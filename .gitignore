@@ -1,0 +1,92 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# VSCode settings
+.vscode/
+*.code-workspace
+.code-profile/
+
+# IDE configs
+.idea/
+*.iml
+
+# Environment and virtualenvs
+.env
+.env.*
+.venv/
+venv/
+*.envrc
+
+# Logs, runtime, outputs
+*.log
+*.tmp
+*.bak
+*.txt
+*.json
+logs/
+outputs/
+checkpoints/
+cache/
+run/
+
+# OS junk
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.swp
+
+# Notebook & interactive shells
+.ipynb_checkpoints/
+*.sage.py
+
+# Compiled objects, builds
+*.out
+*.o
+*.a
+*.so
+*.dll
+*.class
+*.wasm
+
+# AI + Model data (present or future)
+*.ckpt
+*.pt
+*.pth
+*.npz
+*.onnx
+*.gguf
+*.tflite
+models/
+weights/
+generated_data/
+
+# Git
+.git/
+.gitmodules
+
+# Backup editors
+*.bak
+*.tmp
+*.old
+
+# VSCode user-level extensions
+.history/
+.code/
+
+# Mermaid and diagram generation
+*.svg
+*.drawio
+*.mermaid
+
+# Frontend/UI (if added later)
+node_modules/
+dist/
+build/
+*.lock
+
+# Recursive AI export state (if saved)
+*.state.json
+*.mindloop
+*.recursion
