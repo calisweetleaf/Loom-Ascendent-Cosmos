@@ -17,7 +17,8 @@ The Genesis Cosmos Engine is a revolutionary framework for simulating emergent r
 
 ## Core Architecture
 
-The Genesis Cosmos Engine implements a formal architectural theorem composed of seven interconnected layers:
+The Genesis Cosmos Engine implements a formal architectural theorem composed of eight interconnected layers:
+#cosmic scroll explanation coming soon#
 
 ```
 
