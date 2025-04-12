@@ -136,13 +136,31 @@ def initialize_cosmos_engine():
             try:
                 # Create minimal engine components
                 timeline = TimelineEngine()
-                universe_logger.info("TimelineEngine initialized")
+                universe_logger.info("TimelineEngine initialized with 1 timeline(s) at 1.0Hz breath frequency")
+                
+                # Get an observer in the timeline
+                timeline.register_observer("test_observer")
+                # Test with a sample event to make sure timeline works
+                timeline.notify_observers("test_event", 0)
                 
                 aether = AetherEngine()
                 universe_logger.info("AetherEngine initialized")
                 
-                universe = UniverseEngine()
-                universe_logger.info("UniverseEngine initialized")
+                try:
+                    # Create universe engine with proper parameters
+                    physics = {'c': 299792458.0, 'G': 6.67430e-11, 'hubble_constant': 70.0}
+                    initial_conditions = {'initial_temperature': 1e32, 'initial_density': 1e96}
+                    
+                    universe = UniverseEngine(
+                        aether_space=aether, 
+                        physics=physics,
+                        timeline=timeline,
+                        initial_conditions=initial_conditions
+                    )
+                    universe_logger.info("UniverseEngine initialized")
+                except Exception as ue_error:
+                    universe_logger.error(f"Failed to initialize UniverseEngine: {ue_error}")
+                    universe = None
                 
                 # Create a minimal kernel-like object to hold components
                 class MinimalKernel:

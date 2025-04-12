@@ -9,9 +9,11 @@ from typing import Dict, List, Tuple, Any, Optional, Set
 from dataclasses import dataclass, field
 import logging
 from collections import defaultdict, deque
+import importlib
+import sys
 from aether_engine import AetherPattern, AetherSpace, PhysicsConstraints, EncodingType
 from timeline_engine import TimelineEngine, TemporalEvent
-from quantum_physics import QuantumField, QuantumMonteCarlo, PhysicsConstants
+from quantum_physics import QuantumField, QuantumMonteCarlo, PhysicsConstants, WaveFunction, SymbolicOperators, AMRGrid, SimulationConfig, EthicalGravityManifold, QuantumStateVector
 import heapq
 import matplotlib.pyplot as plt
 from scipy.sparse import csr_matrix

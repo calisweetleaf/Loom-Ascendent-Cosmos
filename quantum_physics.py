@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import logging
 import importlib.util
 import sys
+import os
 from typing import Dict, List, Tuple, Optional, Union, Any, Callable
 from enum import Enum, auto
 
@@ -16,9 +17,16 @@ from enum import Enum, auto
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("QuantumPhysics")
 
-# Load the quantum&physics module dynamically
+# Load the quantum&physics module dynamically using a relative path
 try:
-    spec = importlib.util.spec_from_file_location("quantum_physics_impl", "c:/Genesis_Cosmos_Engine/quantum&physics.py")
+    # Get the directory of the current file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # Build path to quantum&physics.py relative to current file
+    quantum_physics_path = os.path.join(current_dir, "quantum&physics.py")
+    
+    logger.info(f"Attempting to load quantum physics implementation from {quantum_physics_path}")
+    
+    spec = importlib.util.spec_from_file_location("quantum_physics_impl", quantum_physics_path)
     quantum_physics_impl = importlib.util.module_from_spec(spec)
     sys.modules["quantum_physics_impl"] = quantum_physics_impl
     spec.loader.exec_module(quantum_physics_impl)
@@ -33,9 +41,13 @@ try:
     # Add the missing exports
     SymbolicOperators = quantum_physics_impl.SymbolicOperators
     EthicalGravityManifold = quantum_physics_impl.EthicalGravityManifold
+    QuantumStateVector = quantum_physics_impl.QuantumStateVector
+    
+    logger.info("Successfully loaded quantum physics implementation module")
 
 except Exception as e:
-    logger.error(f"Failed to import quantum&physics.py: {e}")
+    logger.warning(f"Failed to load quantum&physics.py module: {e}")
+    logger.info("Using fallback implementation for quantum physics classes")
     
     # Define fallback classes for when the module import fails
     class PhysicsConstants:
@@ -1796,3 +1808,16 @@ except Exception as e:
             fig.text(0.5, 0.02, state_text, ha='center')
             
             return fig
+
+# Add these exports to make classes available to importing modules
+__all__ = [
+    'PhysicsConstants', 
+    'WaveFunction', 
+    'QuantumField', 
+    'QuantumMonteCarlo', 
+    'SimulationConfig', 
+    'AMRGrid',
+    'SymbolicOperators',
+    'EthicalGravityManifold',
+    'QuantumStateVector'
+]
