@@ -1816,7 +1816,7 @@ class ScrollMemory:
         event_types = set(e.event_type for e in self.events)
         for etype in event_types:
             type_events = sorted(self.get_events_by_type(etype), key=lambda e: e.timestamp)
-            if len(type_events) >= 3:  # Minimum 3 events to form an arc
+            if len(type_events) >= 3:
                 arcs[etype] = type_events
                 
         return arcs
@@ -1934,13 +1934,10 @@ class ScrollMemory:
             # Take some distributed across timeline
             time_range = sorted_events[-1].timestamp - sorted_events[0].timestamp
             if time_range > 0:
-                step = time_range / (max_events - top_half)
-                target_times = [sorted_events[0].timestamp + i * step for i in range(max_events - top_half)]
-                
-                for target in target_times:
-                    closest = min(sorted_events, key=lambda e: abs(e.timestamp - target))
-                    if closest not in key_events:
-                        key_events.append(closest)
+                indices = [int(i * (events_count - 1) / (max_events - top_half)) for i in range(max_events - top_half)]
+                for idx in indices:
+                    if sorted_events[idx] not in key_events:
+                        key_events.append(sorted_events[idx])
             
             # Sort by timestamp
             key_events = sorted(key_events, key=lambda e: e.timestamp)
