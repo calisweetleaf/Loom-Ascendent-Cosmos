@@ -25,6 +25,8 @@ venv/
 *.bak
 *.txt
 *.json
+*.zip
+*.tar.gz
 logs/
 outputs/
 checkpoints/

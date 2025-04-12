@@ -33,7 +33,6 @@ try:
     # Add the missing exports
     SymbolicOperators = quantum_physics_impl.SymbolicOperators
     EthicalGravityManifold = quantum_physics_impl.EthicalGravityManifold
-    WaveFunction = quantum_physics_impl.WaveFunction
 
 except Exception as e:
     logger.error(f"Failed to import quantum&physics.py: {e}")

@@ -532,71 +532,6 @@ class UniverseEngine:
             # Apply corrections based on Breath Synchronization System principles
             self.current_time = self.timeline.master_tick * self.timeline.temporal_resolution
 
-    def _synchronize_to_breath_phase(self):
-        """
-        Synchronize cosmic evolution with universal breath phase.
-        Implements the breath synchronization system from Genesis Framework.
-        """
-        breath_phase = self.timeline.phase if hasattr(self.timeline, 'phase') else 0.0
-        
-        # Modify the evolution rate based on breath phase
-        # Inhale phase (0.0-0.5) accelerates expansion
-        # Exhale phase (0.5-1.0) consolidates structures
-        if breath_phase < 0.5:
-            # Inhale phase - accelerate expansion
-            expansion_modifier = 1.0 + 0.2 * (0.5 - breath_phase) / 0.5
-            for structure in self.structural_hierarchy:
-                # Move structures slightly outward from origin
-                direction = np.array(structure.position)
-                if np.any(direction):
-                    direction = direction / np.linalg.norm(direction)
-                    new_position = list(structure.position)
-                    for i in range(min(len(new_position), len(direction))):
-                        new_position[i] += direction[i] * 1e-6 * expansion_modifier
-                    structure.position = tuple(new_position)
-        else:
-            # Exhale phase - consolidate structures
-            contraction_modifier = 0.8 + 0.4 * ((breath_phase - 0.5) / 0.5)
-            
-            # Group nearby structures by increasing their gravitational attraction
-            for i, s1 in enumerate(self.structural_hierarchy):
-                for s2 in self.structural_hierarchy[i+1:]:
-                    # Calculate distance vector
-                    pos1 = np.array(s1.position[:3])  # Use only spatial dimensions
-                    pos2 = np.array(s2.position[:3])
-                    delta = pos2 - pos1
-                    distance = np.linalg.norm(delta)
-                    
-                    if distance > 0 and distance < 1e10:  # Ignore very distant structures
-                        # Apply mild gravitational effect
-                        direction = delta / distance
-                        force_magnitude = (s1.total_mass * s2.total_mass) / (distance**2)
-                        force_magnitude *= 1e-20 * contraction_modifier  # Scaling factor
-                        
-                        # Move structures towards each other
-                        if s1.total_mass + s2.total_mass > 0:
-                            # Calculate movement for each structure inversely proportional to mass
-                            s1_move = force_magnitude * direction * (s2.total_mass / (s1.total_mass + s2.total_mass))
-                            s2_move = -force_magnitude * direction * (s1.total_mass / (s1.total_mass + s2.total_mass))
-                            
-                            # Update positions
-                            s1_position = list(s1.position)
-                            s2_position = list(s2.position)
-                            
-                            for i in range(min(len(s1_position), len(s1_move))):
-                                s1_position[i] += s1_move[i]
-                            
-                            for i in range(min(len(s2_position), len(s2_move))):
-                                s2_position[i] += s2_move[i]
-                            
-                            s1.position = tuple(s1_position)
-                            s2.position = tuple(s2_position)
-        
-        # Record synchronization event
-        logger.debug(f"Synchronized cosmic evolution to breath phase {breath_phase:.2f}")
-        
-        return breath_phase
-
     def set_ethical_dimensions(self, ethical_dimensions: Dict[str, float]) -> None:
         """
         Set ethical dimensions for the universe based on Genesis Framework principle:
@@ -1094,7 +1029,7 @@ class UniverseEngine:
             # Use existing pattern as template
             template = np.random.choice(compatible_patterns)
             
-            # Create new pattern based on template
+            # Replace pattern creation code with:
             pattern = AetherPattern(
                 core=hashlib.sha256(pattern_seed.encode()).digest(),
                 mutations=(hashlib.sha256((pattern_seed + "_mut1").encode()).digest(),),
@@ -1108,35 +1043,40 @@ class UniverseEngine:
                     'complexity': template.metadata.get('complexity', 1.0) * (1 + 0.1 * np.random.random()),
                     'parent_pattern_id': template.pattern_id,
                     'position': position[:3],  # Only spatial components
-                    'creation_time': self.current_time
+                    'creation_time': self.current_time,
+                    'encoding_type': template.metadata.get('encoding_type', 'QUANTUM'),
                 }
             )
         else:
-            # Create new pattern from scratch with correct parameters for AetherPattern
-            core_data = hashlib.sha256(pattern_seed.encode()).digest()
-            mutations = tuple(hashlib.sha256((pattern_seed + f"_mut{i}").encode()).digest() for i in range(3))
+            # Create new pattern from scratch
+            dimensions = min(4, self.manifold.dimensions)
+            grid_size = max(2, int(np.log10(mass)))
             
-            # Define basic interactions with string values
-            interactions = {
-                'combine': '0.7',
-                'transform': '0.5',
-                'resonate': '0.3'
-            }
+            # Create weights tensor with Gaussian distribution
+            weights = np.ones((grid_size,) * dimensions)
+            center = tuple(grid_size // 2 for _ in range(dimensions))
             
-            # Create pattern with correct parameters
+            # Apply Gaussian distribution
+            indices = np.indices((grid_size,) * dimensions)
+            distance_sq = sum((indices[i] - center[i])**2 for i in range(dimensions))
+            sigma = grid_size / 4
+            weights = np.exp(-distance_sq / (2 * sigma**2))
+            
+            # Normalize to conserve mass
+            weights = weights * mass / np.sum(weights)
+            
+            # Create new pattern
             pattern = AetherPattern(
-                core=core_data,
-                mutations=mutations,
-                interactions=interactions,
-                encoding_type=EncodingType.QUANTUM,
-                recursion_level=0,
+                pattern_id=f"structure_pattern_{len(self.structural_hierarchy)}",
+                dimensions=dimensions,
+                weights=weights,
                 metadata={
                     'mass': mass,
                     'density': density,
                     'complexity': 1.0 + 0.5 * np.random.random(),
                     'position': position[:3],  # Only spatial components
                     'creation_time': self.current_time,
-                    'structure_id': f"structure_pattern_{len(self.structural_hierarchy)}"
+                    'encoding_type': 'QUANTUM',  # Default encoding for cosmic structures
                 }
             )
         
