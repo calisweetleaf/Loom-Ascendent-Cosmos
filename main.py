@@ -78,7 +78,7 @@ def check_ollama_status(model_name="qwen2.5:3b", model_path=None):
             # In a production environment, you would register this model with ollama
             return model_name
             
-        if model_name not in model_names:
+        if (model_name not in model_names):
             print(f"Warning: Model {model_name} not found in available models.")
             print(f"Available models: {', '.join(model_names)}")
             
@@ -152,7 +152,7 @@ def initialize_cosmos_engine():
                     initial_conditions = {'initial_temperature': 1e32, 'initial_density': 1e96}
                     
                     universe = UniverseEngine(
-                        aether_space=aether, 
+                        aether_space=aether.space, 
                         physics=physics,
                         timeline=timeline,
                         initial_conditions=initial_conditions

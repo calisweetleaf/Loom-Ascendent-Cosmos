@@ -584,17 +584,21 @@ class TimelineEngine:
             logger.info(f"Timelines merged: {source_idx} -> {target_idx} using {merge_strategy}")
             return True
 
-    def register_observer(self, callback: Callable) -> None:
+    def register_observer(self, callback: Callable | str) -> None:
         """
         Register observer function to be called on each event
         
         Args:
             callback: Function to call with (event, timeline_idx) parameters
+            or a string identifier for the observer
         """
         self.observers.append(callback)
-        logger.info(f"Observer registered: {callback.__name__}")
+        if hasattr(callback, '__name__'):
+            logger.info(f"Observer registered: {callback.__name__}")
+        else:
+            logger.info(f"Observer registered: {callback}")
 
-    def notify_observers(self, event: TemporalEvent | Dict, timeline_idx: int) -> None:
+    def notify_observers(self, event: TemporalEvent | Dict | str, timeline_idx: int) -> None:
         """
         Notify all registered observers of a temporal event.
 
@@ -602,7 +606,14 @@ class TimelineEngine:
             event: The temporal event to notify observers about.
             timeline_idx: The index of the timeline where the event occurred.
         """
-        if isinstance(event, dict):
+        # Handle string events for backward compatibility
+        if isinstance(event, str):
+            event_data = {
+                "event_type": event,
+                "timestamp": self.master_tick * self.temporal_resolution
+            }
+            event = TemporalEvent.from_dict(event_data)
+        elif isinstance(event, dict):
             event = TemporalEvent.from_dict(event)
 
         if not self.observers:
@@ -611,10 +622,14 @@ class TimelineEngine:
 
         for observer in self.observers:
             try:
-                observer(event, timeline_idx)
-                logger.info(f"Notified observer: {observer.__name__} with event: {event.event_type}")
+                # Check if observer is a callable or just a string identifier
+                if callable(observer):
+                    observer(event, timeline_idx)
+                else:
+                    logger.info(f"Observer {observer} notified of: {event.event_type}")
             except Exception as e:
-                logger.error(f"Error notifying observer {observer.__name__}: {e}")
+                observer_name = observer.__name__ if hasattr(observer, '__name__') else str(observer)
+                logger.error(f"Error notifying observer {observer_name}: {e}")
 
     def dump_state(self) -> Dict:
         """

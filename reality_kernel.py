@@ -11,6 +11,13 @@ from collections import deque
 import threading
 import numpy as np
 import logging
+import os
+import time
+import gzip
+import pickle
+import uuid
+import math
+import random
 from dataclasses import dataclass
 
 from aether_engine import AetherSpace, AetherPattern, PhysicsConstraints, EncodingType
@@ -118,7 +125,7 @@ class RealityKernel:
     def _initialize_config(self, user_config: Optional[Dict]) -> Dict:
         """Initialize configuration with sensible defaults and user overrides"""
         default_config = {
-            'reality_threads': max(1, threading.cpu_count() - 1),
+            'reality_threads': max(1, os.cpu_count() - 1),
             'metrics_sampling_rate': 1000,
             'aether_resolution': 2048,
             'timeline_branches': 16,
@@ -139,6 +146,8 @@ class RealityKernel:
     def _initialize_aether_engine(self):
         """Initialize enhanced AetherEngine with adaptive physics"""
         logger.info("Initializing AetherEngine")
+        from aether_engine import AetherEngine  # Explicit import to avoid name resolution issues
+        
         return AetherEngine(physics_constraints={
             'min_pattern_size': self.config['aether_resolution'],
             'max_recursion_depth': 32,  # Increased recursion depth for finer pattern detail
@@ -155,27 +164,28 @@ class RealityKernel:
         return TimelineEngine(
             breath_frequency=self.config['reality_cycles_per_second'],
             parallel_timelines=self.config['timeline_branches'],
-            ethical_dimensions=self.config['ethical_dimensions'],
-            branch_pruning_algorithm='ethical_optimization',
-            causality_enforcement=True,
-            paradox_resolution='quantum_superposition',
-            timeline_coherence_threshold=0.85
+            ethical_dimensions=self.config['ethical_dimensions']
         )
 
     def _initialize_universe_engine(self):
         """Initialize enhanced UniverseEngine with advanced simulation capabilities"""
         logger.info("Initializing UniverseEngine")
+        
+        # Define initial conditions required for UniverseEngine
+        initial_conditions = {
+            'initial_temperature': 1e32,
+            'initial_density': 1e96,
+            'expansion_rate': self.config.get('hubble_constant', 70.0)
+        }
+        
         return UniverseEngine(
             aether_space=self.aether.space,
             physics=self.aether.physics,
             timeline=self.timeline,
+            initial_conditions=initial_conditions,
             config=SimulationConfig(
                 grid_resolution=self.config['aether_resolution'],
-                temporal_resolution=self.config['quantum_precision'],
-                adaptive_resolution=True,
-                intelligent_resource_allocation=True,
-                perception_priority_regions=True,
-                entity_focused_detail=True
+                temporal_resolution=self.config['quantum_precision']
             )
         )
 
@@ -735,9 +745,12 @@ class PerceptionEngine:
         self.last_frame_time = 0.0
         self.frame_count = 0
         
+        # Create identity matrix for sensory processing
+        self.identity = IdentityMatrix() if 'IdentityMatrix' in globals() else None
+        
         # Advanced sensory filters with higher resolution
         self.sensory_filters = {
-            'visual': SensoryFilter(resolution=self.config['perception_fidelity']),
+            'visual': SensoryFilter(identity=self.identity),
             'auditory': WaveformGenerator(sample_rate=self.config['perception_fidelity'] * 10),
             'tactile': HapticFieldGenerator(resolution=self.config['perception_fidelity'] // 2),
             'olfactory': ChemicalPerceptionGenerator(),
