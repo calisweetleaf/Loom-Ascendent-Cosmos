@@ -15,6 +15,7 @@ import random
 import math
 import uuid
 import time
+import numpy as np
 from collections import defaultdict, deque
 from typing import Dict, List, Tuple, Set, Optional, Union, Any, Callable
 from enum import Enum, auto
@@ -215,7 +216,19 @@ class QuantumSeedGenerator:
 
 
 class CosmicEntity:
-    """Base class for all entities in the cosmic simulation"""
+    """
+    Base class for all entities in the cosmic simulation.
+    
+    CosmicEntity serves as the foundation for the entity hierarchy, handling:
+    - Unique identity and persistence
+    - Trait and motif management
+    - Reality registration via the DRM system
+    - Temporal evolution through the simulation
+    - Scroll memory integration for entity history
+    
+    All entities derive from this class, inheriting its core capabilities while
+    implementing their own domain-specific behaviors and properties.
+    """
     
     def __init__(self, entity_id: str = None):
         self.entity_id = entity_id or f"{self.__class__.__name__.lower()}_{uuid.uuid4().hex}"
@@ -3508,3 +3521,3697 @@ class DiplomaticRegistry:
 
 # Initialize the diplomatic registry singleton
 DIPLOMATIC_REGISTRY = DiplomaticRegistry()
+```
+# === Integrated Environmental Scroll Modules ===
+# Source: scroll_modules.py
+# This module contains the integrated environmental scroll modules for the Cosmic Scroll system.
+# === World & Environmental Systems ===
+
+# -------------------------------------------------------------------------
+# Life & Biology Systems
+# -------------------------------------------------------------------------
+import numpy as np
+import uuid
+import math
+import random
+from enum import Enum, auto
+from typing import Dict, List, Tuple, Set, Optional, Union, Any, Callable, Deque
+from collections import defaultdict, deque
+import logging
+
+class MutationType(Enum):
+    """Types of mutations that can occur in biological and symbolic entities"""
+    POINT = "point"              # Small change to a single trait or gene
+    DUPLICATION = "duplication"  # Copying of a trait or gene
+    DELETION = "deletion"        # Removal of a trait or gene
+    INVERSION = "inversion"      # Reversal of a trait or gene sequence
+    INSERTION = "insertion"      # Addition of new trait or gene
+    SYMBOLIC = "symbolic"        # Change to symbolic/motif elements
+    RECURSIVE = "recursive"      # Creates self-referential patterns
+    MOTIF = "motif"              # Alters motif expression or attunement
+    NARRATIVE = "narrative"      # Changes story pattern of organism
+    QUANTUM = "quantum"          # Probabilistic mutation affecting multiple states
+
+logger = logging.getLogger(__name__)
+
+class MetabolicProcess(Enum):
+    """Types of metabolic processes that can occur in living entities"""
+    PHOTOSYNTHESIS = "photosynthesis"       # Light to energy conversion
+    RESPIRATION = "respiration"             # Energy extraction from molecules
+    CHEMOSYNTHESIS = "chemosynthesis"       # Chemical to energy conversion
+    RADIOSYNTHESIS = "radiosynthesis"       # Radiation to energy conversion
+    QUANTUM_ENTANGLEMENT = "entanglement"   # Energy from quantum processes
+    SYMBOLIC_ABSORPTION = "symbolic"        # Energy from meaning patterns
+    MOTIF_CYCLING = "motif_cycling"         # Energy from motif transformations
+    THERMAL_CYCLING = "thermal_cycling"     # Energy from temperature differences
+    ETHERIC_EXTRACTION = "etheric"          # Energy from etheric fields
+    HARMONIC_RESONANCE = "harmonic"         # Energy from harmonic fields
+
+
+class RecursiveMetabolism:
+    """
+    Models the symbiotic, fractal energy exchange system in biological entities.
+    
+    RecursiveMetabolism implements a complex bioenergetic system that functions across
+    multiple scales simultaneously, from molecular to ecosystem levels. It manages the
+    transformation of various energy forms between symbolic and physical states,
+    creating recursive cycles that allow for emergent properties at higher levels.
+    
+    The system features:
+    - Multi-scale energy cycling across different levels of organization
+    - Symbolic/physical energy transduction mechanisms
+    - Recursive feedback loops between metabolic processes
+    - Adaptive pathways that evolve based on environmental conditions
+    - Motif integration for symbolic meaning in biological processes
+    """
+    
+    def __init__(self, 
+                 owner_entity: Any,
+                 base_efficiency: float = 0.7, 
+                 primary_process: MetabolicProcess = None, 
+                 secondary_processes: List[MetabolicProcess] = None,
+                 recursion_depth: int = 3,
+                 symbolic_affinity: Dict[str, float] = None):
+        """
+        Initialize a recursive metabolism system.
+        
+        Args:
+            owner_entity: The entity (planet, flora, fauna) containing this metabolism
+            base_efficiency: Base efficiency of energy conversion (0.0-1.0)
+            primary_process: Main metabolic process
+            secondary_processes: Additional metabolic processes
+            recursion_depth: How many levels of recursive processing to maintain
+            symbolic_affinity: Affinity for different symbolic energies
+        """
+        self.owner = owner_entity
+        self.base_efficiency = base_efficiency
+        self.primary_process = primary_process or self._select_default_process()
+        self.secondary_processes = secondary_processes or []
+        self.recursion_depth = recursion_depth
+        self.symbolic_affinity = symbolic_affinity or self._generate_symbolic_affinity()
+        
+        # Energy storage at different recursion levels
+        self.energy_pools = {
+            level: {
+                "physical": 50.0 * (0.7 ** level),  # Physical energy decreases with level
+                "symbolic": 30.0 * (1.3 ** level),  # Symbolic energy increases with level
+                "capacity": 100.0 * (1.1 ** level)  # Capacity increases with level
+            } for level in range(recursion_depth + 1)
+        }
+        
+        # Process efficiencies vary by level
+        self.process_efficiencies = {
+            process: {
+                level: base_efficiency * (0.9 + 0.2 * random.random()) * (1.0 + (0.1 * level if process == MetabolicProcess.SYMBOLIC_ABSORPTION else 0)) 
+                for level in range(recursion_depth + 1)
+            } for process in [self.primary_process] + self.secondary_processes
+        }
+        
+        # Byproducts from metabolism
+        self.byproducts = {}
+        
+        # Energy transfer rates between levels (upward and downward)
+        self.upward_transfer_rate = 0.15  # % of energy moving to higher level
+        self.downward_transfer_rate = 0.25  # % of energy moving to lower level
+        
+        # Adaptation metrics
+        self.adaptation_pressure = 0.0
+        self.adaptation_threshold = 0.7
+        self.adaptation_history = deque(maxlen=10)
+        
+        # Symbiotic relationships
+        self.symbiotic_links = {}
+        
+        # Create recursive subprocesses with their own cycles
+        self.subprocesses = self._initialize_subprocesses()
+        
+        # Integration with motif system
+        self.metabolic_motifs = self._initialize_metabolic_motifs()
+        
+        # Cycle parameters
+        self.cycle_count = 0
+        self.cycle_length = 12  # Steps per complete metabolic cycle
+        self.cycle_phase = 0.0  # Position in current cycle (0.0-1.0)
+        
+        # Energy needs based on primary process
+        self.input_requirements = self._calculate_input_requirements()
+        
+        # Stats tracking
+        self.total_energy_produced = 0
+        self.total_energy_consumed = 0
+        
+    def _select_default_process(self) -> MetabolicProcess:
+        """Select an appropriate default metabolic process based on owner entity"""
+        if hasattr(self.owner, 'entity_type'):
+            if hasattr(EntityType, 'PLANET') and self.owner.entity_type == EntityType.PLANET:
+                return MetabolicProcess.RADIOSYNTHESIS
+            # For flora/fauna determined by inherited characteristics
+            elif hasattr(self.owner, 'is_photosynthetic') and self.owner.is_photosynthetic:
+                return MetabolicProcess.PHOTOSYNTHESIS
+            elif hasattr(self.owner, 'is_chemosynthetic') and self.owner.is_chemosynthetic:
+                return MetabolicProcess.CHEMOSYNTHESIS
+            elif hasattr(self.owner, 'is_symbolic_processor') and self.owner.is_symbolic_processor:
+                return MetabolicProcess.SYMBOLIC_ABSORPTION
+        
+        # Default based on planet conditions if available
+        if hasattr(self.owner, 'planet') and self.owner.planet:
+            if hasattr(self.owner.planet, 'get_trait') and self.owner.planet.get_trait('solar_radiation', 0.5) > 0.6:
+                return MetabolicProcess.PHOTOSYNTHESIS
+            elif hasattr(self.owner.planet, 'get_trait') and self.owner.planet.get_trait('chemical_energy', 0.3) > 0.7:
+                return MetabolicProcess.CHEMOSYNTHESIS
+        
+        # Fallback
+        return random.choice([
+            MetabolicProcess.PHOTOSYNTHESIS,
+            MetabolicProcess.RESPIRATION,
+            MetabolicProcess.CHEMOSYNTHESIS
+        ])
+    
+    def _generate_symbolic_affinity(self) -> Dict[str, float]:
+        """Generate affinities for different symbolic energy types"""
+        # Base symbolic energy types
+        affinities = {
+            "light": random.uniform(0.1, 0.9),
+            "darkness": random.uniform(0.1, 0.9),
+            "order": random.uniform(0.1, 0.9),
+            "chaos": random.uniform(0.1, 0.9),
+            "creation": random.uniform(0.1, 0.9),
+            "destruction": random.uniform(0.1, 0.9),
+            "transcendence": random.uniform(0.1, 0.9),
+            "immanence": random.uniform(0.1, 0.9),
+            "complexity": random.uniform(0.1, 0.9),
+            "simplicity": random.uniform(0.1, 0.9)
+        }
+        
+        # If owner has motifs, incorporate those into affinities
+        if hasattr(self.owner, 'motifs'):
+            for motif in self.owner.motifs:
+                # Extract key concepts from motif name
+                for symbol in affinities.keys():
+                    if symbol in motif:
+                        affinities[symbol] += 0.2
+        
+        # Normalize to ensure sum is reasonable
+        total = sum(affinities.values())
+        if total > 0:
+            affinities = {k: v / total * len(affinities) for k, v in affinities.items()}
+        
+        return affinities
+    
+    def _initialize_subprocesses(self) -> Dict[str, Dict]:
+        """Initialize recursive metabolic subprocesses"""
+        subprocesses = {}
+        
+        # Create subprocess for each level except the highest
+        for level in range(self.recursion_depth):
+            process_count = 2 + level  # More subprocesses at deeper levels
+            
+            level_processes = {}
+            for i in range(process_count):
+                process_type = random.choice([p for p in MetabolicProcess])
+                
+                # Each subprocess has its own cycle and efficiency
+                level_processes[f"subprocess_{level}_{i}"] = {
+                    "type": process_type,
+                    "efficiency": random.uniform(0.5, 0.9),
+                    "cycle_offset": random.uniform(0, 1.0),
+                    "cycle_length": 6 + random.randint(0, 12),
+                    "input_ratio": random.uniform(0.1, 0.5),
+                    "output_ratio": random.uniform(0.1, 0.5),
+                    "symbolic_ratio": random.uniform(0.2, 0.8),
+                    "byproducts": self._generate_subprocess_byproducts(process_type)
+                }
+            
+            subprocesses.update(level_processes)
+                
+        return subprocesses
+    
+    def _generate_subprocess_byproducts(self, process_type: MetabolicProcess) -> Dict[str, float]:
+        """Generate appropriate byproducts for a given metabolic process"""
+        byproducts = {}
+        
+        # Different processes produce different byproducts
+        if process_type == MetabolicProcess.PHOTOSYNTHESIS:
+            byproducts["oxygen"] = random.uniform(0.1, 0.3)
+            byproducts["glucose"] = random.uniform(0.05, 0.15)
+            byproducts["symbolic_light"] = random.uniform(0.01, 0.1) 
+            
+        elif process_type == MetabolicProcess.RESPIRATION:
+            byproducts["carbon_dioxide"] = random.uniform(0.1, 0.3)
+            byproducts["water"] = random.uniform(0.05, 0.15)
+            byproducts["heat"] = random.uniform(0.1, 0.2)
+            
+        elif process_type == MetabolicProcess.CHEMOSYNTHESIS:
+            byproducts["sulfur_compounds"] = random.uniform(0.05, 0.2)
+            byproducts["mineral_deposits"] = random.uniform(0.01, 0.1)
+            
+        elif process_type == MetabolicProcess.RADIOSYNTHESIS:
+            byproducts["radiation_particles"] = random.uniform(0.01, 0.05)
+            byproducts["heavy_elements"] = random.uniform(0.005, 0.02)
+            
+        elif process_type == MetabolicProcess.SYMBOLIC_ABSORPTION:
+            byproducts["meaning_fragments"] = random.uniform(0.1, 0.3)
+            byproducts["pattern_echoes"] = random.uniform(0.05, 0.15)
+            
+        elif process_type == MetabolicProcess.MOTIF_CYCLING:
+            byproducts["motif_residue"] = random.uniform(0.1, 0.2)
+            byproducts["thematic_essence"] = random.uniform(0.05, 0.15)
+            
+        # Add some random byproducts for all processes
+        if random.random() < 0.3:
+            byproducts["quantum_fluctuations"] = random.uniform(0.01, 0.05)
+        if random.random() < 0.2:
+            byproducts["emergent_patterns"] = random.uniform(0.01, 0.08)
+            
+        return byproducts
+    
+    def _initialize_metabolic_motifs(self) -> List[str]:
+        """Initialize motifs associated with this metabolic system"""
+        motifs = []
+        
+        # Add motifs based on primary process
+        if self.primary_process == MetabolicProcess.PHOTOSYNTHESIS:
+            motifs.append("light_transmutation")
+            motifs.append("solar_dependency")
+            
+        elif self.primary_process == MetabolicProcess.RESPIRATION:
+            motifs.append("oxygen_cycle")
+            motifs.append("energy_extraction")
+            
+        elif self.primary_process == MetabolicProcess.CHEMOSYNTHESIS:
+            motifs.append("chemical_alchemy")
+            motifs.append("mineral_digestion")
+            
+        elif self.primary_process == MetabolicProcess.RADIOSYNTHESIS:
+            motifs.append("radiation_harvester")
+            motifs.append("particle_absorption")
+            
+        elif self.primary_process == MetabolicProcess.SYMBOLIC_ABSORPTION:
+            motifs.append("meaning_processor") 
+            motifs.append("pattern_consumer")
+            
+        elif self.primary_process == MetabolicProcess.QUANTUM_ENTANGLEMENT:
+            motifs.append("quantum_harvester")
+            motifs.append("probability_feeder")
+            
+        # Add motifs related to recursion
+        if self.recursion_depth > 3:
+            motifs.append("deep_recursive_metabolism")
+        
+        # Add motifs based on symbolic affinity
+        strongest_affinity = max(self.symbolic_affinity.items(), key=lambda x: x[1])
+        motifs.append(f"{strongest_affinity[0]}_affinity")
+        
+        return motifs
+    
+    def _calculate_input_requirements(self) -> Dict[str, float]:
+        """Calculate resource requirements based on metabolic process"""
+        requirements = {}
+        
+        # Base requirements by process type
+        if self.primary_process == MetabolicProcess.PHOTOSYNTHESIS:
+            requirements["light"] = 1.0
+            requirements["water"] = 0.6
+            requirements["carbon_dioxide"] = 0.4
+            
+        elif self.primary_process == MetabolicProcess.RESPIRATION:
+            requirements["oxygen"] = 0.8
+            requirements["glucose"] = 0.7
+            
+        elif self.primary_process == MetabolicProcess.CHEMOSYNTHESIS:
+            requirements["hydrogen_sulfide"] = 0.6
+            requirements["carbon_dioxide"] = 0.4
+            requirements["minerals"] = 0.5
+            
+        elif self.primary_process == MetabolicProcess.RADIOSYNTHESIS:
+            requirements["radiation"] = 0.8
+            requirements["heavy_elements"] = 0.3
+            
+        elif self.primary_process == MetabolicProcess.SYMBOLIC_ABSORPTION:
+            requirements["meaning_density"] = 0.7
+            requirements["pattern_complexity"] = 0.5
+            
+        elif self.primary_process == MetabolicProcess.MOTIF_CYCLING:
+            requirements["motif_presence"] = 0.9
+            requirements["narrative_flow"] = 0.4
+        
+        # Add symbolic requirements
+        strongest_symbols = sorted(self.symbolic_affinity.items(), key=lambda x: x[1], reverse=True)[:3]
+        for symbol, affinity in strongest_symbols:
+            requirements[f"symbolic_{symbol}"] = affinity * 0.5
+            
+        return requirements
+
+
+```python
+class RecursiveMetabolism:
+    """
+    Models the symbiotic, fractal energy exchange system in biological entities.
+    
+    RecursiveMetabolism implements a complex bioenergetic system that functions across
+    multiple scales simultaneously, from molecular to ecosystem levels. It manages the
+    transformation of various energy forms between symbolic and physical states,
+    creating recursive cycles that allow for emergent properties at higher levels.
+    
+    The system features:
+    - Multi-scale energy cycling across different levels of organization
+    - Symbolic/physical energy transduction mechanisms
+    - Recursive feedback loops between metabolic processes
+    - Adaptive pathways that evolve based on environmental conditions
+    - Motif integration for symbolic meaning in biological processes
+    """
+    
+    def __init__(self, 
+                 owner_entity: Any,
+                 base_efficiency: float = 0.7, 
+                 primary_process: MetabolicProcess = None, 
+                 secondary_processes: List[MetabolicProcess] = None,
+                 recursion_depth: int = 3,
+                 symbolic_affinity: Dict[str, float] = None):
+        """
+        Initialize a recursive metabolism system.
+        
+        Args:
+            owner_entity: The entity (planet, flora, fauna) containing this metabolism
+            base_efficiency: Base efficiency of energy conversion (0.0-1.0)
+            primary_process: Main metabolic process
+            secondary_processes: Additional metabolic processes
+            recursion_depth: How many levels of recursive processing to maintain
+            symbolic_affinity: Affinity for different symbolic energies
+        """
+        self.owner = owner_entity
+        self.base_efficiency = base_efficiency
+        self.primary_process = primary_process or self._select_default_process()
+        self.secondary_processes = secondary_processes or []
+        self.recursion_depth = recursion_depth
+        self.symbolic_affinity = symbolic_affinity or self._generate_symbolic_affinity()
+        
+        # Energy storage at different recursion levels
+        self.energy_pools = {
+            level: {
+                "physical": 50.0 * (0.7 ** level),  # Physical energy decreases with level
+                "symbolic": 30.0 * (1.3 ** level),  # Symbolic energy increases with level
+                "capacity": 100.0 * (1.1 ** level)  # Capacity increases with level
+            } for level in range(recursion_depth + 1)
+        }
+        
+        # Process efficiencies vary by level
+        self.process_efficiencies = {
+            process: {
+                level: base_efficiency * (0.9 + 0.2 * random.random()) * (1.0 + (0.1 * level if process == MetabolicProcess.SYMBOLIC_ABSORPTION else 0)) 
+                for level in range(recursion_depth + 1)
+            } for process in [self.primary_process] + self.secondary_processes
+        }
+        
+        # Byproducts from metabolism
+        self.byproducts = {}
+        
+        # Energy transfer rates between levels (upward and downward)
+        self.upward_transfer_rate = 0.15  # % of energy moving to higher level
+        self.downward_transfer_rate = 0.25  # % of energy moving to lower level
+        
+        # Adaptation metrics
+        self.adaptation_pressure = 0.0
+        self.adaptation_threshold = 0.7
+        self.adaptation_history = deque(maxlen=10)
+        
+        # Symbiotic relationships
+        self.symbiotic_links = {}
+        
+        # Create recursive subprocesses with their own cycles
+        self.subprocesses = self._initialize_subprocesses()
+        
+        # Integration with motif system
+        self.metabolic_motifs = self._initialize_metabolic_motifs()
+        
+        # Cycle parameters
+        self.cycle_count = 0
+        self.cycle_length = 12  # Steps per complete metabolic cycle
+        self.cycle_phase = 0.0  # Position in current cycle (0.0-1.0)
+        
+        # Energy needs based on primary process
+        self.input_requirements = self._calculate_input_requirements()
+        
+        # Stats tracking
+        self.total_energy_produced = 0
+        self.total_energy_consumed = 0
+        
+    def _select_default_process(self) -> MetabolicProcess:
+        """Select an appropriate default metabolic process based on owner entity"""
+        if hasattr(self.owner, 'entity_type'):
+            if self.owner.entity_type == EntityType.PLANET:
+                return MetabolicProcess.RADIOSYNTHESIS
+            # For flora/fauna determined by inherited characteristics
+            elif hasattr(self.owner, 'is_photosynthetic') and self.owner.is_photosynthetic:
+                return MetabolicProcess.PHOTOSYNTHESIS
+            elif hasattr(self.owner, 'is_chemosynthetic') and self.owner.is_chemosynthetic:
+                return MetabolicProcess.CHEMOSYNTHESIS
+            elif hasattr(self.owner, 'is_symbolic_processor') and self.owner.is_symbolic_processor:
+                return MetabolicProcess.SYMBOLIC_ABSORPTION
+        
+        # Default based on planet conditions if available
+        if hasattr(self.owner, 'planet') and self.owner.planet:
+            if self.owner.planet.get_trait('solar_radiation', 0.5) > 0.6:
+                return MetabolicProcess.PHOTOSYNTHESIS
+            elif self.owner.planet.get_trait('chemical_energy', 0.3) > 0.7:
+                return MetabolicProcess.CHEMOSYNTHESIS
+        
+        # Fallback
+        return random.choice([
+            MetabolicProcess.PHOTOSYNTHESIS,
+            MetabolicProcess.RESPIRATION,
+            MetabolicProcess.CHEMOSYNTHESIS
+        ])
+    
+    def _generate_symbolic_affinity(self) -> Dict[str, float]:
+        """Generate affinities for different symbolic energy types"""
+        # Base symbolic energy types
+        affinities = {
+            "light": random.uniform(0.1, 0.9),
+            "darkness": random.uniform(0.1, 0.9),
+            "order": random.uniform(0.1, 0.9),
+            "chaos": random.uniform(0.1, 0.9),
+            "creation": random.uniform(0.1, 0.9),
+            "destruction": random.uniform(0.1, 0.9),
+            "transcendence": random.uniform(0.1, 0.9),
+            "immanence": random.uniform(0.1, 0.9),
+            "complexity": random.uniform(0.1, 0.9),
+            "simplicity": random.uniform(0.1, 0.9)
+        }
+        
+        # If owner has motifs, incorporate those into affinities
+        if hasattr(self.owner, 'motifs'):
+            for motif in self.owner.motifs:
+                # Extract key concepts from motif name
+                for symbol in affinities.keys():
+                    if symbol in motif:
+                        affinities[symbol] += 0.2
+        
+        # Normalize to ensure sum is reasonable
+        total = sum(affinities.values())
+        if total > 0:
+            affinities = {k: v / total * len(affinities) for k, v in affinities.items()}
+        
+        return affinities
+    
+    def _initialize_subprocesses(self) -> Dict[str, Dict]:
+        """Initialize recursive metabolic subprocesses"""
+        subprocesses = {}
+        
+        # Create subprocess for each level except the highest
+        for level in range(self.recursion_depth):
+            process_count = 2 + level  # More subprocesses at deeper levels
+            
+            level_processes = {}
+            for i in range(process_count):
+                process_type = random.choice([p for p in MetabolicProcess])
+                
+                # Each subprocess has its own cycle and efficiency
+                level_processes[f"subprocess_{level}_{i}"] = {
+                    "type": process_type,
+                    "efficiency": random.uniform(0.5, 0.9),
+                    "cycle_offset": random.uniform(0, 1.0),
+                    "cycle_length": 6 + random.randint(0, 12),
+                    "input_ratio": random.uniform(0.1, 0.5),
+                    "output_ratio": random.uniform(0.1, 0.5),
+                    "symbolic_ratio": random.uniform(0.2, 0.8),
+                    "byproducts": self._generate_subprocess_byproducts(process_type)
+                }
+            
+            subprocesses.update(level_processes)
+                
+        return subprocesses
+    
+    def _generate_subprocess_byproducts(self, process_type: MetabolicProcess) -> Dict[str, float]:
+        """Generate appropriate byproducts for a given metabolic process"""
+        byproducts = {}
+        
+        # Different processes produce different byproducts
+        if process_type == MetabolicProcess.PHOTOSYNTHESIS:
+            byproducts["oxygen"] = random.uniform(0.1, 0.3)
+            byproducts["glucose"] = random.uniform(0.05, 0.15)
+            byproducts["symbolic_light"] = random.uniform(0.01, 0.1) 
+            
+        elif process_type == MetabolicProcess.RESPIRATION:
+            byproducts["carbon_dioxide"] = random.uniform(0.1, 0.3)
+            byproducts["water"] = random.uniform(0.05, 0.15)
+            byproducts["heat"] = random.uniform(0.1, 0.2)
+            
+        elif process_type == MetabolicProcess.CHEMOSYNTHESIS:
+            byproducts["sulfur_compounds"] = random.uniform(0.05, 0.2)
+            byproducts["mineral_deposits"] = random.uniform(0.01, 0.1)
+            
+        elif process_type == MetabolicProcess.RADIOSYNTHESIS:
+            byproducts["radiation_particles"] = random.uniform(0.01, 0.05)
+            byproducts["heavy_elements"] = random.uniform(0.005, 0.02)
+            
+        elif process_type == MetabolicProcess.SYMBOLIC_ABSORPTION:
+            byproducts["meaning_fragments"] = random.uniform(0.1, 0.3)
+            byproducts["pattern_echoes"] = random.uniform(0.05, 0.15)
+            
+        elif process_type == MetabolicProcess.MOTIF_CYCLING:
+            byproducts["motif_residue"] = random.uniform(0.1, 0.2)
+            byproducts["thematic_essence"] = random.uniform(0.05, 0.15)
+            
+        # Add some random byproducts for all processes
+        if random.random() < 0.3:
+            byproducts["quantum_fluctuations"] = random.uniform(0.01, 0.05)
+        if random.random() < 0.2:
+            byproducts["emergent_patterns"] = random.uniform(0.01, 0.08)
+            
+        return byproducts
+    
+    def _initialize_metabolic_motifs(self) -> List[str]:
+        """Initialize motifs associated with this metabolic system"""
+        motifs = []
+        
+        # Add motifs based on primary process
+        if self.primary_process == MetabolicProcess.PHOTOSYNTHESIS:
+            motifs.append("light_transmutation")
+            motifs.append("solar_dependency")
+            
+        elif self.primary_process == MetabolicProcess.RESPIRATION:
+            motifs.append("oxygen_cycle")
+            motifs.append("energy_extraction")
+            
+        elif self.primary_process == MetabolicProcess.CHEMOSYNTHESIS:
+            motifs.append("chemical_alchemy")
+            motifs.append("mineral_digestion")
+            
+        elif self.primary_process == MetabolicProcess.RADIOSYNTHESIS:
+            motifs.append("radiation_harvester")
+            motifs.append("particle_absorption")
+            
+        elif self.primary_process == MetabolicProcess.SYMBOLIC_ABSORPTION:
+            motifs.append("meaning_processor") 
+            motifs.append("pattern_consumer")
+            
+        elif self.primary_process == MetabolicProcess.QUANTUM_ENTANGLEMENT:
+            motifs.append("quantum_harvester")
+            motifs.append("probability_feeder")
+            
+        # Add motifs related to recursion
+        if self.recursion_depth > 3:
+            motifs.append("deep_recursive_metabolism")
+        
+        # Add motifs based on symbolic affinity
+        strongest_affinity = max(self.symbolic_affinity.items(), key=lambda x: x[1])
+        motifs.append(f"{strongest_affinity[0]}_affinity")
+        
+        return motifs
+    
+    def _calculate_input_requirements(self) -> Dict[str, float]:
+        """Calculate resource requirements based on metabolic process"""
+        requirements = {}
+        
+        # Base requirements by process type
+        if self.primary_process == MetabolicProcess.PHOTOSYNTHESIS:
+            requirements["light"] = 1.0
+            requirements["water"] = 0.6
+            requirements["carbon_dioxide"] = 0.4
+            
+        elif self.primary_process == MetabolicProcess.RESPIRATION:
+            requirements["oxygen"] = 0.8
+            requirements["glucose"] = 0.7
+            
+        elif self.primary_process == MetabolicProcess.CHEMOSYNTHESIS:
+            requirements["hydrogen_sulfide"] = 0.6
+            requirements["carbon_dioxide"] = 0.4
+            requirements["minerals"] = 0.5
+            
+        elif self.primary_process == MetabolicProcess.RADIOSYNTHESIS:
+            requirements["radiation"] = 0.8
+            requirements["heavy_elements"] = 0.3
+            
+        elif self.primary_process == MetabolicProcess.SYMBOLIC_ABSORPTION:
+            requirements["meaning_density"] = 0.7
+            requirements["pattern_complexity"] = 0.5
+            
+        elif self.primary_process == MetabolicProcess.MOTIF_CYCLING:
+            requirements["motif_presence"] = 0.9
+            requirements["narrative_flow"] = 0.4
+        
+        # Add symbolic requirements
+        strongest_symbols = sorted(self.symbolic_affinity.items(), key=lambda x: x[1], reverse=True)[:3]
+        for symbol, affinity in strongest_symbols:
+            requirements[f"symbolic_{symbol}"] = affinity * 0.5
+            
+        return requirements
+    
+    def process_cycle(self, environmental_inputs: Dict[str, float], time_delta: float = 1.0) -> Dict[str, Any]:
+        """
+        Process a full metabolic cycle with environmental inputs.
+        
+        Args:
+            environmental_inputs: Dictionary of available resources
+            time_delta: Time progression factor
+            
+        Returns:
+            Dict containing metabolic results, byproducts, and events
+        """
+        # Advance cycle phase
+        phase_increment = time_delta / self.cycle_length
+        self.cycle_phase = (self.cycle_phase + phase_increment) % 1.0
+        
+        # Complete cycles counter
+        if self.cycle_phase < phase_increment:
+            self.cycle_count += 1
+        
+        # Process each level starting from the lowest (most physical)
+        results = {
+            "energy_produced": 0,
+            "symbolic_energy_produced": 0,
+            "byproducts": {},
+            "adaptation_events": [],
+            "efficiency_change": 0,
+            "energy_state": {}
+        }
+        
+        # Run primary and secondary processes at each level
+        for level in range(self.recursion_depth + 1):
+            level_results = self._process_level(level, environmental_inputs, time_delta)
+            
+            # Accumulate results
+            results["energy_produced"] += level_results["physical_energy"]
+            results["symbolic_energy_produced"] += level_results["symbolic_energy"]
+            
+            # Merge byproducts
+            for byproduct, amount in level_results["byproducts"].items():
+                if byproduct in results["byproducts"]:
+                    results["byproducts"][byproduct] += amount
+                else:
+                    results["byproducts"][byproduct] = amount
+            
+            # Add any adaptation events
+            results["adaptation_events"].extend(level_results["adaptation_events"])
+        
+        # Process energy transfer between levels
+        self._transfer_energy_between_levels()
+        
+        # Check for adaptation pressure and possibly evolve
+        adaptation_result = self._check_adaptation(environmental_inputs, time_delta)
+        results["adaptation_events"].extend(adaptation_result["events"])
+        results["efficiency_change"] = adaptation_result["efficiency_change"]
+        
+        # Run symbiotic processes if any exist
+        if self.symbiotic_links:
+            symbiotic_result = self._process_symbiotic_relationships(time_delta)
+            results["symbiotic_energy"] = symbiotic_result["energy"]
+            results["adaptation_events"].extend(symbiotic_result["events"])
+        
+        # Update total stats
+        self.total_energy_produced += results["energy_produced"]
+        
+        # Record current energy state
+        results["energy_state"] = {level: pool.copy() for level, pool in self.energy_pools.items()}
+        
+        return results
+    
+    def _process_level(self, level: int, environmental_inputs: Dict[str, float], time_delta: float) -> Dict[str, Any]:
+        """Process metabolism at a specific recursive level"""
+        level_results = {
+            "physical_energy": 0,
+            "symbolic_energy": 0,
+            "byproducts": {},
+            "adaptation_events": []
+        }
+        
+        # Adjust inputs based on level (higher levels use more symbolic resources)
+        adjusted_inputs = self._adjust_inputs_for_level(environmental_inputs, level)
+        
+        # Calculate current efficiency based on cycle phase
+        phase_efficiency = self._calculate_phase_efficiency(level)
+        
+        # Process primary metabolism
+        primary_result = self._process_single_metabolism(
+            self.primary_process, 
+            level,
+            adjusted_inputs,
+            phase_efficiency,
+            time_delta
+        )
+        
+        # Add to level results
+        level_results["physical_energy"] += primary_result["physical_energy"]
+        level_results["symbolic_energy"] += primary_result["symbolic_energy"]
+        
+        # Process byproducts
+        for byproduct, amount in primary_result["byproducts"].items():
+            if byproduct in level_results["byproducts"]:
+                level_results["byproducts"][byproduct] += amount
+            else:
+                level_results["byproducts"][byproduct] = amount
+        
+        # Process secondary metabolisms
+        """
+        Initialize a recursive metabolism system.
+        
+        Args:
+            owner_entity: The entity (planet, flora, fauna) containing this metabolism
+            base_efficiency: Base efficiency of energy conversion (0.0-1.0)
+            primary_process: Main metabolic process
+            secondary_processes: Additional metabolic processes
+            recursion_depth: How many levels of recursive processing to maintain
+            symbolic_affinity: Affinity for different symbolic energies
+        """
+        self.owner = owner_entity
+        self.base_efficiency = base_efficiency
+        self.primary_process = primary_process or self._select_default_process()
+        self.secondary_processes = secondary_processes or []
+        self.recursion_depth = recursion_depth
+        self.symbolic_affinity = symbolic_affinity or self._generate_symbolic_affinity()
+        
+        # Energy storage at different recursion levels
+        self.energy_pools = {
+            level: {
+                "physical": 50.0 * (0.7 ** level),  # Physical energy decreases with level
+                "symbolic": 30.0 * (1.3 ** level),  # Symbolic energy increases with level
+                "capacity": 100.0 * (1.1 ** level)  # Capacity increases with level
+            } for level in range(recursion_depth + 1)
+        }
+        
+        # Process efficiencies vary by level
+        self.process_efficiencies = {
+            process: {
+                level: base_efficiency * (0.9 + 0.2 * random.random()) * (1.0 + (0.1 * level if process == MetabolicProcess.SYMBOLIC_ABSORPTION else 0)) 
+                for level in range(recursion_depth + 1)
+            } for process in [self.primary_process] + self.secondary_processes
+        }
+        
+        # Byproducts from metabolism
+        self.byproducts = {}
+        
+        # Energy transfer rates between levels (upward and downward)
+        self.upward_transfer_rate = 0.15  # % of energy moving to higher level
+        self.downward_transfer_rate = 0.25  # % of energy moving to lower level
+        
+        # Adaptation metrics
+        self.adaptation_pressure = 0.0
+        self.adaptation_threshold = 0.7
+        self.adaptation_history = deque(maxlen=10)
+        
+        # Symbiotic relationships
+        self.symbiotic_links = {}
+        
+        # Create recursive subprocesses with their own cycles
+        self.subprocesses = self._initialize_subprocesses()
+        
+        # Integration with motif system
+        self.metabolic_motifs = self._initialize_metabolic_motifs()
+        
+        # Cycle parameters
+        self.cycle_count = 0
+        self.cycle_length = 12  # Steps per complete metabolic cycle
+        self.cycle_phase = 0.0  # Position in current cycle (0.0-1.0)
+        
+        # Energy needs based on primary process
+        self.input_requirements = self._calculate_input_requirements()
+        
+        # Stats tracking
+        self.total_energy_produced = 0
+        self.total_energy_consumed = 0
+        
+    def _select_default_process(self) -> MetabolicProcess:
+        """Select an appropriate default metabolic process based on owner entity"""
+        if hasattr(self.owner, 'entity_type'):
+            if self.owner.entity_type == EntityType.PLANET:
+                return MetabolicProcess.RADIOSYNTHESIS
+            # For flora/fauna determined by inherited characteristics
+            elif hasattr(self.owner, 'is_photosynthetic') and self.owner.is_photosynthetic:
+                return MetabolicProcess.PHOTOSYNTHESIS
+            elif hasattr(self.owner, 'is_chemosynthetic') and self.owner.is_chemosynthetic:
+                return MetabolicProcess.CHEMOSYNTHESIS
+            elif hasattr(self.owner, 'is_symbolic_processor') and self.owner.is_symbolic_processor:
+                return MetabolicProcess.SYMBOLIC_ABSORPTION
+        
+        # Default based on planet conditions if available
+        if hasattr(self.owner, 'planet') and self.owner.planet:
+            if self.owner.planet.get_trait('solar_radiation', 0.5) > 0.6:
+                return MetabolicProcess.PHOTOSYNTHESIS
+            elif self.owner.planet.get_trait('chemical_energy', 0.3) > 0.7:
+                return MetabolicProcess.CHEMOSYNTHESIS
+        
+        # Fallback
+        return random.choice([
+            MetabolicProcess.PHOTOSYNTHESIS,
+            MetabolicProcess.RESPIRATION,
+            MetabolicProcess.CHEMOSYNTHESIS
+        ])
+    
+    def _generate_symbolic_affinity(self) -> Dict[str, float]:
+        """Generate affinities for different symbolic energy types"""
+        # Base symbolic energy types
+        affinities = {
+            "light": random.uniform(0.1, 0.9),
+            "darkness": random.uniform(0.1, 0.9),
+            "order": random.uniform(0.1, 0.9),
+            "chaos": random.uniform(0.1, 0.9),
+            "creation": random.uniform(0.1, 0.9),
+            "destruction": random.uniform(0.1, 0.9),
+            "transcendence": random.uniform(0.1, 0.9),
+            "immanence": random.uniform(0.1, 0.9),
+            "complexity": random.uniform(0.1, 0.9),
+            "simplicity": random.uniform(0.1, 0.9)
+        }
+        
+        # If owner has motifs, incorporate those into affinities
+        if hasattr(self.owner, 'motifs'):
+            for motif in self.owner.motifs:
+                # Extract key concepts from motif name
+                for symbol in affinities.keys():
+                    if symbol in motif:
+                        affinities[symbol] += 0.2
+        
+        # Normalize to ensure sum is reasonable
+        total = sum(affinities.values())
+        if total > 0:
+            affinities = {k: v / total * len(affinities) for k, v in affinities.items()}
+        
+        return affinities
+    
+    def _initialize_subprocesses(self) -> Dict[str, Dict]:
+        """Initialize recursive metabolic subprocesses"""
+        subprocesses = {}
+        
+        # Create subprocess for each level except the highest
+        for level in range(self.recursion_depth):
+            process_count = 2 + level  # More subprocesses at deeper levels
+            
+            level_processes = {}
+            for i in range(process_count):
+                process_type = random.choice([p for p in MetabolicProcess])
+                
+                # Each subprocess has its own cycle and efficiency
+                level_processes[f"subprocess_{level}_{i}"] = {
+                    "type": process_type,
+                    "efficiency": random.uniform(0.5, 0.9),
+                    "cycle_offset": random.uniform(0, 1.0),
+                    "cycle_length": 6 + random.randint(0, 12),
+                    "input_ratio": random.uniform(0.1, 0.5),
+                    "output_ratio": random.uniform(0.1, 0.5),
+                    "symbolic_ratio": random.uniform(0.2, 0.8),
+                    "byproducts": self._generate_subprocess_byproducts(process_type)
+                }
+                
+        return subprocesses
+    
+    def _generate_subprocess_byproducts(self, process_type: MetabolicProcess) -> Dict[str, float]:
+        """Generate appropriate byproducts for a given metabolic process"""
+        byproducts = {}
+        
+        # Different processes produce different byproducts
+        if process_type == MetabolicProcess.PHOTOSYNTHESIS:
+            byproducts["oxygen"] = random.uniform(0.1, 0.3)
+            byproducts["glucose"] = random.uniform(0.05, 0.15)
+            byproducts["symbolic_light"] = random.uniform(0.01, 0.1) 
+            
+        elif process_type == MetabolicProcess.RESPIRATION:
+            byproducts["carbon_dioxide"] = random.uniform(0.1, 0.3)
+            byproducts["water"] = random.uniform(0.05, 0.15)
+            byproducts["heat"] = random.uniform(0.1, 0.2)
+            
+        elif process_type == MetabolicProcess.CHEMOSYNTHESIS:
+            byproducts["sulfur_compounds"] = random.uniform(0.05, 0.2)
+            byproducts["mineral_deposits"] = random.uniform(0.01, 0.1)
+            
+        elif process_type == MetabolicProcess.RADIOSYNTHESIS:
+            byproducts["radiation_particles"] = random.uniform(0.01, 0.05)
+            byproducts["heavy_elements"] = random.uniform(0.005, 0.02)
+            
+        elif process_type == MetabolicProcess.SYMBOLIC_ABSORPTION:
+            byproducts["meaning_fragments"] = random.uniform(0.1, 0.3)
+            byproducts["pattern_echoes"] = random.uniform(0.05, 0.15)
+            
+        elif process_type == MetabolicProcess.MOTIF_CYCLING:
+            byproducts["motif_residue"] = random.uniform(0.1, 0.2)
+            byproducts["thematic_essence"] = random.uniform(0.05, 0.15)
+            
+        # Add some random byproducts for all processes
+        if random.random() < 0.3:
+            byproducts["quantum_fluctuations"] = random.uniform(0.01, 0.05)
+        if random.random() < 0.2:
+            byproducts["emergent_patterns"] = random.uniform(0.01, 0.08)
+            
+        return byproducts
+    
+    def _initialize_metabolic_motifs(self) -> List[str]:
+        """Initialize motifs associated with this metabolic system"""
+        motifs = []
+        
+        # Add motifs based on primary process
+        if self.primary_process == MetabolicProcess.PHOTOSYNTHESIS:
+            motifs.append("light_transmutation")
+            motifs.append("solar_dependency")
+            
+        elif self.primary_process == MetabolicProcess.RESPIRATION:
+            motifs.append("oxygen_cycle")
+            motifs.append("energy_extraction")
+            
+        elif self.primary_process == MetabolicProcess.CHEMOSYNTHESIS:
+            motifs.append("chemical_alchemy")
+            motifs.append("mineral_digestion")
+            
+        elif self.primary_process == MetabolicProcess.RADIOSYNTHESIS:
+            motifs.append("radiation_harvester")
+            motifs.append("particle_absorption")
+            
+        elif self.primary_process == MetabolicProcess.SYMBOLIC_ABSORPTION:
+            motifs.append("meaning_processor") 
+            motifs.append("pattern_consumer")
+            
+        elif self.primary_process == MetabolicProcess.QUANTUM_ENTANGLEMENT:
+            motifs.append("quantum_harvester")
+            motifs.append("probability_feeder")
+            
+        # Add motifs related to recursion
+        if self.recursion_depth > 3:
+            motifs.append("deep_recursive_metabolism")
+        
+        # Add motifs based on symbolic affinity
+        strongest_affinity = max(self.symbolic_affinity.items(), key=lambda x: x[1])
+        motifs.append(f"{strongest_affinity[0]}_affinity")
+        
+        return motifs
+    
+    def _calculate_input_requirements(self) -> Dict[str, float]:
+        """Calculate resource requirements based on metabolic process"""
+        requirements = {}
+        
+        # Base requirements by process type
+        if self.primary_process == MetabolicProcess.PHOTOSYNTHESIS:
+            requirements["light"] = 1.0
+            requirements["water"] = 0.6
+            requirements["carbon_dioxide"] = 0.4
+            
+        elif self.primary_process == MetabolicProcess.RESPIRATION:
+            requirements["oxygen"] = 0.8
+            requirements["glucose"] = 0.7
+            
+        elif self.primary_process == MetabolicProcess.CHEMOSYNTHESIS:
+            requirements["hydrogen_sulfide"] = 0.6
+            requirements["carbon_dioxide"] = 0.4
+            requirements["minerals"] = 0.5
+            
+        elif self.primary_process == MetabolicProcess.RADIOSYNTHESIS:
+            requirements["radiation"] = 0.8
+            requirements["heavy_elements"] = 0.3
+            
+        elif self.primary_process == MetabolicProcess.SYMBOLIC_ABSORPTION:
+            requirements["meaning_density"] = 0.7
+            requirements["pattern_complexity"] = 0.5
+            
+        elif self.primary_process == MetabolicProcess.MOTIF_CYCLING:
+            requirements["motif_presence"] = 0.9
+            requirements["narrative_flow"] = 0.4
+        
+        # Add symbolic requirements
+        strongest_symbols = sorted(self.symbolic_affinity.items(), key=lambda x: x[1], reverse=True)[:3]
+        for symbol, affinity in strongest_symbols:
+            requirements[f"symbolic_{symbol}"] = affinity * 0.5
+            
+        return requirements
+    
+    def process_cycle(self, environmental_inputs: Dict[str, float], time_delta: float = 1.0) -> Dict[str, Any]:
+        """
+        Process a full metabolic cycle with environmental inputs.
+        
+        Args:
+            environmental_inputs: Dictionary of available resources
+            time_delta: Time progression factor
+            
+        Returns:
+            Dict containing metabolic results, byproducts, and events
+        """
+        # Advance cycle phase
+        phase_increment = time_delta / self.cycle_length
+        self.cycle_phase = (self.cycle_phase + phase_increment) % 1.0
+        
+        # Complete cycles counter
+        if self.cycle_phase < phase_increment:
+            self.cycle_count += 1
+        
+        # Process each level starting from the lowest (most physical)
+        results = {
+            "energy_produced": 0,
+            "symbolic_energy_produced": 0,
+            "byproducts": {},
+            "adaptation_events": [],
+            "efficiency_change": 0,
+            "energy_state": {}
+        }
+        
+        # Run primary and secondary processes at each level
+        for level in range(self.recursion_depth + 1):
+            level_results = self._process_level(level, environmental_inputs, time_delta)
+            
+            # Accumulate results
+            results["energy_produced"] += level_results["physical_energy"]
+            results["symbolic_energy_produced"] += level_results["symbolic_energy"]
+            
+            # Merge byproducts
+            for byproduct, amount in level_results["byproducts"].items():
+                if byproduct in results["byproducts"]:
+                    results["byproducts"][byproduct] += amount
+                else:
+                    results["byproducts"][byproduct] = amount
+            
+            # Add any adaptation events
+            results["adaptation_events"].extend(level_results["adaptation_events"])
+        
+        # Process energy transfer between levels
+        self._transfer_energy_between_levels()
+        
+        # Check for adaptation pressure and possibly evolve
+        adaptation_result = self._check_adaptation(environmental_inputs, time_delta)
+        results["adaptation_events"].extend(adaptation_result["events"])
+        results["efficiency_change"] = adaptation_result["efficiency_change"]
+        
+        # Run symbiotic processes if any exist
+        if self.symbiotic_links:
+            symbiotic_result = self._process_symbiotic_relationships(time_delta)
+            results["symbiotic_energy"] = symbiotic_result["energy"]
+            results["adaptation_events"].extend(symbiotic_result["events"])
+        
+        # Update total stats
+        self.total_energy_produced += results["energy_produced"]
+        
+        # Record current energy state
+        results["energy_state"] = {level: pool.copy() for level, pool in self.energy_pools.items()}
+        
+        return results
+    
+    def _process_level(self, level: int, environmental_inputs: Dict[str, float], time_delta: float) -> Dict[str, Any]:
+        """Process metabolism at a specific recursive level"""
+        level_results = {
+            "physical_energy": 0,
+            "symbolic_energy": 0,
+            "byproducts": {},
+            "adaptation_events": []
+        }
+        
+        # Adjust inputs based on level (higher levels use more symbolic resources)
+        adjusted_inputs = self._adjust_inputs_for_level(environmental_inputs, level)
+        
+        # Calculate current efficiency based on cycle phase
+        phase_efficiency = self._calculate_phase_efficiency(level)
+        
+        # Process primary metabolism
+        primary_result = self._process_single_metabolism(
+
+class Storm:
+    """
+    Represents a weather system that carries symbolic content and affects entities
+    and landscapes within its influence.
+    """
+    
+    def __init__(self, center, storm_type, radius, intensity, symbolic_content):
+        self.center = center
+        self.storm_type = storm_type
+        self.radius = radius
+        self.intensity = intensity
+        self.symbolic_content = symbolic_content
+        self.age = 0
+        self.trajectory = []
+        self.affected_regions = set()
+        self.emotional_signature = self._derive_emotional_signature()
+        self.dissolution_rate = 0.05
+        
+    def update(self, world_state):
+        """Update the storm's position, intensity, and effects."""
+        self.age += 1
+        
+        # Natural dissipation over time
+        self.intensity *= (1 - self.dissolution_rate)
+        
+        # Movement based on prevailing currents
+        self._move(world_state.wind_patterns)
+        
+        # Record the current position in trajectory
+        self.trajectory.append(self.center)
+        
+        # Apply effects to regions within storm radius
+        self._apply_effects(world_state)
+        
+        # Return True if the storm should persist, False if it should dissipate
+        return self.intensity > 0.1
+    
+    def _move(self, wind_patterns):
+        """Move the storm based on prevailing winds."""
+        x, y = self.center
+        
+        # Get wind vector at current position
+        wind_x, wind_y = wind_patterns.get_vector(x, y)
+        
+        # Add some randomness to movement
+        wind_x += (random.random() - 0.5) * 0.5
+        wind_y += (random.random() - 0.5) * 0.5
+        
+        # Scale movement by intensity (stronger storms move faster)
+        movement_scale = 0.5 + (self.intensity * 0.1)
+        
+        # Calculate new position
+        new_x = x + (wind_x * movement_scale)
+        new_y = y + (wind_y * movement_scale)
+        
+        # Ensure within world bounds
+        new_x = max(0, min(new_x, WORLD_SIZE - 1))
+        new_y = max(0, min(new_y, WORLD_SIZE - 1))
+        
+        self.center = (new_x, new_y)
+    
+    def _apply_effects(self, world_state):
+        """Apply the storm's effects to regions within its influence."""
+        x, y = self.center
+        
+        for i in range(max(0, int(x - self.radius)), min(WORLD_SIZE, int(x + self.radius + 1))):
+            for j in range(max(0, int(y - self.radius)), min(WORLD_SIZE, int(y + self.radius + 1))):
+                # Calculate distance from storm center
+                distance = math.sqrt((i - x)**2 + (j - y)**2)
+                
+                if distance <= self.radius:
+                    # Calculate intensity at this point (decreases with distance)
+                    local_intensity = self.intensity * (1 - (distance / self.radius))
+                    
+                    # Record affected region
+                    self.affected_regions.add((i, j))
+                    
+                    # Apply symbolic effects
+                    for symbol, potency in self.symbolic_content.items():
+                        effect_strength = local_intensity * potency
+                        world_state.apply_symbolic_effect((i, j), symbol, effect_strength)
+    
+    def _derive_emotional_signature(self):
+        """Derive the emotional signature based on storm type and content."""
+        base_emotions = {
+            "hurricane": {"fear": 0.8, "awe": 0.7, "transformation": 0.9},
+            "thunderstorm": {"shock": 0.6, "clarity": 0.5, "tension": 0.7},
+            "fog": {"confusion": 0.8, "mystery": 0.9, "introspection": 0.6},
+            "rain": {"melancholy": 0.4, "renewal": 0.7, "calm": 0.5}
+        }
+        
+        # Start with base emotions for this storm type
+        emotional_signature = base_emotions.get(self.storm_type, {})
+        
+        # Modify based on symbolic content
+        for symbol in self.symbolic_content:
+            if "fear" in symbol.lower():
+                emotional_signature["fear"] = emotional_signature.get("fear", 0) + 0.2
+            if "renewal" in symbol.lower():
+                emotional_signature["hope"] = emotional_signature.get("hope", 0) + 0.3
+            if "chaos" in symbol.lower():
+                emotional_signature["confusion"] = emotional_signature.get("confusion", 0) + 0.4
+                
+        return emotional_signature
+
+
+class SeasonalCycle:
+    """
+    Controls the progression of seasonal patterns that affect weather, terrain,
+    and entity behavior throughout the year.
+    """
+    
+    def __init__(self, starting_season="spring", cycle_length=120):
+        """
+        Initialize the seasonal cycle.
+        
+        Args:
+            starting_season (str): The season to start with
+            cycle_length (int): Total time steps in a complete year
+        """
+        self.seasons = ["winter", "spring", "summer", "autumn"]
+        self.season_durations = {
+            "winter": cycle_length // 4,
+            "spring": cycle_length // 4,
+            "summer": cycle_length // 4,
+            "autumn": cycle_length // 4
+        }
+        self.current_season = starting_season
+        self.time_in_season = 0
+        self.cycle_length = cycle_length
+        self.year_count = 0
+        self.seasonal_effects = self._initialize_seasonal_effects()
+        self.transition_thresholds = self._calculate_transition_thresholds()
+        self.seasonal_events = []
+    
+    def advance(self, accelerate=False):
+        """
+        Advances the seasonal cycle by one time step.
+        
+        Args:
+            accelerate (bool): Whether to speed up seasonal progression
+        
+        Returns:
+            bool: True if the season changed, False otherwise
+        """
+        self.time_in_season += 1 + (1 if accelerate else 0)
+        season_changed = False
+        
+        # Check if we need to transition to the next season
+        if self.time_in_season >= self.season_durations[self.current_season]:
+            current_idx = self.seasons.index(self.current_season)
+            next_idx = (current_idx + 1) % len(self.seasons)
+            self.current_season = self.seasons[next_idx]
+            self.time_in_season = 0
+            season_changed = True
+            
+            # Check if we've completed a full year
+            if next_idx == 0:
+                self.year_count += 1
+        
+        # Generate seasonal events
+        if random.random() < 0.1 or season_changed:
+            self._generate_seasonal_event()
+            
+        return season_changed
+    
+    def get_seasonal_modifier(self, aspect):
+        """
+        Gets the modifier for a specific aspect based on current season.
+        
+        Args:
+            aspect (str): The aspect to get a modifier for (e.g., 'temperature')
+            
+        Returns:
+            float: The modifier value
+        """
+        base_modifier = self.seasonal_effects[self.current_season].get(aspect, 1.0)
+        
+        # Calculate where we are in the season (0.0 to 1.0)
+        progress = self.time_in_season / self.season_durations[self.current_season]
+        
+        # Get next season for interpolation
+        current_idx = self.seasons.index(self.current_season)
+        next_idx = (current_idx + 1) % len(self.seasons)
+        next_season = self.seasons[next_idx]
+        
+        # Get modifier for next season
+        next_modifier = self.seasonal_effects[next_season].get(aspect, 1.0)
+        
+        # Smooth transition near season boundaries
+        if progress > 0.8:
+            transition_weight = (progress - 0.8) / 0.2
+            return base_modifier * (1 - transition_weight) + next_modifier * transition_weight
+        else:
+            return base_modifier
+    
+    def get_diffusion_modifier(self):
+        """Returns the seasonal modifier for motif diffusion."""
+        return self.get_seasonal_modifier("diffusion_rate")
+    
+    def get_current_season_info(self):
+        """
+        Returns detailed information about the current season state.
+        
+        Returns:
+            dict: Information about the current seasonal state
+        """
+        progress = self.time_in_season / self.season_durations[self.current_season]
+        
+        return {
+            "season": self.current_season,
+            "progress": progress,
+            "year": self.year_count,
+            "temperature": self.get_seasonal_modifier("temperature"),
+            "precipitation": self.get_seasonal_modifier("precipitation"),
+            "day_length": self.get_seasonal_modifier("day_length"),
+            "growth_rate": self.get_seasonal_modifier("growth_rate"),
+            "active_events": self.seasonal_events
+        }
+    
+    def _initialize_seasonal_effects(self):
+        """Initialize the effects of each season on different aspects."""
+        return {
+            "winter": {
+                "temperature": 0.2,
+                "precipitation": 0.7,
+                "day_length": 0.3,
+                "growth_rate": 0.1,
+                "emotional_intensity": 0.5,
+                "introspection": 0.9,
+                "memory_clarity": 0.7,
+                "diffusion_rate": 0.5
+            },
+            "spring": {
+                "temperature": 0.6,
+                "precipitation": 0.8,
+                "day_length": 0.6,
+                "growth_rate": 1.0,
+                "emotional_intensity": 0.7,
+                "creativity": 0.9,
+                "renewal": 1.0,
+                "diffusion_rate": 0.8
+            },
+            "summer": {
+                "temperature": 1.0,
+                "precipitation": 0.4,
+                "day_length": 1.0,
+                "growth_rate": 0.7,
+                "emotional_intensity": 0.8,
+                "energy": 1.0,
+                "activity": 0.9,
+                "diffusion_rate": 1.0
+            },
+            "autumn": {
+                "temperature": 0.5,
+                "precipitation": 0.6,
+                "day_length": 0.5,
+                "growth_rate": 0.3,
+                "emotional_intensity": 0.9,
+                "reflection": 0.8,
+                "transition": 0.9,
+                "diffusion_rate": 0.7
+            }
+        }
+    
+    def _calculate_transition_thresholds(self):
+        """Calculate the time step thresholds for season transitions."""
+        thresholds = {}
+        cumulative = 0
+        
+        for season in self.seasons:
+            thresholds[season] = cumulative
+            cumulative += self.season_durations[season]
+            
+        return thresholds
+    
+    def _generate_seasonal_event(self):
+        """Generate a random seasonal event appropriate to the current season."""
+        season_events = {
+            "winter": ["frost_ritual", "hibernation_trance", "snow_pattern_emergence", "solstice_inversion"],
+            "spring": ["bloom_cascade", "renewal_surge", "seedling_awakening", "equinox_balance"],
+            "summer": ["solar_intensity_peak", "growth_acceleration", "energy_abundance", "solstice_alignment"],
+            "autumn": ["harvest_culmination", "leaf_transition_wave", "preparation_cycle", "equinox_reflection"]
+        }
+        
+        # Select a random event for this season
+        potential_events = season_events[self.current_season]
+        event = random.choice(potential_events)
+        
+        # Give the event a random duration and intensity
+        duration = random.randint(3, 10)
+        intensity = 0.3 + random.random() * 0.7
+        
+        seasonal_event = {
+            "name": event,
+            "remaining_duration": duration,
+            "intensity": intensity,
+            "effects": self._generate_event_effects(event, intensity)
+        }
+        
+        # Add to active events
+        self.seasonal_events.append(seasonal_event)
+        
+        # Clean up expired events
+        self.seasonal_events = [e for e in self.seasonal_events if e["remaining_duration"] > 0]
+        
+        # Decrease duration for all events
+        for e in self.seasonal_events:
+            e["remaining_duration"] -= 1
+    
+    def _generate_event_effects(self, event_name, intensity):
+        """Generate the effects for a seasonal event."""
+        # Base effects by event category
+        if "frost" in event_name or "snow" in event_name:
+            return {
+                "temperature": -0.2 * intensity,
+                "movement_rate": -0.3 * intensity,
+                "crystallization": 0.5 * intensity
+            }
+        elif "bloom" in event_name or "growth" in event_name:
+            return {
+                "growth_rate": 0.3 * intensity,
+                "diversity": 0.2 * intensity,
+                "vitality": 0.4 * intensity
+            }
+        elif "solstice" in event_name or "equinox" in event_name:
+            return {
+                "symbolic_resonance": 0.5 * intensity,
+                "temporal_fluidity": 0.3 * intensity,
+                "pattern_clarity": 0.4 * intensity
+            }
+        else:
+            return {
+                "emotional_intensity": 0.2 * intensity,
+                "symbolic_flow": 0.3 * intensity,
+                "memory_access": 0.3 * intensity
+            }
+
+
+class CurrentLayer:
+    """
+    Represents a single depth layer in the oceanic current system.
+    """
+    
+    def __init__(self, width, height, depth, velocity_factor=1.0):
+        """
+        Initialize a current layer.
+        
+        Args:
+            width (int): Width of the world
+            height (int): Height of the world
+            depth (float): Depth level of this layer
+            velocity_factor (float): Base speed multiplier for this layer
+        """
+        self.width = width
+        self.height = height
+        self.depth = depth
+        self.velocity_factor = velocity_factor
+        self.current_vectors = np.zeros((width, height, 3))  # (x, y, depth) vectors
+        self.memory_concentration = np.zeros((width, height))
+        self.symbolic_content = {}
+        
+        # Initialize with some basic current patterns
+        self._initialize_current_patterns()
+    
+    def get_current_vector(self, x, y):
+        """Get the current vector at the specified coordinates."""
+        if 0 <= x < self.width and 0 <= y < self.height:
+            return self.current_vectors[int(x), int(y)]
+        return [0, 0, 0]
+    
+    def update_currents(self, temperature_gradients, salinity_map):
+        """
+        Update current vectors based on temperature and salinity.
+        
+        Args:
+            temperature_gradients (ndarray): Temperature distribution
+            salinity_map (ndarray): Salinity distribution
+            
+        Returns:
+            significant_changes (list): Locations with major current changes
+        """
+        significant_changes = []
+        
+        # Calculate pressure gradients from temperature and salinity
+        pressure = temperature_gradients * 0.7 + salinity_map * 0.3
+        
+        # Calculate gradient of pressure field
+        dx, dy = np.gradient(pressure)
+        
+        # Scale gradients by velocity factor
+        dx *= self.velocity_factor
+        dy *= self.velocity_factor
+        
+        # Add some continuity from previous state (currents don't change instantly)
+        prev_dx = self.current_vectors[:, :, 0]
+        prev_dy = self.current_vectors[:, :, 1]
+        
+        new_dx = prev_dx * 0.7 + dx * 0.3
+        new_dy = prev_dy * 0.7 + dy * 0.3
+        
+        # Find significant changes
+        change_magnitude = np.sqrt((new_dx - prev_dx)**2 + (new_dy - prev_dy)**2)
+        significant_points = np.where(change_magnitude > 0.2)
+        for i in range(len(significant_points[0])):
+            x, y = significant_points[0][i], significant_points[1][i]
+            significant_changes.append((x, y, change_magnitude[x, y]))
+        
+        # Update current vectors
+        self.current_vectors[:, :, 0] = new_dx
+        self.current_vectors[:, :, 1] = new_dy
+        
+        # Vertical component is smaller (slower vertical mixing)
+        vert_component = (np.random.random((self.width, self.height)) - 0.5) * 0.1
+        self.current_vectors[:, :, 2] = vert_component
+        
+        return significant_changes
+    
+    def deposit_memory(self, x, y, memory_content, intensity):
+        """
+        Deposit memory content into currents at specified location.
+        
+        Args:
+            x (int): X coordinate
+            y (int): Y coordinate
+            memory_content (dict): Memory information to deposit
+            intensity (float): Strength of the memory imprint
+        """
+        if 0 <= x < self.width and 0 <= y < self.height:
+            self.memory_concentration[int(x), int(y)] += intensity
+            
+            # Create unique identifier for this memory deposit
+            memory_id = str(uuid.uuid4())
+            
+            # Store the memory content
+            self.symbolic_content[memory_id] = {
+                "content": memory_content,
+                "location": (x, y),
+                "intensity": intensity,
+                "deposit_time": 0,  # Will be incremented as time passes
+                "decay_rate": 0.01
+            }
+    
+    def retrieve_memories(self, x, y, radius=3):
+        """
+        Retrieve memories from the specified location within radius.
+        
+        Args:
+            x (int): X coordinate
+            y (int): Y coordinate
+            radius (int): Search radius
+            
+        Returns:
+            memories (list): Memories found in the area
+        """
+        memories = []
+        
+        for memory_id, memory in self.symbolic_content.items():
+            mx, my = memory["location"]
+            distance = math.sqrt((x - mx)**2 + (y - my)**2)
+            
+            if distance <= radius:
+                # Stronger memories are more likely to be retrieved
+                retrieval_chance = memory["intensity"] * (1 - (distance / radius))
+                
+                if random.random() < retrieval_chance:
+                    memories.append(memory["content"])
+        
+        return memories
+    
+    def update_memories(self):
+        """
+        Update stored memories, applying decay and diffusion effects.
+        
+        Returns:
+            forgotten_memories (list): Memories that have faded away
+        """
+        forgotten_memories = []
+        memories_to_remove = []
+        
+        # Process each memory
+        for memory_id, memory in self.symbolic_content.items():
+            # Increment age
+            memory["deposit_time"] += 1
+            
+            # Apply decay
+            memory["intensity"] *= (1 - memory["decay_rate"])
+            
+            # If intensity drops too low, mark for removal
+            if memory["intensity"] < 0.1:
+                memories_to_remove.append(memory_id)
+                forgotten_memories.append(memory["content"])
+                
+            # Apply diffusion (memories slowly drift with currents)
+            x, y = memory["location"]
+            vector = self.get_current_vector(x, y)
+            
+            new_x = x + vector[0] * 0.1
+            new_y = y + vector[1] * 0.1
+            
+            # Keep within bounds
+            new_x = max(0, min(new_x, self.width - 1))
+            new_y = max(0, min(new_y, self.height - 1))
+            
+            memory["location"] = (new_x, new_y)
+        
+        # Remove forgotten memories
+        for memory_id in memories_to_remove:
+            del self.symbolic_content[memory_id]
+            
+        return forgotten_memories
+    
+    def _initialize_current_patterns(self):
+        """Initialize basic current patterns."""
+        # Create several circular current patterns (gyres)
+        for _ in range(3):
+            center_x = random.randint(0, self.width - 1)
+            center_y = random.randint(0, self.height - 1)
+            radius = random.randint(30, 100)
+            clockwise = random.choice([True, False])
+            
+            self._create_circular_current(center_x, center_y, radius, clockwise)
+            
+        # Add some linear currents
+        for _ in range(2):
+            start_y = random.randint(0, self.height - 1)
+            width = random.randint(20, 50)
+            direction = 1 if random.random() > 0.5 else -1
+            
+            self._create_linear_current(start_y, width, direction)
+    
+    def _create_circular_current(self, center_x, center_y, radius, clockwise):
+        """Create a circular current pattern (gyre)."""
+        direction = 1 if clockwise else -1
+        
+        for x in range(max(0, center_x - radius), min(self.width, center_x + radius + 1)):
+            for y in range(max(0, center_y - radius), min(self.height, center_y + radius + 1)):
+                dx = x - center_x
+                dy = y - center_y
+                distance = math.sqrt(dx**2 + dy**2)
+                
+                if distance <= radius:
+                    # Create circular flow
+                    strength = 1 - (distance / radius)  # Stronger near center
+                    
+                    # Calculate tangential vector components
+                    angle = math.atan2(dy, dx) + (math.pi / 2 * direction)
+                    flow_x = math.cos(angle) * strength * self.velocity_factor
+                    flow_y = math.sin(angle) * strength * self.velocity_factor
+                    
+                    self.current_vectors[x, y, 0] = flow_x
+                    self.current_vectors[x, y, 1] = flow_y
+    
+    def _create_linear_current(self, start_y, width, direction):
+        """Create a linear current flowing across the map."""
+        for y in range(max(0, start_y - width // 2), min(self.height, start_y + width // 2 + 1)):
+            for x in range(self.width):
+                # Distance from center of the current
+                dist_from_center = abs(y - start_y)
+                
+                if dist_from_center <= width // 2:
+                    # Strength based on distance from center (strongest at center)
+                    strength = 1 - (dist_from_center / (width / 2))
+                    
+                    # Set horizontal flow
+                    self.current_vectors[x, y, 0] = direction * strength * self.velocity_factor
+
+
+class ThermohalineCirculation:
+    """
+    Simulates the global circulation of ocean currents driven by temperature
+    and salinity differences.
+    """
+    
+    def __init__(self, world_geometry):
+        """
+        Initialize the thermohaline circulation system.
+        
+        Args:
+            world_geometry (WorldGeometry): Physical shape of the world
+        """
+        self.world_geometry = world_geometry
+        self.conveyor_belt = self._initialize_conveyor_belt()
+        self.upwelling_zones = self._initialize_upwelling_zones()
+        self.downwelling_zones = self._initialize_downwelling_zones()
+        self.circulation_strength = 1.0
+        self.memory_transport_rate = 0.3
+        self.symbolic_payload = {}
+    
+    def update(self, temperature_gradients, salinity_map):
+        """
+        Update the thermohaline circulation based on temperature and salinity.
+        
+        Args:
+            temperature_gradients (ndarray): Temperature distribution
+            salinity_map (ndarray): Salinity distribution
+            
+        Returns:
+            circulation_events (list): Significant events in the circulation
+        """
+        circulation_events = []
+        
+        # Calculate driving forces for circulation
+        driving_force = self._calculate_driving_force(temperature_gradients, salinity_map)
+        
+        # Update circulation strength based on driving force
+        old_strength = self.circulation_strength
+        self.circulation_strength = old_strength * 0.9 + driving_force * 0.1
+        
+        # Detect significant changes in circulation
+        if abs(self.circulation_strength - old_strength) > 0.2:
+            circulation_events.append({
+                "type": "circulation_shift",
+                "magnitude": abs(self.circulation_strength - old_strength),
+                "direction": "strengthening" if self.circulation_strength > old_strength else "weakening"
+            })
+        
+        # Update conveyor belt positions based on new strength
+        self._update_conveyor_belt()
+        
+        # Process memory transport along the conveyor
+        memory_events = self._process_memory_transport()
+        circulation_events.extend(memory_events)
+        
+        # Update upwelling and downwelling zones
+        upwelling_events = self._update_upwelling_zones()
+        circulation_events.extend(upwelling_events)
+        
+        downwelling_events = self._update_downwelling_zones()
+        circulation_events.extend(downwelling_events)
+        
+        return circulation_events
+    
+    def add_memory_payload(self, location, memory_content, intensity):
+        """
+        Add memory content to be transported by the circulation.
+        
+        Args:
+            location (tuple): (x, y) coordinates where memory enters circulation
+            memory_content (dict): The memory data to transport
+            intensity (float): Strength of the memory imprint
+            
+        Returns:
+            bool: True if successfully added, False otherwise
+        """
+        # Find nearest point on conveyor belt
+        nearest_point, nearest_idx = self._find_nearest_conveyor_point(location)
+        
+        if nearest_point is not None:
+            # Calculate distance to conveyor
+            distance = math.sqrt((location[0] - nearest_point[0])**2 + 
+                               (location[1] - nearest_point[1])**2)
+            
+            # Only add if close enough to conveyor
+            if distance < 20:
+                memory_id = str(uuid.uuid4())
+                
+                self.symbolic_payload[memory_id] = {
+                    "content": memory_content,
+                    "intensity": intensity * (1 - distance/20),  # Weaken with distance
+                    "position": nearest_idx,  # Position along conveyor belt
+                    "depth": 0,  # Surface level initially
+                    "age": 0
+                }
+                return True
+                
+        return False
+    
+    def get_surface_currents(self):
+        """
+        Get the surface current vectors for the entire world.
+        
+        Returns:
+            surface_currents (ndarray): Array of (x, y) current vectors
+        """
+        surface_currents = np.zeros((self.world_geometry.width, self.world_geometry.height, 2))
+        
+        # Add conveyor belt influence
+        for i in range(len(self.conveyor_belt) - 1):
+            p1 = self.conveyor_belt[i]
+            p2 = self.conveyor_belt[(i + 1) % len(self.conveyor_belt)]
+            
+            # Direction vector
+            dx = p2[0] - p1[0]
+            dy = p2[1] - p1[1]
+            length = math.sqrt(dx**2 + dy**2)
+            
+            if length > 0:
+                dx /= length
+                dy /= length
+                
+                # Influence nearby points
+                for radius in range(1, 20):
+                    influence = max(0, (20 - radius) / 20) * self.circulation_strength
+                    
+                    for angle in range(0, 360, 10):
+                        rad = math.radians(angle)
+                        cx = int(p1[0] + radius * math.cos(rad))
+                        cy = int(p1[1] + radius * math.sin(rad))
+                        
+                        if 0 <= cx < self.world_geometry.width and 0 <= cy < self.world_geometry.height:
+                            surface_currents[cx, cy, 0] += dx * influence
+                            surface_currents[cx, cy, 1] += dy * influence
+        
+        return surface_currents
+    
+    def _calculate_driving_force(self, temperature_gradients, salinity_map):
+        """Calculate the driving force for thermohaline circulation."""
+        # Sample points in upwelling and downwelling zones
+        upwelling_temps = []
+        upwelling_salinity = []
+        downwelling_temps = []
+        downwelling_salinity = []
+        
+        for point in self.upwelling_zones:
+            x, y = int(point[0]), int(point[1])
+            if 0 <= x < self.world_geometry.width and 0 <= y < self.world_geometry.height:
+                upwelling_temps.append(temperature_gradients[x, y])
+                upwelling_salinity.append(salinity_map[x, y])
+        
+        for point in self.downwelling_zones:
+            x, y = int(point[0]), int(point[1])
+            if 0 <= x < self.world_geometry.width and 0 <= y < self.world_geometry.height:
+                downwelling_temps.append(temperature_gradients[x, y])
+                downwelling_salinity.append(salinity_map[x, y])
+        
+        # Calculate average temperature and salinity differences
+        if upwelling_temps and downwelling_temps:
+            avg_upwelling_temp = sum(upwelling_temps) / len(upwelling_temps)
+            avg_upwelling_salinity = sum(upwelling_salinity) / len(upwelling_salinity)
+            
+            avg_downwelling_temp = sum(downwelling_temps) / len(downwelling_temps)
+            avg_downwelling_salinity = sum(downwelling_salinity) / len(downwelling_salinity)
+            
+            # Temperature and salinity differences drive circulation
+            temp_diff = abs(avg_downwelling_temp - avg_upwelling_temp)
+            salinity_diff = abs(avg_downwelling_salinity - avg_upwelling_salinity)
+            
+            # Combine factors (both temperature and salinity differences are important)
+            driving_force = 0.5 + ((temp_diff * 0.7 + salinity_diff * 0.3) / 2)
+            
+            return driving_force
+        
+        return 1.0  # Default
+    
+    def _initialize_conveyor_belt(self):
+        """Initialize the path of the global conveyor belt."""
+        width, height = self.world_geometry.width, self.world_geometry.height
+        
+        # Create a simple loop around the world
+        conveyor_belt = []
+        
+        # Top edge
+        for x in range(0, width, 10):
+            conveyor_belt.append((x,
+            # Continue from where ThermohalineCirculation left off
+
+        # Look for a suitable point along the conveyor belt
+        min_distance = float('inf')
+        nearest_point = None
+        nearest_idx = None
+        
+        for i, point in enumerate(self.conveyor_belt):
+            distance = math.sqrt((location[0] - point[0])**2 + (location[1] - point[1])**2)
+            if distance < min_distance:
+                min_distance = distance
+                nearest_point = point
+                nearest_idx = i
+        
+        return nearest_point, nearest_idx
+    
+    def _process_memory_transport(self):
+        """Process the transport of memories along the conveyor belt."""
+        memory_events = []
+        memories_to_remove = []
+        
+        # Process each memory in the payload
+        for memory_id, memory in self.symbolic_payload.items():
+            # Age the memory
+            memory["age"] += 1
+            
+            # Move along conveyor belt
+            belt_length = len(self.conveyor_belt)
+            movement_rate = self.memory_transport_rate * self.circulation_strength
+            new_position = (memory["position"] + movement_rate) % belt_length
+            memory["position"] = new_position
+            
+            # Integer position for accessing conveyor belt
+            idx = int(memory["position"])
+            
+            # Check if memory passes through upwelling or downwelling zone
+            current_location = self.conveyor_belt[idx % belt_length]
+            
+            for upwell in self.upwelling_zones:
+                if self._point_distance(current_location, upwell) < 10:
+                    # Memory moves upward
+                    memory["depth"] = max(0, memory["depth"] - 0.2)
+                    
+                    # If reaches surface, create event
+                    if memory["depth"] < 0.1 and memory["depth"] > 0:
+                        memory_events.append({
+                            "type": "memory_resurface",
+                            "location": current_location,
+                            "content": memory["content"],
+                            "intensity": memory["intensity"]
+                        })
+                        memory["depth"] = 0
+            
+            for downwell in self.downwelling_zones:
+                if self._point_distance(current_location, downwell) < 10:
+                    # Memory moves downward
+                    memory["depth"] += 0.2
+                    
+                    # If goes deep enough, create event
+                    if memory["depth"] > 0.9 and memory["depth"] < 1.1:
+                        memory_events.append({
+                            "type": "memory_descent",
+                            "location": current_location,
+                            "content": memory["content"],
+                            "intensity": memory["intensity"]
+                        })
+            
+            # Decay intensity over time
+            memory["intensity"] *= (0.997)  # Very slow decay
+            
+            # Remove if too weak
+            if memory["intensity"] < 0.1:
+                memories_to_remove.append(memory_id)
+                memory_events.append({
+                    "type": "memory_dissolution",
+                    "location": self.conveyor_belt[idx % belt_length],
+                    "content": memory["content"]
+                })
+        
+        # Remove decayed memories
+        for memory_id in memories_to_remove:
+            del self.symbolic_payload[memory_id]
+            
+        return memory_events
+    
+    def _update_conveyor_belt(self):
+        """Update the conveyor belt path based on circulation strength."""
+        # Adjust the path slightly based on circulation strength
+        for i in range(len(self.conveyor_belt)):
+            # Add some random drift
+            drift_x = (random.random() - 0.5) * 0.5
+            drift_y = (random.random() - 0.5) * 0.5
+            
+            # Stronger circulation means less drift
+            drift_factor = max(0.1, 1 - self.circulation_strength)
+            
+            x, y = self.conveyor_belt[i]
+            x += drift_x * drift_factor
+            y += drift_y * drift_factor
+            
+            # Keep within world bounds
+            x = max(0, min(x, self.world_geometry.width - 1))
+            y = max(0, min(y, self.world_geometry.height - 1))
+            
+            self.conveyor_belt[i] = (x, y)
+    
+    def _initialize_upwelling_zones(self):
+        """Initialize the upwelling zones where deep water rises."""
+        width, height = self.world_geometry.width, self.world_geometry.height
+        upwelling_zones = []
+        
+        # Create several upwelling zones
+        for _ in range(5):
+            x = random.randint(0, width - 1)
+            y = random.randint(0, height - 1)
+            upwelling_zones.append((x, y))
+        
+        return upwelling_zones
+    
+    def _initialize_downwelling_zones(self):
+        """Initialize the downwelling zones where surface water sinks."""
+        width, height = self.world_geometry.width, self.world_geometry.height
+        downwelling_zones = []
+        
+        # Create several downwelling zones
+        for _ in range(5):
+            x = random.randint(0, width - 1)
+            y = random.randint(0, height - 1)
+            downwelling_zones.append((x, y))
+        
+        return downwelling_zones
+    
+    def _update_upwelling_zones(self):
+        """Update the upwelling zones and process their effects."""
+        events = []
+        
+        for i, point in enumerate(self.upwelling_zones):
+            # Random drift
+            x, y = point
+            x += (random.random() - 0.5) * 0.5
+            y += (random.random() - 0.5) * 0.5
+            
+            # Keep within bounds
+            x = max(0, min(x, self.world_geometry.width - 1))
+            y = max(0, min(y, self.world_geometry.height - 1))
+            
+            self.upwelling_zones[i] = (x, y)
+            
+            # Occasionally generate symbolic emergence events
+            if random.random() < 0.05 * self.circulation_strength:
+                # Find memories in the vicinity that might surface
+                nearby_memories = []
+                
+                for memory_id, memory in self.symbolic_payload.items():
+                    idx = int(memory["position"])
+                    memory_location = self.conveyor_belt[idx % len(self.conveyor_belt)]
+                    distance = self._point_distance(memory_location, (x, y))
+                    
+                    if distance < 20 and memory["depth"] > 0.5:
+                        nearby_memories.append(memory)
+                
+                if nearby_memories:
+                    # Select one memory to surface
+                    selected_memory = random.choice(nearby_memories)
+                    
+                    events.append({
+                        "type": "memory_emergence",
+                        "location": (x, y),
+                        "content": selected_memory["content"],
+                        "intensity": selected_memory["intensity"] * self.circulation_strength
+                    })
+        
+        return events
+    
+    def _update_downwelling_zones(self):
+        """Update the downwelling zones and process their effects."""
+        events = []
+        
+        for i, point in enumerate(self.downwelling_zones):
+            # Random drift
+            x, y = point
+            x += (random.random() - 0.5) * 0.5
+            y += (random.random() - 0.5) * 0.5
+            
+            # Keep within bounds
+            x = max(0, min(x, self.world_geometry.width - 1))
+            y = max(0, min(y, self.world_geometry.height - 1))
+            
+            self.downwelling_zones[i] = (x, y)
+            
+            # Occasionally generate memory archiving events
+            if random.random() < 0.03 * self.circulation_strength:
+                events.append({
+                    "type": "memory_archiving",
+                    "location": (x, y),
+                    "depth_increase": 0.3 * self.circulation_strength
+                })
+        
+        return events
+    
+    def _point_distance(self, p1, p2):
+        """Calculate Euclidean distance between two points."""
+        return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+
+
+class WindPattern:
+    """
+    Represents atmospheric wind patterns that affect weather, entity movement,
+    and the diffusion of motifs and thematic elements.
+    """
+    
+    def __init__(self, width, height):
+        """
+        Initialize the wind pattern system.
+        
+        Args:
+            width (int): Width of the world
+            height (int): Height of the world
+        """
+        self.width = width
+        self.height = height
+        self.vector_field = np.zeros((width, height, 2))  # x, y components
+        self.pressure_systems = []
+        self.prevailing_direction = (1, 0)  # Default east
+        self.turbulence = 0.3
+        self.seasonal_modifier = 1.0
+        
+        # Initialize with basic patterns
+        self._initialize_basic_patterns()
+    
+    def update(self, temperature_map, terrain_height_map, seasonal_modifier):
+        """
+        Update wind patterns based on temperature, terrain, and season.
+        
+        Args:
+            temperature_map (ndarray): Temperature distribution
+            terrain_height_map (ndarray): Terrain elevation
+            seasonal_modifier (float): Seasonal influence factor
+            
+        Returns:
+            wind_events (list): Significant wind events
+        """
+        wind_events = []
+        self.seasonal_modifier = seasonal_modifier
+        
+        # Update pressure systems
+        self._update_pressure_systems(temperature_map)
+        
+        # Calculate new wind vectors
+        new_vector_field = np.zeros_like(self.vector_field)
+        
+        # Add influence from prevailing winds
+        self._add_prevailing_wind(new_vector_field)
+        
+        # Add influence from pressure systems
+        self._add_pressure_system_influence(new_vector_field)
+        
+        # Add terrain effects
+        self._add_terrain_effects(new_vector_field, terrain_height_map)
+        
+        # Add turbulence
+        self._add_turbulence(new_vector_field)
+        
+        # Smooth transitions from previous state
+        self._smooth_transition(new_vector_field)
+        
+        # Detect significant changes
+        wind_events = self._detect_wind_events()
+        
+        return wind_events
+    
+    def get_vector(self, x, y):
+        """Get wind vector at the specified location."""
+        if 0 <= x < self.width and 0 <= y < self.height:
+            return self.vector_field[int(x), int(y)]
+        return np.array([0, 0])
+    
+    def add_pressure_system(self, center, radius, is_high_pressure, intensity):
+        """
+        Add a new pressure system to the wind patterns.
+        
+        Args:
+            center (tuple): (x, y) center of the pressure system
+            radius (float): Radius of influence
+            is_high_pressure (bool): True for high pressure, False for low pressure
+            intensity (float): Strength of the pressure system
+        """
+        self.pressure_systems.append({
+            "center": center,
+            "radius": radius,
+            "is_high_pressure": is_high_pressure,
+            "intensity": intensity,
+            "age": 0,
+            "max_age": random.randint(20, 50)
+        })
+    
+    def _initialize_basic_patterns(self):
+        """Initialize basic wind patterns."""
+        # Set prevailing wind direction
+        angle = random.uniform(0, 2 * math.pi)
+        self.prevailing_direction = (math.cos(angle), math.sin(angle))
+        
+        # Add basic prevailing wind
+        self._add_prevailing_wind(self.vector_field)
+        
+        # Add some initial pressure systems
+        for _ in range(3):
+            x = random.randint(0, self.width - 1)
+            y = random.randint(0, self.height - 1)
+            radius = random.randint(30, 100)
+            is_high = random.choice([True, False])
+            intensity = random.uniform(0.3, 0.8)
+            
+            self.add_pressure_system((x, y), radius, is_high, intensity)
+            
+        # Add influence from initial pressure systems
+        self._add_pressure_system_influence(self.vector_field)
+    
+    def _add_prevailing_wind(self, vector_field):
+        """Add prevailing wind component to vector field."""
+        dx, dy = self.prevailing_direction
+        strength = 0.5 * self.seasonal_modifier
+        
+        for x in range(self.width):
+            for y in range(self.height):
+                vector_field[x, y, 0] += dx * strength
+                vector_field[x, y, 1] += dy * strength
+    
+    def _add_pressure_system_influence(self, vector_field):
+        """Add influence from pressure systems."""
+        for system in self.pressure_systems:
+            center_x, center_y = system["center"]
+            radius = system["radius"]
+            is_high = system["is_high_pressure"]
+            intensity = system["intensity"]
+            
+            # Determine influence range
+            min_x = max(0, int(center_x - radius))
+            max_x = min(self.width, int(center_x + radius + 1))
+            min_y = max(0, int(center_y - radius))
+            max_y = min(self.height, int(center_y + radius + 1))
+            
+            for x in range(min_x, max_x):
+                for y in range(min_y, max_y):
+                    dx = x - center_x
+                    dy = y - center_y
+                    distance = math.sqrt(dx**2 + dy**2)
+                    
+                    if distance <= radius:
+                        # Calculate influence strength
+                        strength = intensity * (1 - (distance / radius))
+                        
+                        # Direction depends on pressure type
+                        if is_high:
+                            # High pressure: outward
+                            if distance > 0:  # Avoid division by zero
+                                norm = distance
+                                vector_field[x, y, 0] += (dx / norm) * strength
+                                vector_field[x, y, 1] += (dy / norm) * strength
+                        else:
+                            # Low pressure: inward
+                            if distance > 0:  # Avoid division by zero
+                                norm = distance
+                                vector_field[x, y, 0] -= (dx / norm) * strength
+                                vector_field[x, y, 1] -= (dy / norm) * strength
+    
+    def _add_terrain_effects(self, vector_field, terrain_height_map):
+        """Add terrain influences on wind patterns."""
+        # Calculate terrain gradient
+        gradient_x, gradient_y = np.gradient(terrain_height_map)
+        
+        for x in range(self.width):
+            for y in range(self.height):
+                # Stronger winds get diverted by terrain more
+                terrain_influence = min(1.0, terrain_height_map[x, y])
+                
+                # Add terrain channeling effect
+                channel_strength = 0.3 * terrain_influence
+                vector_field[x, y, 0] -= gradient_x[x, y] * channel_strength
+                vector_field[x, y, 1] -= gradient_y[x, y] * channel_strength
+    
+    def _add_turbulence(self, vector_field):
+        """Add random turbulence to wind patterns."""
+        turbulence_strength = self.turbulence * self.seasonal_modifier
+        
+        for x in range(self.width):
+            for y in range(self.height):
+                vector_field[x, y, 0] += (random.random() - 0.5) * turbulence_strength
+                vector_field[x, y, 1] += (random.random() - 0.5) * turbulence_strength
+    
+    def _smooth_transition(self, new_vector_field):
+        """Smooth transition between previous and new wind vectors."""
+        # Blend old and new
+        self.vector_field = self.vector_field * 0.7 + new_vector_field * 0.3
+    
+    def _update_pressure_systems(self, temperature_map):
+        """Update pressure systems based on temperature and age."""
+        systems_to_remove = []
+        
+        for i, system in enumerate(self.pressure_systems):
+            # Age the system
+            system["age"] += 1
+            
+            # Update intensity based on age
+            life_fraction = system["age"] / system["max_age"]
+            if life_fraction < 0.2:
+                # Intensifying
+                system["intensity"] = min(1.0, system["intensity"] * 1.05)
+            elif life_fraction > 0.8:
+                # Weakening
+                system["intensity"] *= 0.95
+                
+            # Move the system
+            cx, cy = system["center"]
+            
+            # Movement depends on pressure type and prevailing winds
+            dx, dy = self.prevailing_direction
+            
+            # High pressure systems tend to move with prevailing winds
+            # Low pressure systems have more complex movement
+            if system["is_high_pressure"]:
+                move_x = dx * 0.3 + (random.random() - 0.5) * 0.2
+                move_y = dy * 0.3 + (random.random() - 0.5) * 0.2
+            else:
+                move_x = dx * 0.2 + (random.random() - 0.5) * 0.4
+                move_y = dy * 0.2 + (random.random() - 0.5) * 0.4
+            
+            cx += move_x
+            cy += move_y
+            
+            # Keep within bounds
+            cx = max(0, min(cx, self.width - 1))
+            cy = max(0, min(cy, self.height - 1))
+            
+            system["center"] = (cx, cy)
+            
+            # Remove if too old
+            if system["age"] >= system["max_age"]:
+                systems_to_remove.append(i)
+        
+        # Remove old systems
+        for idx in sorted(systems_to_remove, reverse=True):
+            self.pressure_systems.pop(idx)
+            
+        # Randomly generate new systems
+        if random.random() < 0.05 and len(self.pressure_systems) < 8:
+            x = random.randint(0, self.width - 1)
+            y = random.randint(0, self.height - 1)
+            radius = random.randint(30, 100)
+            is_high = random.choice([True, False])
+            
+            # Temperature influences pressure system type
+            if 0 <= x < self.width and 0 <= y < self.height:
+                local_temp = temperature_map[x, y]
+                # Higher chance of high pressure in cold areas
+                if local_temp < 0.5 and random.random() < 0.7:
+                    is_high = True
+                # Higher chance of low pressure in warm areas
+                elif local_temp > 0.5 and random.random() < 0.7:
+                    is_high = False
+            
+            intensity = random.uniform(0.3, 0.8)
+            self.add_pressure_system((x, y), radius, is_high, intensity)
+    
+    def _detect_wind_events(self):
+        """Detect significant wind events based on patterns."""
+        wind_events = []
+        
+        # Look for circular patterns (potential cyclones)
+        for system in self.pressure_systems:
+            if not system["is_high_pressure"] and system["intensity"] > 0.7:
+                wind_events.append({
+                    "type": "cyclone",
+                    "location": system["center"],
+                    "intensity": system["intensity"],
+                    "radius": system["radius"]
+                })
+            elif system["is_high_pressure"] and system["intensity"] > 0.8:
+                wind_events.append({
+                    "type": "anticyclone",
+                    "location": system["center"],
+                    "intensity": system["intensity"],
+                    "radius": system["radius"]
+                })
+        
+        # Look for strong directional flows (jet streams)
+        max_flow = 0
+        max_flow_location = None
+        max_flow_direction = None
+        
+        sample_points = 100
+        for _ in range(sample_points):
+            x = random.randint(0, self.width - 1)
+            y = random.randint(0, self.height - 1)
+            
+            vx, vy = self.vector_field[x, y]
+            magnitude = math.sqrt(vx**2 + vy**2)
+            
+            if magnitude > max_flow:
+                max_flow = magnitude
+                max_flow_location = (x, y)
+                max_flow_direction = (vx, vy)
+        
+        if max_flow > 1.5:
+            wind_events.append({
+                "type": "jet_stream",
+                "location": max_flow_location,
+                "intensity": max_flow,
+                "direction": max_flow_direction
+            })
+        
+        return wind_events
+
+
+class ClimateZone:
+    """
+    Represents a distinct climatic region with characteristic weather patterns,
+    seasonal variations, and symbolic associations.
+    """
+    
+    def __init__(self, center, radius, climate_type, intensity=1.0):
+        """
+        Initialize a climate zone.
+        
+        Args:
+            center (tuple): (x, y) center coordinates
+            radius (float): Radius of influence
+            climate_type (str): Type of climate (desert, tundra, etc.)
+            intensity (float): Strength of climate influence
+        """
+        self.center = center
+        self.radius = radius
+        self.climate_type = climate_type
+        self.intensity = intensity
+        self.seasonal_variations = self._initialize_seasonal_variations()
+        self.symbolic_associations = self._initialize_symbolic_associations()
+        self.weather_tendencies = self._initialize_weather_tendencies()
+        self.boundary_blending = 20  # Width of transition zone
+    
+    def get_influence(self, position):
+        """
+        Calculate the influence of this climate zone at the given position.
+        
+        Args:
+            position (tuple): (x, y) coordinates to check
+            
+        Returns:
+            influence (float): Strength of influence (0-1)
+            climate_data (dict): Climate effects at this position
+        """
+        x, y = position
+        cx, cy = self.center
+        
+        distance = math.sqrt((x - cx)**2 + (y - cy)**2)
+        
+        # No influence beyond radius + blending zone
+        if distance > self.radius + self.boundary_blending:
+            return 0, {}
+        
+        # Full influence within core radius
+        if distance <= self.radius:
+            influence = self.intensity
+        else:
+            # Linear falloff in blending zone
+            blend_distance = distance - self.radius
+            influence = self.intensity * (1 - (blend_distance / self.boundary_blending))
+        
+        # Get climate data modified by distance from center
+        climate_data = {
+            "type": self.climate_type,
+            "temperature_modifier": self._get_temperature_modifier() * influence,
+            "precipitation_modifier": self._get_precipitation_modifier() * influence,
+            "symbolic_elements": self._get_scaled_symbolic_elements(influence),
+            "weather_bias": self._get_scaled_weather_bias(influence)
+        }
+        
+        return influence, climate_data
+    
+    def update_seasonal_state(self, current_season, progress):
+        """
+        Update the climate zone's state based on seasonal changes.
+        
+        Args:
+            current_season (str): The current season
+            progress (float): Progress through the current season (0-1)
+        """
+        # Adjust intensity based on seasonal alignment
+        seasonal_alignment = self.seasonal_variations.get(current_season, {}).get("intensity_modifier", 1.0)
+        self.intensity = min(1.0, self.intensity * 0.9 + seasonal_alignment * 0.1)
+        
+        # Some climate zones may expand or contract seasonally
+        radius_modifier = self.seasonal_variations.get(current_season, {}).get("radius_modifier", 1.0)
+        self.radius *= 0.95  # Slight contraction by default
+        self.radius = min(100, max(30, self.radius * radius_modifier))
+    
+    def _get_temperature_modifier(self):
+        """Get the temperature modifier for this climate."""
+        base_modifiers = {
+            "desert": 1.5,
+            "tundra": -1.0,
+            "temperate": 0.0,
+            "tropical": 1.0,
+            "arctic": -1.5,
+            "oceanic": -0.3
+        }
+        
+        return base_modifiers.get(self.climate_type, 0.0)
+    
+    def _get_precipitation_modifier(self):
+        """Get the precipitation modifier for this climate."""
+        base_modifiers = {
+            "desert": -0.8,
+            "tundra": -0.2,
+            "temperate": 0.2,
+            "tropical": 0.8,
+            "arctic": -0.5,
+            "oceanic": 0.5
+        }
+        
+        return base_modifiers.get(self.climate_type, 0.0)
+    
+    def _get_scaled_symbolic_elements(self, influence):
+        """Get symbolic elements scaled by influence strength."""
+        scaled_elements = {}
+        
+        for symbol, value in self.symbolic_associations.items():
+            scaled_elements[symbol] = value * influence
+            
+        return scaled_elements
+    
+    def _get_scaled_weather_bias(self, influence):
+        """Get weather tendencies scaled by influence strength."""
+        scaled_bias = {}
+        
+        for weather, bias in self.weather_tendencies.items():
+            scaled_bias[weather] = bias * influence
+            
+        return scaled_bias
+    
+    def _initialize_seasonal_variations(self):
+        """Initialize seasonal variations for this climate type."""
+        if self.climate_type == "desert":
+            return {
+                "winter": {"intensity_modifier": 0.9, "radius_modifier": 0.95},
+                "spring": {"intensity_modifier": 1.0, "radius_modifier": 1.05},
+                "summer": {"intensity_modifier": 1.2, "radius_modifier": 1.1},
+                "autumn": {"intensity_modifier": 1.0, "radius_modifier": 1.0}
+            }
+        elif self.climate_type == "tundra":
+            return {
+                "winter": {"intensity_modifier": 1.2, "radius_modifier": 1.1},
+                "spring": {"intensity_modifier": 0.9, "radius_modifier": 0.9},
+                "summer": {"intensity_modifier": 0.7, "radius_modifier": 0.8},
+                "autumn": {"intensity_modifier": 1.0, "radius_modifier": 1.0}
+            }
+        elif self.climate_type == "temperate":
+            return {
+                "winter": {"intensity_modifier": 0.8, "radius_modifier": 0.9},
+                "spring": {"intensity_modifier": 1.1, "radius_modifier": 1.0},
+                "summer": {"intensity_modifier": 1.0, "radius_modifier": 1.0},
+                "autumn": {"intensity_modifier": 1.1, "radius_modifier": 1.0}
+            }
+        elif self.climate_type == "tropical":
+            return {
+                "winter": {"intensity_modifier": 0.9, "radius_modifier": 0.95},
+                "spring": {"intensity_modifier": 1.0, "radius_modifier": 1.0},
+                "summer": {"intensity_modifier": 1.1, "radius_modifier": 1.05},
+                "autumn": {"intensity_modifier": 1.0, "radius_modifier": 1.0}
+            }
+        elif self.climate_type == "arctic":
+            return {
+                "winter": {"intensity_modifier": 1.3, "radius_modifier": 1.2},
+                "spring": {"intensity_modifier": 1.0, "radius_modifier": 0.9},
+                "summer": {"intensity_modifier": 0.6, "radius_modifier": 0.7},
+                "autumn": {"intensity_modifier": 0.9, "radius_modifier": 0.95}
+            }
+        elif self.climate_type == "oceanic":
+            return {
+                "winter": {"intensity_modifier": 1.1, "radius_modifier": 1.05},
+                "spring": {"intensity_modifier": 1.0, "radius_modifier": 1.0},
+                "summer": {"intensity_modifier": 0.9, "radius_modifier": 0.95},
+                "autumn": {"intensity_modifier": 1.0, "radius_modifier": 1.0}
+            }
+        else:
+            return {
+                "winter": {"intensity_modifier": 1.0, "radius_modifier": 1.0},
+                "spring": {"intensity_modifier": 1.0, "radius_modifier": 1.0},
+                "summer": {"intensity_modifier": 1.0, "radius_modifier": 1.0},
+                "autumn": {"intensity_modifier": 1.0, "radius_modifier": 1.0}
+            }
+    
+    def _initialize_symbolic_associations(self):
+        """Initialize symbolic associations for this climate type."""
+        if self.climate_type == "desert":
+            return {
+                "isolation": 0.8,
+                "endurance": 0.9,
+                "clarity": 0.7,
+                "timelessness": 0.8,
+                "transformation": 0.6
+            }
+        elif self.climate_type == "tundra":
+            return {
+                "solitude": 0.8,
+                "stillness": 0.9,
+                "preservation": 0.7,
+                "patience": 0.8,
+                "reflection": 0.7
+            }
+        elif self.climate_type == "temperate":
+            return {
+                "balance": 0.9,
+                "renewal": 0.7,
+                "cycles": 0.8,
+                "harmony": 0.7,
+                "adaptation": 0.8
+            }
+        elif self.climate_type == "tropical":
+            return {
+                "abundance": 0.9,
+                "vitality": 0.8,
+                "diversity": 0.9,
+                "growth": 0.8,
+                "interconnection": 0.7
+            }
+        elif self.climate_type == "arctic":
+            return {
+                "endurance": 0.9,
+                "isolation": 0.8,
+                "purity": 0.7,
+                "dormancy": 0.8,
+                "preservation": 0.9
+            }
+        elif self.climate_type == "oceanic":
+            return {
+                "fluidity": 0.9,
+                "connection": 0.8,
+                "depth": 0.7,
+                "mystery": 0.8,
+                "transformation": 0.6
+            }
+        else:
+            return {
+                "neutral": 0.5,
+                "adaptation": 0.5,
+                "balance": 0.5,
+                "change": 0.5,
+                "transformation": 0.5
+            }
+    def _initialize_weather_tendencies(self):
+        """Initialize weather tendencies for this climate type."""
+        if self.climate_type == "desert":
+            return {
+                "dry": 0.9,
+                "hot": 0.8,
+                "windy": 0.5,
+                "clear": 0.7
+            }
+        elif self.climate_type == "tundra":
+            return {
+                "cold": 0.9,
+                "dry": 0.7,
+                "windy": 0.6,
+                "cloudy": 0.5
+            }
+        elif self.climate_type == "temperate":
+            return {
+                "moderate": 0.8,
+                "rainy": 0.6,
+                "cloudy": 0.7,
+                "windy": 0.5
+            }
+        elif self.climate_type == "tropical":
+            return {
+                "humid": 0.9,
+                "rainy": 0.8,
+                "calm": 0.6,
+                "sunny": 0.7
+            }
+        elif self.climate_type == "arctic":
+            return {
+                "cold": 1.0,
+                "dry": 0.8,
+                "windy": 0.7,
+                "cloudy": 0.6
+            }
+        elif self.climate_type == "oceanic":
+            return {
+                "mild": 0.8,
+                "humid": 0.7,
+                "windy": 0.6,
+                "rainy": 0.5
+            }
+        else:
+            return {
+                "neutral": 0.5,
+                "variable": 0.5,
+                "calm": 0.5,
+                "unpredictable": 0.5
+            }
+
+    def __repr__(self):
+        """String representation of the climate zone."""
+        return f"ClimateZone(center={self.center}, radius={self.radius}, type={self.climate_type})"
+
+
+class WorldState:
+    """
+    Maintains the global state of the environmental systems and their interaction
+    with cosmic entities in the simulation.
+    
+    Serves as a bridge between the environmental modules and the cosmic entities,
+    facilitating the flow of symbolic content and environmental effects.
+    """
+    
+    def __init__(self, width=WORLD_SIZE, height=WORLD_SIZE):
+        """Initialize the world state with environmental systems."""
+        self.width = width
+        self.height = height
+        self.time = 0
+        self.seasonal_cycle = SeasonalCycle()
+        self.wind_patterns = WindPattern(width, height)
+        self.climate_zones = []
+        self.active_storms = []
+        self.temperature_map = np.zeros((width, height))
+        self.precipitation_map = np.zeros((width, height))
+        self.humidity_map = np.zeros((width, height))
+        self.terrain_height_map = np.zeros((width, height))
+        self.symbolic_influence_map = {}  # symbol -> influence array
+        self.event_history = []
+        
+        # Dynamic systems
+        self.ocean_currents = None  # Will be initialized if oceans are present
+        
+        # Initialize terrain and climate
+        self._initialize_terrain()
+        self._initialize_climate_zones()
+    
+    def update(self, time_delta):
+        """
+        Update all environmental systems and their interactions.
+        
+        Args:
+            time_delta: Time increment
+            
+        Returns:
+            events: List of significant environmental events
+        """
+        self.time += time_delta
+        events = []
+        
+        # Update season
+        season_changed = self.seasonal_cycle.advance()
+        if season_changed:
+            events.append({
+                "type": "season_change",
+                "season": self.seasonal_cycle.current_season,
+                "year": self.seasonal_cycle.year_count
+            })
+        
+        # Get seasonal info
+        seasonal_info = self.seasonal_cycle.get_current_season_info()
+        
+        # Update climate zones based on season
+        for zone in self.climate_zones:
+            zone.update_seasonal_state(seasonal_info["season"], seasonal_info["progress"])
+        
+        # Generate temperature and precipitation maps
+        self._update_climate_maps(seasonal_info)
+        
+        # Update wind patterns
+        wind_events = self.wind_patterns.update(
+            self.temperature_map, 
+            self.terrain_height_map,
+            seasonal_info["temperature"]  # Use temperature as seasonal modifier
+        )
+        events.extend(wind_events)
+        
+        # Update ocean currents if present
+        if self.ocean_currents:
+            current_events = self.ocean_currents.update(
+                self.temperature_map,
+                self.humidity_map  # Using humidity as a proxy for salinity
+            )
+            events.extend(current_events)
+        
+        # Update existing storms
+        self._update_storms(time_delta)
+        
+        # Generate new storms
+        storm_chance = 0.05 * time_delta * seasonal_info["precipitation"]
+        if random.random() < storm_chance:
+            storm = self._generate_storm(seasonal_info)
+            if storm:
+                self.active_storms.append(storm)
+                events.append({
+                    "type": "storm_formation",
+                    "storm_type": storm.storm_type,
+                    "location": storm.center,
+                    "intensity": storm.intensity
+                })
+        
+        # Record significant events
+        for event in events:
+            if event not in self.event_history:  # Avoid duplicates
+                self.event_history.append(event)
+                
+        # Trim event history if it gets too long
+        if len(self.event_history) > 100:
+            self.event_history = self.event_history[-100:]
+            
+        return events
+    
+    def apply_symbolic_effect(self, position, symbol, strength):
+        """
+        Apply a symbolic effect to the world at the given position.
+        
+        Args:
+            position: (x,y) coordinates
+            symbol: The symbolic concept
+            strength: Effect strength
+        """
+        x, y = position
+        if 0 <= x < self.width and 0 <= y < self.height:
+            if symbol not in self.symbolic_influence_map:
+                self.symbolic_influence_map[symbol] = np.zeros((self.width, self.height))
+            
+            self.symbolic_influence_map[symbol][int(x), int(y)] += strength
+    
+    def get_local_climate(self, position):
+        """
+        Get the climate conditions at the specified position.
+        
+        Args:
+            position: (x,y) coordinates
+            
+        Returns:
+            climate_data: Climate information at this position
+        """
+        x, y = position
+        climate_data = {
+            "temperature": 0,
+            "precipitation": 0,
+            "humidity": 0,
+            "wind": [0, 0],
+            "symbolic_elements": {},
+            "active_effects": []
+        }
+        
+        # Get base values from maps
+        if 0 <= x < self.width and 0 <= y < self.height:
+            climate_data["temperature"] = self.temperature_map[int(x), int(y)]
+            climate_data["precipitation"] = self.precipitation_map[int(x), int(y)]
+            climate_data["humidity"] = self.humidity_map[int(x), int(y)]
+            climate_data["wind"] = self.wind_patterns.get_vector(x, y)
+        
+        # Get influences from climate zones
+        zone_influences = []
+        for zone in self.climate_zones:
+            influence, zone_data = zone.get_influence(position)
+            if influence > 0:
+                zone_influences.append((influence, zone_data))
+        
+        # Combine zone influences
+        if zone_influences:
+            total_influence = sum(infl for infl, _ in zone_influences)
+            
+            for influence, zone_data in zone_influences:
+                weight = influence / total_influence
+                
+                # Weighted contribution to temperature and precipitation
+                climate_data["temperature"] += zone_data["temperature_modifier"] * weight
+                climate_data["precipitation"] += zone_data["precipitation_modifier"] * weight
+                
+                # Combine symbolic elements
+                for symbol, value in zone_data["symbolic_elements"].items():
+                    if symbol in climate_data["symbolic_elements"]:
+                        climate_data["symbolic_elements"][symbol] += value * weight
+                    else:
+                        climate_data["symbolic_elements"][symbol] = value * weight
+        
+        # Check for active storms at this location
+        for storm in self.active_storms:
+            storm_x, storm_y = storm.center
+            distance = math.sqrt((x - storm_x)**2 + (y - storm_y)**2)
+            
+            if distance <= storm.radius:
+                # Calculate how much this point is affected by the storm
+                influence = storm.intensity * (1 - (distance / storm.radius))
+                
+                # Add storm to active effects
+                climate_data["active_effects"].append({
+                    "type": "storm",
+                    "storm_type": storm.storm_type,
+                    "intensity": influence
+                })
+                
+                # Storms modify local conditions
+                if storm.storm_type == "hurricane":
+                    climate_data["wind"][0] *= (1 + influence)
+                    climate_data["wind"][1] *= (1 + influence)
+                    climate_data["precipitation"] *= (1 + influence)
+                elif storm.storm_type == "thunderstorm":
+                    climate_data["precipitation"] *= (1 + influence * 0.5)
+                    climate_data["temperature"] -= influence * 0.1
+                elif storm.storm_type == "fog":
+                    climate_data["humidity"] *= (1 + influence * 0.3)
+                    climate_data["precipitation"] *= (1 + influence * 0.1)
+                
+                # Add storm's symbolic content
+                for symbol, potency in storm.symbolic_content.items():
+                    value = potency * influence
+                    if symbol in climate_data["symbolic_elements"]:
+                        climate_data["symbolic_elements"][symbol] += value
+                    else:
+                        climate_data["symbolic_elements"][symbol] = value
+        
+        # Get symbolic influences from map
+        for symbol, influence_map in self.symbolic_influence_map.items():
+            if 0 <= x < self.width and 0 <= y < self.height:
+                value = influence_map[int(x), int(y)]
+                if value > 0.1:  # Only include significant influences
+                    if symbol in climate_data["symbolic_elements"]:
+                        climate_data["symbolic_elements"][symbol] += value
+                    else:
+                        climate_data["symbolic_elements"][symbol] = value
+        
+        return climate_data
+    
+    def get_dominant_symbols(self, position, count=3):
+        """
+        Get the dominant symbolic elements at the specified position.
+        
+        Args:
+            position: (x,y) coordinates
+            count: Maximum number of symbols to return
+            
+        Returns:
+            symbols: List of (symbol, strength) tuples
+        """
+        climate_data = self.get_local_climate(position)
+        symbols = climate_data["symbolic_elements"]
+        
+        # Sort by strength
+        sorted_symbols = sorted(symbols.items(), key=lambda x: x[1], reverse=True)
+        
+        # Return top symbols
+        return sorted_symbols[:count]
+    
+    def deposit_memory(self, position, memory_content, intensity=1.0):
+        """
+        Deposit memory content into the environment.
+        
+        Args:
+            position: (x,y) coordinates
+            memory_content: The memory data
+            intensity: Strength of memory imprint
+            
+        Returns:
+            success: Boolean indicating successful deposit
+        """
+        # If ocean currents exist, attempt to deposit in currents
+        if self.ocean_currents:
+            return self.ocean_currents.add_memory_payload(position, memory_content, intensity)
+        
+        # Otherwise, apply as a symbolic influence
+        for key, value in memory_content.items():
+            if isinstance(value, (int, float)) and value > 0:
+                self.apply_symbolic_effect(position, key, value * intensity)
+        
+        return True
+    
+    def _initialize_terrain(self):
+        """Initialize terrain height map."""
+        # Simple fractal terrain generation
+        scale = 8
+        terrain = np.zeros((self.width, self.height))
+        
+        while scale > 0:
+            for x in range(0, self.width, scale):
+                for y in range(0, self.height, scale):
+                    terrain[x:x+scale, y:y+scale] += random.random() * scale
+            scale //= 2
+            
+        # Normalize to 0-1 range
+        if np.max(terrain) > 0:
+            terrain = (terrain - np.min(terrain)) / (np.max(terrain) - np.min(terrain))
+            
+        self.terrain_height_map = terrain
+    
+    def _initialize_climate_zones(self):
+        """Initialize climate zones based on terrain."""
+        # Create several climate zones of different types
+        climate_types = ["desert", "tundra", "temperate", "tropical", "arctic", "oceanic"]
+        
+        for _ in range(6):
+            climate_type = random.choice(climate_types)
+            x = random.randint(0, self.width - 1)
+            y = random.randint(0, self.height - 1)
+            radius = random.randint(50, 150)
+            
+            self.climate_zones.append(ClimateZone((x, y), radius, climate_type))
+    
+    def _update_climate_maps(self, seasonal_info):
+        """Update temperature, precipitation, and humidity maps."""
+        # Initialize with base values influenced by terrain and season
+        for x in range(self.width):
+            for y in range(self.height):
+                # Terrain influence on temperature (higher = cooler)
+                height_influence = -0.5 * self.terrain_height_map[x, y]
+                
+                # Seasonal base temperature (normalized to -1 to 1 range)
+                seasonal_temp = seasonal_info["temperature"] * 2 - 1
+                
+                # Combine factors
+                self.temperature_map[x, y] = 0.5 + (seasonal_temp * 0.3 + height_influence * 0.2)
+                
+                # Terrain influence on precipitation (higher = more rain, up to a point)
+                precipitation_factor = self.terrain_height_map[x, y] * (1 - self.terrain_height_map[x, y] / 2)
+                
+                # Seasonal precipitation
+                seasonal_precip = seasonal_info["precipitation"]
+                
+                self.precipitation_map[x, y] = seasonal_precip * 0.7 + precipitation_factor * 0.3
+                
+                # Humidity correlates with precipitation but is more affected by temperature
+                self.humidity_map[x, y] = self.precipitation_map[x, y] * 0.7 - (max(0, self.temperature_map[x, y] - 0.5) * 0.3)
+        
+        # Apply climate zone influences
+        for x in range(self.width):
+            for y in range(self.height):
+                position = (x, y)
+                climate_data = self.get_local_climate(position)
+                
+                # Update maps with climate zone influences
+                self.temperature_map[x, y] = climate_data["temperature"]
+                self.precipitation_map[x, y] = climate_data["precipitation"]
+                self.humidity_map[x, y] = climate_data["humidity"]
+        
+        # Smooth the maps
+        self.temperature_map = self._smooth_map(self.temperature_map)
+        self.precipitation_map = self._smooth_map(self.precipitation_map)
+        self.humidity_map = self._smooth_map(self.humidity_map)
+        
+        # Ensure values are in valid ranges
+        self.temperature_map = np.clip(self.temperature_map, 0, 1)
+        self.precipitation_map = np.clip(self.precipitation_map, 0, 1)
+        self.humidity_map = np.clip(self.humidity_map, 0, 1)
+    
+    def _smooth_map(self, map_data, kernel_size=3):
+        """Apply smoothing to a map."""
+        from scipy.ndimage import uniform_filter
+        return uniform_filter(map_data, size=kernel_size, mode='reflect')
+    
+    def _update_storms(self, time_delta):
+        """Update all active storms."""
+        storms_to_remove = []
+        
+        for storm in self.active_storms:
+            # Update the storm
+            still_active = storm.update(self)
+            
+            if not still_active:
+                storms_to_remove.append(storm)
+        
+        # Remove dissipated storms
+        for storm in storms_to_remove:
+            self.active_storms.remove(storm)
+    
+    def _generate_storm(self, seasonal_info):
+        """Generate a new storm based on current conditions."""
+        # Choose a random position
+        x = random.randint(0, self.width - 1)
+        y = random.randint(0, self.height - 1)
+        
+        # Storm chance depends on local conditions
+        local_precip = self.precipitation_map[x, y]
+        local_temp = self.temperature_map[x, y]
+        
+        # Only generate storm if conditions are right
+        if local_precip < 0.4:
+            return None  # Too dry
+            
+        # Determine storm type based on conditions
+        storm_type = None
+        if local_temp > 0.7 and local_precip > 0.7:
+            storm_type = "hurricane"
+            radius = random.randint(30, 60)
+            intensity = 0.7 + random.random() * 0.3
+        elif local_temp > 0.5 and local_precip > 0.6:
+            storm_type = "thunderstorm"
+            radius = random.randint(10, 30)
+            intensity = 0.5 + random.random() * 0.5
+        elif local_temp < 0.4 and local_precip > 0.5:
+            storm_type = "fog"
+            radius = random.randint(20, 40)
+            intensity = 0.4 + random.random() * 0.4
+        else:
+            storm_type = "rain"
+            radius = random.randint(15, 35)
+            intensity = 0.3 + random.random() * 0.4
+        
+        if not storm_type:
+            return None
+            
+        # Generate symbolic content for the storm
+        symbolic_content = self._generate_storm_symbolism(storm_type, seasonal_info)
+        
+        # Create the storm
+        return Storm((x, y), storm_type, radius, intensity, symbolic_content)
+    
+    def _generate_storm_symbolism(self, storm_type, seasonal_info):
+        """Generate symbolic content for a storm."""
+        symbolic_content = {}
+        
+        # Base symbolism by storm type
+        if storm_type == "hurricane":
+            base_symbols = ["chaos", "transformation", "power", "destruction", "renewal"]
+            symbol_count = random.randint(2, 4)
+        elif storm_type == "thunderstorm":
+            base_symbols = ["revelation", "energy", "conflict", "clarity", "change"]
+            symbol_count = random.randint(2, 3)
+        elif storm_type == "fog":
+            base_symbols = ["mystery", "concealment", "confusion", "illusion", "transition"]
+            symbol_count = random.randint(2, 3)
+        elif storm_type == "rain":
+            base_symbols = ["cleansing", "renewal", "life", "sadness", "contemplation"]
+            symbol_count = random.randint(1, 3)
+        else:
+            base_symbols = ["change", "cycle", "nature", "wildness"]
+            symbol_count = random.randint(1, 2)
+        
+        # Select random symbols
+        selected_symbols = random.sample(base_symbols, symbol_count)
+        
+        # Seasonal influences
+        season = seasonal_info["season"]
+        if season == "winter":
+            if random.random() < 0.5:
+                selected_symbols.append("stillness")
+        elif season == "spring":
+            if random.random() < 0.5:
+                selected_symbols.append("growth")
+        elif season == "summer":
+            if random.random() < 0.5:
+                selected_symbols.append("vigor")
+        elif season == "autumn":
+            if random.random() < 0.5:
+                selected_symbols.append("transition")
+        
+        # Assign potency to each symbol
+        for symbol in selected_symbols:
+            symbolic_content[symbol] = 0.5 + random.random() * 0.5
+        
+        return symbolic_content
+
+
+# -------------------------------------------------------------------------
+# Emotional Resonance System
+# -------------------------------------------------------------------------
+
+class FloralGrowthPattern(Enum):
+    """Defines the fundamental growth patterns for symbolic flora"""
+    BRANCHING = "branching"      # Forked, divergent growth patterns
+    SPIRAL = "spiral"            # Fibonacci-sequence based spiral patterns
+    LAYERED = "layered"          # Concentric growth from center outward
+    FRACTAL = "fractal"          # Self-similar patterns at different scales
+    RADIAL = "radial"            # Growth outward from central point
+    LATTICE = "lattice"          # Grid-like structured growth
+    CHAOTIC = "chaotic"          # Unpredictable, emergent growth patterns
+    HARMONIC = "harmonic"        # Wavelike undulating growth
+    MIRRORED = "mirrored"        # Symmetrical balanced growth
+    ADAPTIVE = "adaptive"        # Context-responsive variable growth
+
+
+class NutrientType(Enum):
+    """Types of nutrients that symbolic flora can consume"""
+    PHYSICAL = "physical"          # Material resources
+    SYMBOLIC = "symbolic"          # Meaning and pattern resources
+    EMOTIONAL = "emotional"        # Feeling-based resources
+    TEMPORAL = "temporal"          # Time-based resources
+    ENTROPIC = "entropic"          # Disorder-based resources
+    HARMONIC = "harmonic"          # Resonance-based resources
+    VOID = "void"                  # Emptiness and negative space
+    NARRATIVE = "narrative"        # Story and sequence resources
+    QUANTUM = "quantum"            # Probability and uncertainty resources
+    METAPHORIC = "metaphoric"      # Symbolic transformation resources
+
+
+class FloraEvolutionStage(Enum):
+    """Evolutionary stages for motif flora"""
+    SEED = "seed"                    # Initial pattern state
+    EMERGENT = "emergent"            # First growth and establishment
+    MATURING = "maturing"            # Development of core structures
+    FLOWERING = "flowering"          # Peak expression and reproduction
+    SEEDING = "seeding"              # Distribution of pattern copies
+    WITHERING = "withering"          # Decline and entropy increase
+    COMPOSTING = "composting"        # Breaking down into base patterns
+    DORMANT = "dormant"              # Suspended animation state
+    RESURGENT = "resurgent"          # Renewal after dormancy
+    TRANSCENDENT = "transcendent"    # Evolution beyond original pattern
+
+
+class MotifFloraSystem:
+    """
+    Models the growth, propagation, and evolution of symbolic plant life.
+    
+    MotifFloraSystem represents the botanical dimension of the symbolic ecosystem,
+    where meaning-patterns grow, interact with their environment, and evolve based
+    on available nutrients and conditions. These flora form the foundation of many
+    symbolic food chains and serve as processors of raw symbolic matter into more
+    structured forms.
+    
+    The system features:
+    - Pattern-based growth with multiple archetypal structures
+    - Symbolic nutrient metabolism and motif expression
+    - Environmental response and adaptation mechanisms
+    - Seasonal and cyclical behavior with growth phases
+    - Symbolic pollination and cross-fertilization of ideas
+    - Emergent properties through flora communities and forests
+    """
+    
+    def __init__(self, 
+                 owner_entity: Any,
+                 base_pattern: str = None,
+                 growth_style: FloralGrowthPattern = None,
+                 evolution_stage: FloraEvolutionStage = FloraEvolutionStage.SEED,
+                 maturation_rate: float = 0.05,
+                 symbolic_metabolism: Dict[NutrientType, float] = None,
+                 primary_motifs: List[str] = None):
+        """
+        Initialize a new MotifFloraSystem with the specified parameters.
+        
+        Args:
+            owner_entity: The entity this flora system belongs to
+            base_pattern: The foundational pattern for this flora (auto-generated if None)
+            growth_style: The fundamental growth pattern (randomly chosen if None)
+            evolution_stage: Current evolutionary stage of the flora
+            maturation_rate: Base rate at which the flora evolves (0.0-1.0)
+            symbolic_metabolism: Dictionary mapping nutrient types to processing efficiencies
+            primary_motifs: List of primary motifs expressed by this flora
+        """
+        self.owner = owner_entity
+        self.base_pattern = base_pattern or self._generate_base_pattern()
+        self.growth_style = growth_style or random.choice(list(FloralGrowthPattern))
+        self.evolution_stage = evolution_stage
+        self.maturation_rate = maturation_rate
+        self.symbolic_metabolism = symbolic_metabolism or self._initialize_metabolism()
+        self.primary_motifs = primary_motifs or self._initialize_motifs()
+        
+        # Growth metrics
+        self.growth_factor = 0.0  # 0.0 (seed) to 1.0 (fully grown)
+        self.health = 1.0  # 0.0 (dead) to 1.0 (perfect health)
+        self.pattern_density = 0.1  # Pattern richness/complexity
+        self.root_depth = 0.0  # Symbolic grounding/stability
+        self.canopy_spread = 0.0  # Area of influence
+        
+        # Environmental response
+        self.seasonal_state = {}  # Current response to seasons
+        self.adaptation_history = []  # Record of adaptations
+        self.environmental_responses = self._initialize_environmental_responses()
+        
+        # Reproduction and propagation
+        self.seed_bank = []  # Generated seed patterns
+        self.pollination_vectors = set()  # Entities that can spread pollen
+        self.cross_pollination_record = {}  # History of genetic exchanges
+        
+        # Community metrics
+        self.symbiotic_relationships = {}  # Flora-fauna relationships
+        self.competitive_relationships = {}  # Resource competition
+        self.community_role = {}  # Function within larger ecosystem
+        
+        # Temporal tracking
+        self.age = 0.0
+        self.growth_cycles_completed = 0
+        self.last_update_time = 0.0
+        self.seasonal_cycle_position = 0.0  # 0.0-1.0 position in seasonal cycle
+        
+        # Manifestation and effects
+        self.sensory_properties = self._initialize_sensory_properties()
+        self.symbolic_effects = self._initialize_symbolic_effects()
+        self.produced_resources = {}  # Resources generated for other entities
+        
+        # Evolution potential
+        self.mutation_potential = 0.2  # Likelihood of mutation during reproduction
+        self.adaptation_pressure = 0.0  # Current evolutionary pressure
+        self.evolutionary_direction = {}  # Current trends in adaptation
+    
+    # Additional methods for MotifFloraSystem would go here...
+
+# Add flora_system attribute to CosmicEntity
+def add_flora_system_to_entity(entity: Any, growth_style: FloralGrowthPattern = None, primary_motifs: List[str] = None):
+    """Add a MotifFloraSystem to an entity if it doesn't already have one"""
+    if not hasattr(entity, 'flora_system'):
+        entity.flora_system = MotifFloraSystem(entity, growth_style=growth_style, primary_motifs=primary_motifs)
+    return entity.flora_system
+
+class EmotionalState(Enum):
+    """Fundamental emotional states that entities can experience and project"""
+    JOY = "joy"                 # Expansive, light, uplifting
+    SORROW = "sorrow"           # Contracting, heavy, descending
+    FEAR = "fear"               # Tense, scattered, retreating
+    ANGER = "anger"             # Sharp, hot, advancing
+    WONDER = "wonder"           # Opening, receptive, crystalline
+    SERENITY = "serenity"       # Stable, flowing, balanced
+    DETERMINATION = "determination"  # Focused, directed, persistent
+    CONFUSION = "confusion"     # Dispersed, foggy, seeking
+    LONGING = "longing"         # Reaching, resonant, yearning
+    TRANSCENDENCE = "transcendence"  # Dissolving, unifying, infinite
+
+
+class EmotionalResonanceBody:
+    """
+    Manages the emotional field of an entity and its resonance with surrounding entities.
+    
+    The EmotionalResonanceBody functions as an emotional counterpart to physical bodies,
+    creating fields of feeling that influence and are influenced by other entities.
+    It handles the generation, propagation, and reception of emotional harmonics
+    that flow between entities across multiple levels of reality.
+    
+    Key features:
+    - Generates emotional field projections with varying intensities and harmonics
+    - Creates emergent emotional weather systems from collective resonance
+    - Forms emotional memories that influence future resonance patterns
+    - Develops unique emotional signatures for entities over time
+    - Allows for symbolic transference of emotional states between entities
+    """
+    
+    def __init__(self, owner_entity: Any, base_resonance: Dict[EmotionalState, float] = None,
+                 projection_radius: float = 10.0, receptivity: float = 0.5):
+        self.owner = owner_entity
+        self.base_resonance = base_resonance or self._initialize_base_resonance()
+        self.current_state = self._calculate_current_state()
+        self.projection_radius = projection_radius
+        self.receptivity = receptivity
+        self.resonance_signature = {}  # Develops over time
+        self.emotional_memory = []
+        self.active_harmonics = []
+        self.resonance_connections = {}  # entity_id -> connection_strength
+        self.emotional_weather = {}
+        self.state_history = deque(maxlen=100)
+        self.state_transitions = defaultdict(int)  # Tracks emotional state changes
+        self.harmonic_nodes = self._initialize_harmonic_nodes()
+        self.dissonance_threshold = 0.7
+        self.resonance_evolution_rate = 0.05
+        
+        # Keep track of the last update time
+        self.last_update_time = getattr(self.owner, 'last_update_time', 0)
+        
+        # Initialize state history with current state
+        self.state_history.append((self.current_state, self.last_update_time))
+    
+    def _initialize_base_resonance(self) -> Dict[EmotionalState, float]:
+        """Initialize base emotional resonance values"""
+        base = {}
+        
+        # Start with low values for all emotions
+        for state in EmotionalState:
+            base[state] = 0.1 + 0.1 * random.random()
+        
+        # Select 1-3 dominant emotions
+        dominant_count = random.randint(1, 3)
+        dominant_emotions = random.sample(list(EmotionalState), dominant_count)
+        
+        for emotion in dominant_emotions:
+            base[emotion] = 0.4 + 0.4 * random.random()
+        
+        # If entity has motifs, use them to influence base resonance
+        if hasattr(self.owner, 'motifs'):
+            for motif in self.owner.motifs:
+                self._apply_motif_influence(base, motif)
+        
+        # Normalize to ensure sum is around 1.0
+        total = sum(base.values())
+        if total > 0:
+            for state in base:
+                base[state] /= total
+        
+        return base
+    
+    def _apply_motif_influence(self, resonance: Dict[EmotionalState, float], motif: str):
+        """Apply influence from a motif to the emotional resonance"""
+        # Map common motifs to emotional states they enhance
+        motif_influences = {
+            "fire": [EmotionalState.ANGER, EmotionalState.DETERMINATION],
+            "water": [EmotionalState.SERENITY, EmotionalState.SORROW],
+            "air": [EmotionalState.JOY, EmotionalState.WONDER],
+            "earth": [EmotionalState.DETERMINATION, EmotionalState.SERENITY],
+            
+            "light": [EmotionalState.JOY, EmotionalState.TRANSCENDENCE],
+            "dark": [EmotionalState.FEAR, EmotionalState.CONFUSION],
+            
+            "growth": [EmotionalState.JOY, EmotionalState.DETERMINATION],
+            "decay": [EmotionalState.SORROW, EmotionalState.TRANSCENDENCE],
+            
+            "cycle": [EmotionalState.SERENITY, EmotionalState.WONDER],
+            "chaos": [EmotionalState.CONFUSION, EmotionalState.FEAR],
+            "order": [EmotionalState.SERENITY, EmotionalState.DETERMINATION],
+            
+            "knowledge": [EmotionalState.WONDER, EmotionalState.DETERMINATION],
+            "mystery": [EmotionalState.WONDER, EmotionalState.CONFUSION],
+            "wisdom": [EmotionalState.SERENITY, EmotionalState.TRANSCENDENCE],
+            
+            "journey": [EmotionalState.DETERMINATION, EmotionalState.LONGING],
+            "return": [EmotionalState.JOY, EmotionalState.SERENITY],
+            
+            "transformation": [EmotionalState.WONDER, EmotionalState.TRANSCENDENCE],
+            "stasis": [EmotionalState.SERENITY, EmotionalState.FEAR],
+            
+            "connection": [EmotionalState.JOY, EmotionalState.LONGING],
+            "isolation": [EmotionalState.SORROW, EmotionalState.LONGING],
+        }
+        
+        # Check for partial matches in the motif
+        matched_influences = []
+        for key, influences in motif_influences.items():
+            if key in motif.lower():
+                matched_influences.extend(influences)
+        
+        # Apply influence to matched emotions
+        for emotion in matched_influences:
+            resonance[emotion] = min(1.0, resonance[emotion] + 0.15)
+    
+    def _initialize_harmonic_nodes(self) -> List[Dict]:
+        """Initialize harmonic nodes for emotional resonance"""
+        nodes = []
+        
+        # Create 3-7 harmonic nodes
+        num_nodes = random.randint(3, 7)
+        
+        for i in range(num_nodes):
+            # Select a primary and secondary emotion for this node
+            primary = random.choice(list(EmotionalState))
+            secondary_options = [e for e in EmotionalState if e != primary]
+            secondary = random.choice(secondary_options)
+            
+            # Create the node
+            node = {
+                "id": f"node_{i}",
+                "primary_emotion": primary,
+                "secondary_emotion": secondary,
+                "amplitude": 0.2 + 0.6 * random.random(),
+                "frequency": 0.5 + 1.5 * random.random(),
+                "phase": random.random() * 2 * math.pi,
+                "connections": []
+            }
+            
+            nodes.append(node)
+        
+        # Create connections between nodes (not fully connected)
+        for i, node in enumerate(nodes):
+            # Connect to 1-3 other nodes
+            connection_count = min(len(nodes) - 1, random.randint(1, 3))
+            connection_targets = random.sample([j for j in range(len(nodes)) if j != i], connection_count)
+            
+            for target in connection_targets:
+                node["connections"].append({
+                    "target": target,
+                    "strength": 0.2 + 0.6 * random.random(),
+                    "delay": 0.1 + 0.4 * random.random()
+                })
+        
+        return nodes
+    
+    def _calculate_current_state(self) -> EmotionalState:
+        """Calculate the current dominant emotional state"""
+        if not self.base_resonance:
+            return EmotionalState.SERENITY
+        
+        # Find the emotion with highest resonance
+        dominant_emotion = max(self.base_resonance.items(), key=lambda x: x[1])[0]
+        return dominant_emotion
+
+# Add emotional_resonance attribute to CosmicEntity
+def add_emotional_resonance_to_entity(entity: Any, base_resonance: Dict[EmotionalState, float] = None):
+    """Add an EmotionalResonanceBody to an entity if it doesn't already have one"""
+    if not hasattr(entity, 'emotional_resonance'):
+        entity.emotional_resonance = EmotionalResonanceBody(entity, base_resonance)
+    return entity.emotional_resonance
+
+# -------------------------------------------------------------------------
+# Environment Integration System
+# -------------------------------------------------------------------------
+
+def integrate_environment_with_planet(planet: Planet, world_state: WorldState = None):
+    """
+    Integrate environmental systems with a planet entity.
+    
+    Args:
+        planet: The planet to integrate with
+        world_state: Optional existing WorldState (creates new one if None)
+    
+    Returns:
+        world_state: The created or updated WorldState
+    """
+    if not world_state:
+        world_state = WorldState()
+    
+    # Link planet's climate data with environmental system
+    planet.env_state = world_state
+    
+    # Use planet's surface features to initialize terrain
+    if hasattr(planet, 'surface') and planet.surface:
+        # Adjust terrain height based on surface features
+        for x in range(world_state.width):
+            for y in range(world_state.height):
+                height = world_state.terrain_height_map[x, y]
+                
+                # Increase height for mountainous regions
+                if 'mountains' in planet.surface:
+                    if random.random() < planet.surface['mountains']:
+                        height += random.random() * 0.5
+                
+                # Lower height for water regions
+                if 'water' in planet.surface:
+                    if random.random() < planet.surface['water']:
+                        height -= random.random() * 0.3
+                
+                # Create crater depressions
+                if 'craters' in planet.surface:
+                    if random.random() < planet.surface['craters'] * 0.3:
+                        crater_radius = random.randint(5, 20)
+                        crater_x = random.randint(0, world_state.width - 1)
+                        crater_y = random.randint(0, world_state.height - 1)
+                        
+                        dist = math.sqrt((x - crater_x)**2 + (y - crater_y)**2)
+                        if dist < crater_radius:
+                            depth = (1 - (dist / crater_radius)) * 0.3
+                            height -= depth
+                
+                # Update height with constraints
+                world_state.terrain_height_map[x, y] = max(0, min(1, height))
+    
+    # Set up climate zones based on planet's climate data
+    if hasattr(planet, 'climate') and planet.climate:
+        world_state.climate_zones = []
+        
+        for climate_type, coverage in planet.climate.items():
+            # Create multiple zones for each climate type based on coverage
+            zone_count = max(1, int(coverage * 10))
+            for _ in range(zone_count):
+                x = random.randint(0, world_state.width - 1)
+                y = random.randint(0, world_state.height - 1)
+                
+                # Zone radius based on coverage
+                radius = int(30 + coverage * 100)
+                
+                # Create climate zone
+                zone = ClimateZone((x, y), radius, climate_type)
+                world_state.climate_zones.append(zone)
+    
+    # Initialize ocean currents if planet has significant water
+    if hasattr(planet, 'surface') and planet.surface.get('water', 0) > 0.3:
+        # Create ocean current system
+        ocean_depth = 3
+        current_layers = []
+        
+        for depth in range(ocean_depth):
+            layer = CurrentLayer(
+                width=world_state.width,
+                height=world_state.height,
+                depth=depth,
+                velocity_factor=1.0 - (depth * 0.3)  # Surface moves faster
+            )
+            current_layers.append(layer)
+        
+        # Initialize global circulation if planet has sufficient water
+        if planet.surface.get('water', 0) > 0.6:
+            # Create placeholder for world geometry
+            class WorldGeometry:
+                def __init__(self, width, height):
+                    self.width = width
+                    self.height = height
+            
+            geometry = WorldGeometry(world_state.width, world_state.height)
+            circulation = ThermohalineCirculation(geometry)
+            
+            # Add circulation system to world state
+            world_state.ocean_circulation = circulation
+    
+    # Add symbolic influence from planet's motifs
+    if hasattr(planet, 'motifs'):
+        for motif in planet.motifs:
+            # Choose random locations to apply influence
+            for _ in range(10):
+                x = random.randint(0, world_state.width - 1)
+                y = random.randint(0, world_state.height - 1)
+                world_state.apply_symbolic_effect((x, y), motif, 0.7)
+    
+    # Add method to planet to update environment
+    def update_environment(self, time_delta: float):
+        """Update the planet's environmental systems."""
+        if hasattr(self, 'env_state'):
+            # Update environment
+            events = self.env_state.update(time_delta)
+            
+            # Process significant environmental events
+            for event in events:
+                # Record major events in scroll memory if available
+                if event.get('type') in ['storm_formation', 'season_change'] and hasattr(self, 'record_scroll_event'):
+                    importance = 0.5
+                    if event['type'] == 'storm_formation' and event.get('storm_type') == 'hurricane':
+                        importance = 0.7
+                    
+                    self.record_scroll_event(
+                        event_type=f"environmental_{event['type']}",
+                        description=f"{event['type'].replace('_', ' ').title()}: {event.get('storm_type', event.get('season', ''))}",
+                        importance=importance,
+                        motifs_added=[event['type']]
+                    )
+                
+                # Storms can affect surface features
+                if event['type'] == 'storm_formation' and hasattr(self, 'surface'):
+                    storm_type = event.get('storm_type')
+                    intensity = event.get('intensity', 0.5)
+                    
+                    if storm_type == 'hurricane' and intensity > 0.7:
+                        # Hurricanes erode coastlines
+                        if 'water' in self.surface and self.surface['water'] > 0.3:
+                            coastal_change = 0.01 * intensity
+                            self.surface['water'] = min(1.0, self.surface['water'] + coastal_change)
+                    
+                    elif storm_type in ['rain', 'thunderstorm'] and 'volcanic' in self.surface:
+                        # Rain can erode volcanic terrain
+                        erosion = 0.005 * intensity
+                        self.surface['volcanic'] = max(0, self.surface['volcanic'] - erosion)
+                        self.surface['sedimentary'] = self.surface.get('sedimentary', 0) + erosion
+    
+    # Bind method to planet
+    planet.update_environment = types.MethodType(update_environment, planet)
+    
+    # Extend planet's evolve method to include environment
+    original_evolve = planet.evolve
+    
+    def evolve_with_environment(self, time_delta: float):
+        """Evolve planet including environmental systems."""
+        # Call original evolve method
+        original_evolve(time_delta)
+        
+        # Update environment
+        self.update_environment(time_delta)
+    
+    # Replace evolve method
+    planet.evolve = types.MethodType(evolve_with_environment, planet)
+    
+    return world_state
+
+
+def apply_environmental_effects_to_civilization(civilization: Civilization, world_state: WorldState):
+    """
+    Apply environmental effects to a civilization.
+    
+    Args:
+        civilization: The civilization to affect
+        world_state: The world state containing environmental data
+    """
+    if not world_state:
+        return
+    
+    # Get planet
+    planet = DRM.get_entity(civilization.planet_id) if civilization.planet_id else None
+    if not planet or not hasattr(planet, 'env_state'):
+        return
+    
+    # Choose a representative location for the civilization
+    if hasattr(civilization, 'home_sector'):
+        # Convert sector coordinates to world coordinates
+        sector = civilization.home_sector
+        if sector:
+            x = (sector[0] % world_state.width + world_state.width // 4) % world_state.width
+            y = (sector[1] % world_state.height + world_state.height // 3) % world_state.height
+            position = (x, y)
+            
+            # Get local climate
+            climate_data = world_state.get_local_climate(position)
+            
+            # Apply effects to civilization
+            
+            # 1. Environmental symbolism affects culture
+            if hasattr(civilization, 'culture_engine'):
+                # Get dominant symbols
+                dominant_symbols = world_state.get_dominant_symbols(position)
+                
+                for symbol, strength in dominant_symbols:
+                    # Add to cultural motifs if strong enough
+                    if strength > 0.6 and random.random() < strength * 0.3:
+                        if symbol not in civilization.culture_engine.cultural_motifs:
+                            civilization.culture_engine.cultural_motifs.append(symbol)
+                            
+                            # Record symbolic integration in scroll memory
+                            if hasattr(civilization, 'record_scroll_event'):
+                                civilization.record_scroll_event(
+                                    event_type="cultural_adaptation",
+                                    description=f"Environment influenced culture through '{symbol}' symbolism",
+                                    importance=0.4,
+                                    motifs_added=[f"environmental_{symbol}"]
+                                )
+            
+            # 2. Extreme climate affects population
+            if climate_data.get('temperature') < 0.2 or climate_data.get('temperature') > 0.8:
+                # Extreme temperatures can slow population growth
+                civilization.population = int(civilization.population * 0.995)
+                
+            # 3. Storm effects
+            for effect in climate_data.get('active_effects', []):
+                if effect.get('type') == 'storm' and effect.get('intensity', 0) > 0.7:
+                    # Strong storms temporarily disrupt civilization
+                    if random.random() < effect.get('intensity', 0) * 0.2:
+                        # Slow development slightly
+                        civilization.development_level = max(0, civilization.development_level - 0.01)
+                        
+                        # Record major storm impact
+                        if hasattr(civilization, 'record_scroll_event'):
+                            civilization.record_scroll_event(
+                                event_type="natural_disaster",
+                                description=f"A powerful {effect.get('storm_type')} disrupted society",
+                                importance=0.6,
+                                motifs_added=["weather_vulnerability"]
+                            )
+            
+            # 4. Precipitation affects technology focus
+            precipitation = climate_data.get('precipitation', 0.5)
+            if precipitation > 0.7 and hasattr(civilization, 'tech_focus'):
+                # Wet environments might encourage water management technology
+                if random.random() < 0.05 and civilization.tech_focus != DevelopmentArea.MATERIALS:
+                    old_focus = civilization.tech_focus
+                    civilization.tech_focus = DevelopmentArea.MATERIALS
+                    
+                    # Record tech focus shift
+                    if hasattr(civilization, 'record_scroll_event'):
+                        civilization.record_scroll_event(
+                            event_type="technological_shift",
+                            description=f"Abundant water resources shifted focus from {old_focus.value} to {DevelopmentArea.MATERIALS.value}",
+                            importance=0.5,
+                            motifs_added=["environmental_adaptation"]
+                        )
+
+
+# Initialize imports needed for environment integration
+import types
+import math
+import random

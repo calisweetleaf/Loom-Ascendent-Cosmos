@@ -51,7 +51,8 @@ ehthumbs.db
 *.dll
 *.class
 *.wasm
-
+*.remaining_Scroll_Modules.md
+*.pyc
 # AI + Model data (present or future)
 *.ckpt
 *.pt
@@ -92,3 +93,4 @@ build/
 *.state.json
 *.mindloop
 *.recursion
+remaining_Scroll_Modules.md
