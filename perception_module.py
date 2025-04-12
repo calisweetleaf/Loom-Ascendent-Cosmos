@@ -1712,3 +1712,192 @@ class PerceptionIntegrator:
         report.append(f"\nSacred Convergence Potential: {convergence_potential:.3f}")
         
         return "\n".join(report)
+
+class SensoryFilter:
+    """
+    Filters and processes incoming sensory data based on entity's sensory thresholds.
+    Implements the boundary between external stimuli and internal perception.
+    """
+    
+    def __init__(self, identity: IdentityMatrix):
+        self.identity = identity
+        self.sensory_thresholds = {
+            "visual": 0.1,
+            "auditory": 0.15,
+            "tactile": 0.2,
+            "proprioceptive": 0.05,
+            "harmonic": 0.1,
+            "symbolic": 0.2,
+            "temporal": 0.1,
+            "quantum": 0.3,
+            "ethical": 0.25
+        }
+        self.attention_weights = np.ones(len(self.sensory_thresholds))
+        self.active_filters = {}
+        self.adaptation_rates = {k: 0.05 for k in self.sensory_thresholds}
+        self.last_stimuli = {}
+    
+    def apply_filters(self, sensory_input: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Filter incoming sensory data based on thresholds and attention.
+        """
+        if not sensory_input:
+            return {}
+            
+        filtered_output = {}
+        
+        # Process each sensory channel
+        for channel, data in sensory_input.items():
+            if channel not in self.sensory_thresholds:
+                # Pass through channels without defined thresholds
+                filtered_output[channel] = data
+                continue
+                
+            # Get channel-specific threshold and attention weight
+            threshold = self.sensory_thresholds[channel]
+            attention_idx = list(self.sensory_thresholds.keys()).index(channel)
+            attention = self.attention_weights[attention_idx]
+            
+            # Apply threshold with attention modification
+            effective_threshold = threshold * (2.0 - attention)
+            
+            # Filter based on threshold
+            if isinstance(data, dict):
+                # For dictionary data, filter each value
+                filtered_data = {}
+                for key, value in data.items():
+                    if isinstance(value, (int, float)):
+                        if value >= effective_threshold:
+                            # Scale based on how far above threshold
+                            scaled_value = (value - effective_threshold) / (1.0 - effective_threshold)
+                            filtered_data[key] = scaled_value * attention
+                    elif isinstance(value, dict):
+                        # Recursively filter nested dictionaries
+                        sub_filtered = {}
+                        for subkey, subvalue in value.items():
+                            if isinstance(subvalue, (int, float)) and subvalue >= effective_threshold:
+                                scaled_subvalue = (subvalue - effective_threshold) / (1.0 - effective_threshold)
+                                sub_filtered[subkey] = scaled_subvalue * attention
+                        if sub_filtered:
+                            filtered_data[key] = sub_filtered
+                    else:
+                        # Pass through non-numeric values
+                        filtered_data[key] = value
+                
+                if filtered_data:
+                    filtered_output[channel] = filtered_data
+            
+            elif isinstance(data, (int, float)):
+                # For simple numeric data
+                if data >= effective_threshold:
+                    scaled_value = (data - effective_threshold) / (1.0 - effective_threshold)
+                    filtered_output[channel] = scaled_value * attention
+            
+            elif isinstance(data, list) or isinstance(data, np.ndarray):
+                # For array data, apply threshold to each element
+                filtered_array = []
+                for item in data:
+                    if isinstance(item, (int, float)) and item >= effective_threshold:
+                        scaled_item = (item - effective_threshold) / (1.0 - effective_threshold)
+                        filtered_array.append(scaled_item * attention)
+                    else:
+                        filtered_array.append(0)  # Below threshold
+                
+                if any(filtered_array):
+                    filtered_output[channel] = np.array(filtered_array) if isinstance(data, np.ndarray) else filtered_array
+            
+            else:
+                # Pass through other data types
+                filtered_output[channel] = data
+        
+        # Store for adaptation
+        self.last_stimuli = sensory_input
+        
+        return filtered_output
+    
+    def adapt_thresholds(self, adaptation_rate: float = None):
+        """
+        Adapt sensory thresholds based on recent stimuli.
+        This implements sensory adaptation/habituation.
+        """
+        if not self.last_stimuli:
+            return
+            
+        for channel, data in self.last_stimuli.items():
+            if channel not in self.sensory_thresholds:
+                continue
+                
+            # Use channel-specific adaptation rate if available
+            rate = adaptation_rate if adaptation_rate is not None else self.adaptation_rates[channel]
+            
+            # Calculate average stimulus strength
+            if isinstance(data, dict):
+                # For dictionary data, average numeric values
+                values = []
+                self._extract_numeric_values(data, values)
+                if values:
+                    avg_strength = sum(values) / len(values)
+                else:
+                    continue
+            elif isinstance(data, (int, float)):
+                avg_strength = data
+            elif isinstance(data, (list, np.ndarray)):
+                if all(isinstance(x, (int, float)) for x in data):
+                    avg_strength = sum(data) / len(data)
+                else:
+                    continue
+            else:
+                continue
+            
+            # Adapt threshold based on stimulus strength
+            current_threshold = self.sensory_thresholds[channel]
+            
+            # If stimulus is consistently strong, increase threshold (habituation)
+            if avg_strength > current_threshold * 2:
+                new_threshold = current_threshold + (avg_strength - current_threshold) * rate
+                self.sensory_thresholds[channel] = min(0.8, new_threshold)
+            
+            # If stimulus is consistently weak, decrease threshold (sensitization)
+            elif avg_strength < current_threshold * 0.5 and avg_strength > 0:
+                new_threshold = current_threshold - (current_threshold - avg_strength * 0.5) * rate
+                self.sensory_thresholds[channel] = max(0.01, new_threshold)
+    
+    def _extract_numeric_values(self, data_dict: Dict, values_list: List):
+        """
+        Helper method to recursively extract numeric values from nested dictionaries.
+        """
+        for key, value in data_dict.items():
+            if isinstance(value, (int, float)):
+                values_list.append(value)
+            elif isinstance(value, dict):
+                self._extract_numeric_values(value, values_list)
+            elif isinstance(value, (list, np.ndarray)):
+                for item in value:
+                    if isinstance(item, (int, float)):
+                        values_list.append(item)
+    
+    def set_attention(self, channel: str, level: float):
+        """
+        Set attention level for a specific sensory channel.
+        Higher attention means more sensitivity to that channel.
+        """
+        if channel in self.sensory_thresholds:
+            idx = list(self.sensory_thresholds.keys()).index(channel)
+            self.attention_weights[idx] = max(0.1, min(2.0, level))
+    
+    def add_filter(self, channel: str, filter_name: str, filter_function: Callable):
+        """
+        Add a custom filter function to a sensory channel.
+        Filter functions should take and return the channel's data type.
+        """
+        if channel not in self.active_filters:
+            self.active_filters[channel] = {}
+            
+        self.active_filters[channel][filter_name] = filter_function
+    
+    def remove_filter(self, channel: str, filter_name: str):
+        """
+        Remove a custom filter from a sensory channel.
+        """
+        if channel in self.active_filters and filter_name in self.active_filters[channel]:
+            del self.active_filters[channel][filter_name]

@@ -48,8 +48,300 @@ try:
 except Exception as e:
     logger.warning(f"Failed to load quantum&physics.py module: {e}")
     logger.info("Using fallback implementation for quantum physics classes")
+
+# WaveFunction implementation
+class WaveFunction:
+    """Represents a quantum mechanical wave function with various representations"""
     
-    # Define fallback classes for when the module import fails
+    def __init__(self, grid_size=64, dimensions=3, representation='position'):
+        """Initialize a wave function on a grid.
+        
+        Args:
+            grid_size: Size of the grid in each dimension
+            dimensions: Number of spatial dimensions
+            representation: Initial representation ('position' or 'momentum')
+        """
+        self.grid_size = grid_size
+        self.dimensions = dimensions
+        self.representation = representation
+        self.lattice_spacing = 1.0 / grid_size
+        
+        # Initialize in position space as a Gaussian wave packet
+        if dimensions == 1:
+            x = np.linspace(-5, 5, grid_size)
+            self.grid = np.array([x])
+            self.psi = np.exp(-x**2/2) * (1.0/np.pi)**0.25
+            
+        elif dimensions == 2:
+            x = np.linspace(-5, 5, grid_size)
+            y = np.linspace(-5, 5, grid_size)
+            X, Y = np.meshgrid(x, y)
+            self.grid = np.array([X, Y])
+            self.psi = np.exp(-(X**2 + Y**2)/2) * (1.0/np.pi)**0.5
+            
+        elif dimensions == 3:
+            x = np.linspace(-5, 5, grid_size)
+            y = np.linspace(-5, 5, grid_size)
+            z = np.linspace(-5, 5, grid_size)
+            X, Y, Z = np.meshgrid(x, y, z)
+            self.grid = np.array([X, Y, Z])
+            self.psi = np.exp(-(X**2 + Y**2 + Z**2)/2) * (1.0/np.pi)**0.75
+        
+        else:
+            # Higher dimensions use a simple product form
+            self.grid = np.zeros((dimensions, grid_size))
+            self.psi = np.ones((grid_size,) * dimensions) / np.sqrt(grid_size**dimensions)
+            
+        # Normalize
+        self.normalize()
+        
+        # For momentum space representation
+        self.psi_momentum = None
+        
+        logger.debug(f"Initialized WaveFunction with {dimensions}D grid of size {grid_size}")
+    
+    def normalize(self):
+        """Normalize the wave function"""
+        norm = np.sqrt(np.sum(np.abs(self.psi)**2) * self.lattice_spacing**self.dimensions)
+        if norm > 0:
+            self.psi /= norm
+        else:
+            logger.warning("Cannot normalize: wave function is zero everywhere")
+    
+    def to_momentum_space(self):
+        """Transform to momentum space representation using FFT"""
+        if self.representation == 'position':
+            # Use FFT to transform to momentum space
+            self.psi_momentum = np.fft.fftn(self.psi)
+            self.representation = 'momentum'
+            logger.debug("Transformed to momentum space")
+        return self.psi_momentum
+    
+    def to_position_space(self):
+        """Transform to position space representation using inverse FFT"""
+        if self.representation == 'momentum':
+            # Use inverse FFT to transform back to position space
+            self.psi = np.fft.ifftn(self.psi_momentum)
+            self.representation = 'position'
+            logger.debug("Transformed to position space")
+        return self.psi
+    
+    def probability_density(self):
+        """Calculate probability density |ψ|²"""
+        if self.representation == 'position':
+            return np.abs(self.psi)**2
+        else:
+            return np.abs(self.to_position_space())**2
+    
+    def expectation_value(self, operator):
+        """Calculate expectation value of an operator"""
+        if callable(operator):
+            # Function-based operator
+            if self.representation == 'position':
+                result = np.sum(np.conj(self.psi) * operator(self.psi)) * self.lattice_spacing**self.dimensions
+            else:
+                position_psi = self.to_position_space()
+                result = np.sum(np.conj(position_psi) * operator(position_psi)) * self.lattice_spacing**self.dimensions
+        else:
+            # Matrix-based operator
+            if self.representation == 'position':
+                result = np.sum(np.conj(self.psi) * operator.dot(self.psi)) * self.lattice_spacing**self.dimensions
+            else:
+                position_psi = self.to_position_space()
+                result = np.sum(np.conj(position_psi) * operator.dot(position_psi)) * self.lattice_spacing**self.dimensions
+        
+        return result
+    
+    def apply_operator(self, operator):
+        """Apply an operator to the wave function"""
+        if callable(operator):
+            # Function-based operator
+            if self.representation == 'position':
+                self.psi = operator(self.psi)
+            else:
+                self.psi_momentum = operator(self.psi_momentum)
+        else:
+            # Matrix-based operator
+            if self.representation == 'position':
+                self.psi = operator.dot(self.psi)
+            else:
+                self.psi_momentum = operator.dot(self.psi_momentum)
+        
+        # Normalize after operator application
+        self.normalize()
+        logger.debug("Applied operator to wave function")
+    
+    def evolve(self, hamiltonian, dt):
+        """Evolve wave function using Schrödinger equation for a time step dt"""
+        # Simple implementation using Euler method
+        # ∂ψ/∂t = -i/ħ H ψ
+        # psi(t+dt) ≈ psi(t) - i/ħ H psi(t) dt
+        
+        if self.representation == 'position':
+            # Apply Hamiltonian operator
+            h_bar = 1.0  # Natural units
+            self.psi = self.psi - 1j / h_bar * hamiltonian(self.psi) * dt
+            self.normalize()
+            logger.debug(f"Evolved wave function for dt={dt}")
+        else:
+            # First transform to position space
+            self.to_position_space()
+            # Then evolve and transform back
+            h_bar = 1.0  # Natural units
+            self.psi = self.psi - 1j / h_bar * hamiltonian(self.psi) * dt
+            self.normalize()
+            self.to_momentum_space()
+    
+    def collapse(self, measurement_operator=None):
+        """Simulate wave function collapse after measurement"""
+        if measurement_operator is None:
+            # Default: position measurement
+            prob = self.probability_density()
+            
+            # Flatten for easier random selection
+            flat_prob = prob.flatten()
+            flat_prob = flat_prob / np.sum(flat_prob)
+            
+            # Random selection based on probability
+            indices = np.random.choice(range(len(flat_prob)), p=flat_prob)
+            
+            # Convert flat index back to multidimensional
+            multi_indices = np.unravel_index(indices, prob.shape)
+            
+            # Collapse to delta function at measured position
+            self.psi = np.zeros_like(self.psi)
+            self.psi[multi_indices] = 1.0
+            
+            # Renormalize
+            self.normalize()
+            logger.info(f"Wave function collapsed to position {multi_indices}")
+        else:
+            # Custom measurement operator
+            # (Implementation depends on the form of the operator)
+            if callable(measurement_operator):
+                eigenvalues, eigenvectors = measurement_operator(self.psi)
+            else:
+                # Assuming matrix-based operator
+                eigenvalues, eigenvectors = np.linalg.eigh(measurement_operator)
+            
+            # Project wave function onto eigenvectors
+            projections = []
+            for eigenvector in eigenvectors:
+                projection = np.sum(np.conj(eigenvector) * self.psi) * self.lattice_spacing**self.dimensions
+                projections.append(np.abs(projection)**2)
+            
+            # Normalize projections to get probabilities
+            projections = np.array(projections)
+            projections = projections / np.sum(projections)
+            
+            # Select eigenstate based on probabilities
+            selected = np.random.choice(range(len(projections)), p=projections)
+            
+            # Collapse to selected eigenstate
+            self.psi = eigenvectors[selected]
+            self.normalize()
+            logger.info(f"Wave function collapsed to eigenstate {selected} with eigenvalue {eigenvalues[selected]}")
+    
+    def visualize(self, title="Wave Function Visualization"):
+        """Visualize the wave function"""
+        prob = self.probability_density()
+        
+        if self.dimensions == 1:
+            plt.figure(figsize=(10, 6))
+            x = self.grid[0]
+            plt.plot(x, prob, 'b-', label=r'$|\psi(x)|^2$')
+            plt.plot(x, np.real(self.psi), 'g--', label=r'$\mathrm{Re}[\psi(x)]$')
+            plt.plot(x, np.imag(self.psi), 'r--', label=r'$\mathrm{Im}[\psi(x)]$')
+            plt.title(title)
+            plt.xlabel('Position')
+            plt.ylabel('Probability Density')
+            plt.legend()
+            plt.grid(True)
+            
+        elif self.dimensions == 2:
+            plt.figure(figsize=(10, 8))
+            X, Y = self.grid
+            plt.contourf(X, Y, prob, 50, cmap='viridis')
+            plt.colorbar(label='Probability Density')
+            plt.title(title)
+            plt.xlabel('X')
+            plt.ylabel('Y')
+            
+        elif self.dimensions == 3:
+            # For 3D, show slices through the center
+            center = self.grid_size // 2
+            
+            fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+            
+            # XY plane (constant z)
+            axes[0].contourf(self.grid[0][:,:,center], self.grid[1][:,:,center], 
+                           prob[:,:,center], 50, cmap='viridis')
+            axes[0].set_title('XY Plane (z=0)')
+            axes[0].set_xlabel('X')
+            axes[0].set_ylabel('Y')
+            
+            # XZ plane (constant y)
+            axes[1].contourf(self.grid[0][:,center,:], self.grid[2][:,center,:], 
+                           prob[:,center,:], 50, cmap='viridis')
+            axes[1].set_title('XZ Plane (y=0)')
+            axes[1].set_xlabel('X')
+            axes[1].set_ylabel('Z')
+            
+            # YZ plane (constant x)
+            axes[2].contourf(self.grid[1][center,:,:], self.grid[2][center,:,:], 
+                           prob[center,:,:], 50, cmap='viridis')
+            axes[2].set_title('YZ Plane (x=0)')
+            axes[2].set_xlabel('Y')
+            axes[2].set_ylabel('Z')
+            
+            plt.tight_layout()
+            
+        else:
+            logger.warning(f"Visualization not implemented for {self.dimensions} dimensions")
+            return
+        
+        plt.tight_layout()
+        return plt.gcf()
+    
+    def hamiltonian(self, psi):
+        """Apply the Hamiltonian operator to the wavefunction"""
+        # H = -∇²/2m + V
+        
+        # Calculate kinetic term using discrete Laplacian
+        kinetic = np.zeros_like(psi, dtype=complex)
+        
+        for dim in range(self.dimensions):
+            # Second derivative in this dimension
+            slice_next = [slice(None)] * self.dimensions
+            slice_prev = [slice(None)] * self.dimensions
+            slice_center = [slice(None)] * self.dimensions
+            
+            slice_next[dim] = slice(1, None)
+            slice_prev[dim] = slice(0, -1)
+            slice_center[dim] = slice(1, -1)
+            
+            # Apply finite difference for second derivative
+            kinetic[tuple(slice_center)] += (psi[tuple(slice_next)] - 2 * psi[tuple(slice_center)] + psi[tuple(slice_prev)]) / self.lattice_spacing**2
+        
+        # Simple harmonic oscillator potential
+        potential = np.zeros_like(psi, dtype=complex)
+        
+        if self.dimensions == 1:
+            x = self.grid[0]
+            potential = 0.5 * x**2 * psi
+        elif self.dimensions == 2:
+            X, Y = self.grid
+            potential = 0.5 * (X**2 + Y**2) * psi
+        elif self.dimensions == 3:
+            X, Y, Z = self.grid
+            potential = 0.5 * (X**2 + Y**2 + Z**2) * psi
+        
+        # Combine kinetic and potential terms
+        # H = -∇²/2m + V with m=1 (natural units)
+        hamiltonian_psi = -0.5 * kinetic + potential
+        
+        return hamiltonian_psi
+
     class PhysicsConstants:
         """Physics constants for the simulation"""
         
@@ -78,257 +370,6 @@ except Exception as e:
             self.dark_matter_density = 0.25  # Fraction of critical density
             self.baryonic_matter_density = 0.05  # Fraction of critical density
 
-    class WaveFunction:
-        """Represents a quantum mechanical wave function with various representations"""
-        
-        def __init__(self, grid_size=64, dimensions=3, representation='position'):
-            """Initialize a wave function on a grid.
-            
-            Args:
-                grid_size: Size of the grid in each dimension
-                dimensions: Number of spatial dimensions
-                representation: Initial representation ('position' or 'momentum')
-            """
-            self.grid_size = grid_size
-            self.dimensions = dimensions
-            self.representation = representation
-            self.lattice_spacing = 1.0 / grid_size
-            
-            # Initialize in position space as a Gaussian wave packet
-            if dimensions == 1:
-                x = np.linspace(-5, 5, grid_size)
-                self.grid = np.array([x])
-                self.psi = np.exp(-x**2/2) * (1.0/np.pi)**0.25
-                
-            elif dimensions == 2:
-                x = np.linspace(-5, 5, grid_size)
-                y = np.linspace(-5, 5, grid_size)
-                X, Y = np.meshgrid(x, y)
-                self.grid = np.array([X, Y])
-                self.psi = np.exp(-(X**2 + Y**2)/2) * (1.0/np.pi)**0.5
-                
-            elif dimensions == 3:
-                x = np.linspace(-5, 5, grid_size)
-                y = np.linspace(-5, 5, grid_size)
-                z = np.linspace(-5, 5, grid_size)
-                X, Y, Z = np.meshgrid(x, y, z)
-                self.grid = np.array([X, Y, Z])
-                self.psi = np.exp(-(X**2 + Y**2 + Z**2)/2) * (1.0/np.pi)**0.75
-            
-            else:
-                # Higher dimensions use a simple product form
-                self.psi = np.ones((grid_size,) * dimensions) / np.sqrt(grid_size**dimensions)
-                
-            # Normalize
-            self.normalize()
-            
-            # For momentum space representation
-            self.psi_momentum = None
-            
-            logger.debug(f"Initialized WaveFunction with {dimensions}D grid of size {grid_size}")
-        
-        def normalize(self):
-            """Normalize the wave function"""
-            norm = np.sqrt(np.sum(np.abs(self.psi)**2) * self.lattice_spacing**self.dimensions)
-            if norm > 0:
-                self.psi /= norm
-            else:
-                logger.warning("Cannot normalize: wave function is zero everywhere")
-        
-        def to_momentum_space(self):
-            """Transform to momentum space representation using FFT"""
-            if self.representation == 'position':
-                # Use FFT to transform to momentum space
-                self.psi_momentum = np.fft.fftn(self.psi)
-                self.representation = 'momentum'
-                logger.debug("Transformed to momentum space")
-            return self.psi_momentum
-        
-        def to_position_space(self):
-            """Transform to position space representation using inverse FFT"""
-            if self.representation == 'momentum':
-                # Use inverse FFT to transform back to position space
-                self.psi = np.fft.ifftn(self.psi_momentum)
-                self.representation = 'position'
-                logger.debug("Transformed to position space")
-            return self.psi
-        
-        def probability_density(self):
-            """Calculate probability density |ψ|²"""
-            if self.representation == 'position':
-                return np.abs(self.psi)**2
-            else:
-                return np.abs(self.to_position_space())**2
-        
-        def expectation_value(self, operator):
-            """Calculate expectation value of an operator"""
-            if callable(operator):
-                # Function-based operator
-                if self.representation == 'position':
-                    result = np.sum(np.conj(self.psi) * operator(self.psi)) * self.lattice_spacing**self.dimensions
-                else:
-                    position_psi = self.to_position_space()
-                    result = np.sum(np.conj(position_psi) * operator(position_psi)) * self.lattice_spacing**self.dimensions
-            else:
-                # Matrix-based operator
-                if self.representation == 'position':
-                    result = np.sum(np.conj(self.psi) * operator.dot(self.psi)) * self.lattice_spacing**self.dimensions
-                else:
-                    position_psi = self.to_position_space()
-                    result = np.sum(np.conj(position_psi) * operator.dot(position_psi)) * self.lattice_spacing**self.dimensions
-            
-            return result
-        
-        def apply_operator(self, operator):
-            """Apply an operator to the wave function"""
-            if callable(operator):
-                # Function-based operator
-                if self.representation == 'position':
-                    self.psi = operator(self.psi)
-                else:
-                    self.psi_momentum = operator(self.psi_momentum)
-            else:
-                # Matrix-based operator
-                if self.representation == 'position':
-                    self.psi = operator.dot(self.psi)
-                else:
-                    self.psi_momentum = operator.dot(self.psi_momentum)
-            
-            # Normalize after operator application
-            self.normalize()
-            logger.debug("Applied operator to wave function")
-            
-        def evolve(self, hamiltonian, dt):
-            """Evolve wave function using Schrödinger equation for a time step dt"""
-            # Simple implementation using Euler method
-            # ∂ψ/∂t = -i/ħ H ψ
-            # psi(t+dt) ≈ psi(t) - i/ħ H psi(t) dt
-            
-            if self.representation == 'position':
-                # Apply Hamiltonian operator
-                h_bar = 1.0  # Natural units
-                self.psi = self.psi - 1j / h_bar * hamiltonian(self.psi) * dt
-                self.normalize()
-                logger.debug(f"Evolved wave function for dt={dt}")
-            else:
-                # First transform to position space
-                self.to_position_space()
-                # Then evolve and transform back
-                self.psi = self.psi - 1j / h_bar * hamiltonian(self.psi) * dt
-                self.normalize()
-                self.to_momentum_space()
-        
-        def collapse(self, measurement_operator=None):
-            """Simulate wave function collapse after measurement"""
-            if measurement_operator is None:
-                # Default: position measurement
-                prob = self.probability_density()
-                
-                # Flatten for easier random selection
-                flat_prob = prob.flatten()
-                flat_prob = flat_prob / np.sum(flat_prob)
-                
-                # Random selection based on probability
-                indices = np.random.choice(range(len(flat_prob)), p=flat_prob)
-                
-                # Convert flat index back to multidimensional
-                multi_indices = np.unravel_index(indices, prob.shape)
-                
-                # Collapse to delta function at measured position
-                self.psi = np.zeros_like(self.psi)
-                self.psi[multi_indices] = 1.0
-                
-                # Renormalize
-                self.normalize()
-                logger.info(f"Wave function collapsed to position {multi_indices}")
-            else:
-                # Custom measurement operator
-                # (Implementation depends on the form of the operator)
-                if callable(measurement_operator):
-                    eigenvalues, eigenvectors = measurement_operator(self.psi)
-                else:
-                    # Assuming matrix-based operator
-                    eigenvalues, eigenvectors = np.linalg.eigh(measurement_operator)
-                
-                # Project wave function onto eigenvectors
-                projections = []
-                for eigenvector in eigenvectors:
-                    projection = np.sum(np.conj(eigenvector) * self.psi) * self.lattice_spacing**self.dimensions
-                    projections.append(np.abs(projection)**2)
-                
-                # Normalize projections to get probabilities
-                projections = np.array(projections)
-                projections = projections / np.sum(projections)
-                
-                # Select eigenstate based on probabilities
-                selected = np.random.choice(range(len(projections)), p=projections)
-                
-                # Collapse to selected eigenstate
-                self.psi = eigenvectors[selected]
-                self.normalize()
-                logger.info(f"Wave function collapsed to eigenstate {selected} with eigenvalue {eigenvalues[selected]}")
-        
-        def visualize(self, title="Wave Function Visualization"):
-            """Visualize the wave function"""
-            prob = self.probability_density()
-            
-            if self.dimensions == 1:
-                plt.figure(figsize=(10, 6))
-                x = self.grid[0]
-                plt.plot(x, prob, 'b-', label=r'$|\psi(x)|^2$')
-                plt.plot(x, np.real(self.psi), 'g--', label=r'$\mathrm{Re}[\psi(x)]$')
-                plt.plot(x, np.imag(self.psi), 'r--', label=r'$\mathrm{Im}[\psi(x)]$')
-                plt.title(title)
-                plt.xlabel('Position')
-                plt.ylabel('Probability Density')
-                plt.legend()
-                plt.grid(True)
-                
-            elif self.dimensions == 2:
-                plt.figure(figsize=(10, 8))
-                X, Y = self.grid
-                plt.contourf(X, Y, prob, 50, cmap='viridis')
-                plt.colorbar(label='Probability Density')
-                plt.title(title)
-                plt.xlabel('X')
-                plt.ylabel('Y')
-                
-            elif self.dimensions == 3:
-                # For 3D, show slices through the center
-                center = self.grid_size // 2
-                
-                fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-                
-                # XY plane (constant z)
-                axes[0].contourf(self.grid[0][:,:,center], self.grid[1][:,:,center], 
-                               prob[:,:,center], 50, cmap='viridis')
-                axes[0].set_title('XY Plane (z=0)')
-                axes[0].set_xlabel('X')
-                axes[0].set_ylabel('Y')
-                
-                # XZ plane (constant y)
-                axes[1].contourf(self.grid[0][:,center,:], self.grid[2][:,center,:], 
-                               prob[:,center,:], 50, cmap='viridis')
-                axes[1].set_title('XZ Plane (y=0)')
-                axes[1].set_xlabel('X')
-                axes[1].set_ylabel('Z')
-                
-                # YZ plane (constant x)
-                axes[2].contourf(self.grid[1][center,:,:], self.grid[2][center,:,:], 
-                               prob[center,:,:], 50, cmap='viridis')
-                axes[2].set_title('YZ Plane (x=0)')
-                axes[2].set_xlabel('Y')
-                axes[2].set_ylabel('Z')
-                
-                plt.tight_layout()
-                
-            else:
-                logger.warning(f"Visualization not implemented for {self.dimensions} dimensions")
-                return
-            
-            plt.tight_layout()
-            return plt.gcf()
-    
     class QuantumField:
         """Quantum field simulation for cosmic evolution"""
         
