@@ -32,6 +32,8 @@ try:
     
     # Add the missing exports
     SymbolicOperators = quantum_physics_impl.SymbolicOperators
+    EthicalGravityManifold = quantum_physics_impl.EthicalGravityManifold
+    WaveFunction = quantum_physics_impl.WaveFunction
 
 except Exception as e:
     logger.error(f"Failed to import quantum&physics.py: {e}")
@@ -1249,7 +1251,7 @@ except Exception as e:
             Returns:
                 Array representing the field values across spacetime
             """
-            if ethical_dimension >= self.ethical_dimensions:
+            if self.ethical_dimension >= self.ethical_dimensions:
                 return None
             
             return self.ethical_tensor[..., ethical_dimension]
