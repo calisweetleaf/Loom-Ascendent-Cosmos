@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Set, Optional, Union, Any, Callable
 import numpy as np
 
-class ArchetypeResonance(Enum:
+class ArchetypeResonance(Enum):
     """Fundamental patterns of being that shape perception."""
     ANIMA = "anima"         # Life-bringing, nurturing, creative
     UMBRA = "umbra"         # Shadow, hidden, depth-seeking
