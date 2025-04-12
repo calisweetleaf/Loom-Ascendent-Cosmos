@@ -13,13 +13,17 @@
 
 ┣ 📂Documentation
 ┃ ┣ 📜CosmosEngine.mermaid
-┃ ┗ 📜Genesis Framework.md
+┃ ┣ 📜Genesis_Framework.md
+┃ ┣ 📜Project_Structure.md
+┃ ┗ 📜Technical_README.md
 ┣ 📜.gitignore
 ┣ 📜aether_engine.py
 ┣ 📜conversation_history.txt
 ┣ 📜genesis_cosmos.log
 ┣ 📜harmonic_engine.py
+┣ 📜LICENSE.md
 ┣ 📜main.py
+┣ 📜metadata.md
 ┣ 📜mindseed.py
 ┣ 📜perception_module.py
 ┣ 📜quantum_bridge.py
