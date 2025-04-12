@@ -1278,3 +1278,463 @@ QuantumField._compute_time_derivatives = _compute_time_derivatives
 QuantumField._ethical_divergence_term = _ethical_divergence_term
 QuantumField._enforce_normalization = _enforce_normalization
 QuantumField.set_ethical_tensor = set_ethical_tensor
+
+# -------------------------------------------------------------------------
+# Quantum State Vector Implementation
+# -------------------------------------------------------------------------
+class QuantumStateVector:
+    """
+    Represents a quantum state vector in Hilbert space, providing a 
+    mathematical representation of quantum superposition and entanglement.
+    """
+    
+    def __init__(self, n_qubits=1, state=None):
+        """
+        Initialize a quantum state vector.
+        
+        Args:
+            n_qubits: Number of qubits in the system
+            state: Initial state vector (if None, initialize to |0>^⊗n)
+        """
+        self.n_qubits = n_qubits
+        self.dim = 2 ** n_qubits
+        
+        # Initialize state vector
+        if state is not None:
+            if len(state) != self.dim:
+                raise ValueError(f"State vector dimension {len(state)} doesn't match expected {self.dim}")
+            self.state = np.array(state, dtype=complex)
+            self.normalize()
+        else:
+            # Initialize to |0...0> state
+            self.state = np.zeros(self.dim, dtype=complex)
+            self.state[0] = 1.0
+    
+    def normalize(self):
+        """Normalize the state vector"""
+        norm = np.sqrt(np.sum(np.abs(self.state)**2))
+        if norm > 0:
+            self.state /= norm
+    
+    def amplitude(self, bitstring):
+        """
+        Get the amplitude for a specific basis state.
+        
+        Args:
+            bitstring: String of 0s and 1s representing the basis state
+            
+        Returns:
+            Complex amplitude
+        """
+        if len(bitstring) != self.n_qubits:
+            raise ValueError(f"Bitstring length {len(bitstring)} doesn't match qubit count {self.n_qubits}")
+        
+        # Convert bitstring to index
+        index = int(bitstring, 2)
+        return self.state[index]
+    
+    def probability(self, bitstring):
+        """
+        Get the probability for a specific basis state.
+        
+        Args:
+            bitstring: String of 0s and 1s representing the basis state
+            
+        Returns:
+            Probability (0 to 1)
+        """
+        return np.abs(self.amplitude(bitstring))**2
+    
+    def apply_gate(self, gate, target_qubits):
+        """
+        Apply a quantum gate to the state vector.
+        
+        Args:
+            gate: Unitary matrix representing the gate
+            target_qubits: List of qubits the gate acts on
+        """
+        # Validate gate shape
+        gate_qubits = int(np.log2(gate.shape[0]))
+        if len(target_qubits) != gate_qubits:
+            raise ValueError(f"Gate acts on {gate_qubits} qubits but {len(target_qubits)} targets specified")
+        
+        # Validate target qubits
+        if any(q >= self.n_qubits for q in target_qubits):
+            raise ValueError(f"Target qubits {target_qubits} out of range for {self.n_qubits} qubits")
+        
+        # For single qubit gates, we can use a more efficient implementation
+        if gate_qubits == 1:
+            target = target_qubits[0]
+            
+            # Reshape state for easier processing
+            new_shape = [2] * self.n_qubits
+            state_tensor = self.state.reshape(new_shape)
+            
+            # Apply gate along the target axis
+            # For numpy's tensordot to work correctly with complex matrices
+            state_tensor = np.tensordot(gate, state_tensor, axes=([1], [target]))
+            
+            # Transpose to get the correct order
+            axes = list(range(self.n_qubits + 1))
+            axes.remove(0)
+            axes.insert(target, 0)
+            state_tensor = np.transpose(state_tensor, axes)
+            
+            # Reshape back to vector
+            self.state = state_tensor.reshape(self.dim)
+            
+        else:
+            # For multi-qubit gates, we'll use a simple but less efficient approach
+            # Building the full unitary is exponential in the number of qubits!
+            full_gate = self._expand_gate(gate, target_qubits)
+            self.state = np.dot(full_gate, self.state)
+        
+        self.normalize()
+    
+    def _expand_gate(self, gate, target_qubits):
+        """
+        Expand a gate to act on the full Hilbert space.
+        
+        Args:
+            gate: Gate matrix
+            target_qubits: List of target qubits
+        
+        Returns:
+            Full unitary matrix
+        """
+        # This is an inefficient implementation for illustration
+        n = self.n_qubits
+        full_gate = np.eye(2**n, dtype=complex)
+        
+        # For each basis state, apply the gate
+        for i in range(2**n):
+            # Convert i to bitstring
+            bitstring = format(i, f'0{n}b')
+            
+            # Extract the bits corresponding to target_qubits
+            target_bits = ''.join(bitstring[q] for q in target_qubits)
+            target_idx = int(target_bits, 2)
+            
+            # For each output of the gate
+            for j in range(gate.shape[1]):
+                # Convert j to bitstring for target qubits
+                j_bits = format(j, f'0{len(target_qubits)}b')
+                
+                # Create new bitstring with j_bits inserted at target positions
+                new_bits = list(bitstring)
+                for q_idx, q in enumerate(target_qubits):
+                    new_bits[q] = j_bits[q_idx]
+                new_bitstring = ''.join(new_bits)
+                new_idx = int(new_bitstring, 2)
+                
+                # Apply gate
+                full_gate[new_idx, i] = gate[j, target_idx]
+        
+        return full_gate
+    
+    def measure(self, qubit):
+        """
+        Measure a specific qubit and collapse the state.
+        
+        Args:
+            qubit: Index of qubit to measure
+            
+        Returns:
+            Measurement result (0 or 1)
+        """
+        # Calculate probabilities for 0 and 1 outcomes
+        prob_0 = 0.0
+        prob_1 = 0.0
+        
+        for i in range(self.dim):
+            # Convert i to bitstring
+            bitstring = format(i, f'0{self.n_qubits}b')
+            
+            # Check if the qubit is 0 or 1
+            if bitstring[qubit] == '0':
+                prob_0 += np.abs(self.state[i])**2
+            else:
+                prob_1 += np.abs(self.state[i])**2
+        
+        # Random outcome based on probabilities
+        outcome = np.random.choice([0, 1], p=[prob_0, prob_1])
+        
+        # Collapse the state
+        new_state = np.zeros_like(self.state)
+        norm = 0.0
+        
+        for i in range(self.dim):
+            # Convert i to bitstring
+            bitstring = format(i, f'0{self.n_qubits}b')
+            
+            # Keep only amplitudes consistent with measurement
+            if int(bitstring[qubit]) == outcome:
+                new_state[i] = self.state[i]
+                norm += np.abs(self.state[i])**2
+        
+        # Normalize the collapsed state
+        if norm > 0:
+            self.state = new_state / np.sqrt(norm)
+        
+        return outcome
+    
+    def entanglement_entropy(self, subsystem_qubits):
+        """
+        Calculate the entanglement entropy between subsystem and its complement.
+        
+        Args:
+            subsystem_qubits: List of qubit indices in the subsystem
+            
+        Returns:
+            Entanglement entropy value
+        """
+        # Convert state vector to density matrix
+        density = np.outer(self.state, np.conj(self.state))
+        
+        # Compute partial trace over complement subsystem
+        reduced_density = self._partial_trace(density, subsystem_qubits)
+        
+        # Calculate von Neumann entropy
+        eigenvalues = np.linalg.eigvalsh(reduced_density)
+        eigenvalues = eigenvalues[eigenvalues > 1e-10]  # Ignore zero eigenvalues
+        entropy = -np.sum(eigenvalues * np.log2(eigenvalues))
+        
+        return float(entropy)
+    
+    def _partial_trace(self, density, subsystem_qubits):
+        """
+        Compute the partial trace of the density matrix.
+        
+        Args:
+            density: Full density matrix
+            subsystem_qubits: Qubits to keep
+            
+        Returns:
+            Reduced density matrix
+        """
+        # This is a simple but inefficient implementation
+        n = self.n_qubits
+        subsystem_dim = 2 ** len(subsystem_qubits)
+        complement_qubits = [i for i in range(n) if i not in subsystem_qubits]
+        complement_dim = 2 ** len(complement_qubits)
+        
+        # Reshape density matrix for partial trace
+        density_tensor = density.reshape([2] * (2 * n))
+        
+        # Trace over complement qubits
+        reduced_density = np.zeros((subsystem_dim, subsystem_dim), dtype=complex)
+        
+        # For each basis state of subsystem and complement
+        for i in range(subsystem_dim):
+            i_bits = format(i, f'0{len(subsystem_qubits)}b')
+            for j in range(subsystem_dim):
+                j_bits = format(j, f'0{len(subsystem_qubits)}b')
+                
+                # Sum over complement subsystem
+                val = 0.0
+                for k in range(complement_dim):
+                    k_bits = format(k, f'0{len(complement_qubits)}b')
+                    
+                    # Create full indices for bra and ket
+                    bra_idx = ['0'] * n
+                    ket_idx = ['0'] * n
+                    
+                    # Fill in subsystem bits
+                    for idx, q in enumerate(subsystem_qubits):
+                        bra_idx[q] = i_bits[idx]
+                        ket_idx[q] = j_bits[idx]
+                    
+                    # Fill in complement bits
+                    for idx, q in enumerate(complement_qubits):
+                        bra_idx[q] = k_bits[idx]
+                        ket_idx[q] = k_bits[idx]
+                    
+                    # Convert to tensor indices
+                    bra_tensor_idx = tuple(int(bit) for bit in bra_idx)
+                    ket_tensor_idx = tuple(int(bit) for bit in ket_idx)
+                    
+                    # Combine for full density matrix index
+                    tensor_idx = bra_tensor_idx + ket_tensor_idx
+                    
+                    # Add to sum
+                    val += density_tensor[tensor_idx]
+                
+                reduced_density[i, j] = val
+        
+        return reduced_density
+    
+    def to_bloch_vector(self, qubit):
+        """
+        Convert a single qubit's state to Bloch sphere coordinates.
+        
+        Args:
+            qubit: Index of qubit
+            
+        Returns:
+            (x, y, z) coordinates on Bloch sphere
+        """
+        if self.n_qubits == 1:
+            # Simple case, just use the state directly
+            rho = np.outer(self.state, np.conj(self.state))
+        else:
+            # Compute reduced density matrix for the qubit
+            rho = self._partial_trace(np.outer(self.state, np.conj(self.state)), [qubit])
+        
+        # Pauli matrices
+        sigma_x = np.array([[0, 1], [1, 0]])
+        sigma_y = np.array([[0, -1j], [1j, 0]])
+        sigma_z = np.array([[1, 0], [0, -1]])
+        
+        # Calculate Bloch coordinates
+        x = np.real(np.trace(np.dot(rho, sigma_x)))
+        y = np.real(np.trace(np.dot(rho, sigma_y)))
+        z = np.real(np.trace(np.dot(rho, sigma_z)))
+        
+        return (x, y, z)
+    
+    def visualize_bloch(self, qubit=0):
+        """
+        Visualize a qubit state on the Bloch sphere.
+        
+        Args:
+            qubit: Index of qubit to visualize
+        
+        Returns:
+            Matplotlib figure
+        """
+        try:
+            from mpl_toolkits.mplot3d import Axes3D
+        except ImportError:
+            warnings.warn("Cannot import Axes3D for 3D plotting")
+            return None
+        
+        # Get Bloch coordinates
+        x, y, z = self.to_bloch_vector(qubit)
+        
+        # Create figure
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(111, projection='3d')
+        
+        # Draw Bloch sphere
+        u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+        sphere_x = np.cos(u) * np.sin(v)
+        sphere_y = np.sin(u) * np.sin(v)
+        sphere_z = np.cos(v)
+        ax.plot_wireframe(sphere_x, sphere_y, sphere_z, color="lightgray", alpha=0.2)
+        
+        # Draw coordinate axes
+        ax.quiver(-1.3, 0, 0, 2.6, 0, 0, color='gray', arrow_length_ratio=0.05, linewidth=0.5)
+        ax.quiver(0, -1.3, 0, 0, 2.6, 0, color='gray', arrow_length_ratio=0.05, linewidth=0.5)
+        ax.quiver(0, 0, -1.3, 0, 0, 2.6, color='gray', arrow_length_ratio=0.05, linewidth=0.5)
+        
+        # Draw state vector
+        ax.quiver(0, 0, 0, x, y, z, color='r', arrow_length_ratio=0.05)
+        
+        # Label axes
+        ax.text(1.5, 0, 0, r'$|0\rangle$', color='black')
+        ax.text(-1.5, 0, 0, r'$|1\rangle$', color='black')
+        ax.text(0, 1.5, 0, r'$|+\rangle$', color='black')
+        ax.text(0, -1.5, 0, r'$|-\rangle$', color='black')
+        ax.text(0, 0, 1.5, r'$|i+\rangle$', color='black')
+        ax.text(0, 0, -1.5, r'$|i-\rangle$', color='black')
+        
+        # Set figure properties
+        ax.set_box_aspect([1,1,1])
+        ax.set_axis_off()
+        ax.set_title(f'Qubit {qubit} State on Bloch Sphere')
+        
+        # Add text showing coordinates
+        state_text = f"Bloch Vector: ({x:.3f}, {y:.3f}, {z:.3f})"
+        fig.text(0.5, 0.02, state_text, ha='center')
+        
+        return fig
+    
+    # Common gate definitions as class methods
+    @classmethod
+    def hadamard_gate(cls):
+        """Create Hadamard gate matrix"""
+        return (1/np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype=complex)
+    
+    @classmethod
+    def pauli_x(cls):
+        """Create Pauli X (NOT) gate matrix"""
+        return np.array([[0, 1], [1, 0]], dtype=complex)
+    
+    @classmethod
+    def pauli_y(cls):
+        """Create Pauli Y gate matrix"""
+        return np.array([[0, -1j], [1j, 0]], dtype=complex)
+    
+    @classmethod
+    def pauli_z(cls):
+        """Create Pauli Z gate matrix"""
+        return np.array([[1, 0], [0, -1]], dtype=complex)
+    
+    @classmethod
+    def phase_gate(cls, phi):
+        """Create phase gate matrix with phase phi"""
+        return np.array([[1, 0], [0, np.exp(1j * phi)]], dtype=complex)
+    
+    @classmethod
+    def rotation_x(cls, theta):
+        """Create rotation around X-axis gate matrix"""
+        return np.array([
+            [np.cos(theta/2), -1j*np.sin(theta/2)],
+            [-1j*np.sin(theta/2), np.cos(theta/2)]
+        ], dtype=complex)
+    
+    @classmethod
+    def rotation_y(cls, theta):
+        """Create rotation around Y-axis gate matrix"""
+        return np.array([
+            [np.cos(theta/2), -np.sin(theta/2)],
+            [np.sin(theta/2), np.cos(theta/2)]
+        ], dtype=complex)
+    
+    @classmethod
+    def rotation_z(cls, theta):
+        """Create rotation around Z-axis gate matrix"""
+        return np.array([
+            [np.exp(-1j*theta/2), 0],
+            [0, np.exp(1j*theta/2)]
+        ], dtype=complex)
+    
+    @classmethod
+    def cnot_gate(cls):
+        """Create CNOT (Controlled-NOT) gate matrix"""
+        return np.array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0]
+        ], dtype=complex)
+    
+    @classmethod
+    def swap_gate(cls):
+        """Create SWAP gate matrix"""
+        return np.array([
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1]
+        ], dtype=complex)
+    
+    def create_bell_pair(self):
+        """
+        Create a Bell pair (maximally entangled two-qubit state)
+        Requires that n_qubits >= 2
+        """
+        if self.n_qubits < 2:
+            raise ValueError("Need at least 2 qubits to create a Bell pair")
+            
+        # Start with |00> state
+        self.state = np.zeros(self.dim, dtype=complex)
+        self.state[0] = 1.0
+        
+        # Apply Hadamard to first qubit
+        self.apply_gate(self.hadamard_gate(), [0])
+        
+        # Apply CNOT with control=first qubit, target=second qubit
+        self.apply_gate(self.cnot_gate(), [0, 1])
+        
+        return self
