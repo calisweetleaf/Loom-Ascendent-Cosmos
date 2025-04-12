@@ -1901,3 +1901,211 @@ class SensoryFilter:
         """
         if channel in self.active_filters and filter_name in self.active_filters[channel]:
             del self.active_filters[channel][filter_name]
+
+class WaveformGenerator:
+    """
+    Generates and manipulates waveforms for various perception aspects.
+    Used to create coherent oscillatory patterns for harmonics and quantum phenomena.
+    """
+    
+    def __init__(self, dimensions: int = 3, frequency_range: List[float] = None, phase_coupling: float = 0.3):
+        self.dimensions = dimensions
+        self.frequency_range = frequency_range or [0.1, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
+        self.phase_coupling = phase_coupling
+        self.base_frequencies = np.array(self.frequency_range)
+        self.phase_offsets = np.random.rand(len(self.frequency_range)) * 2 * np.pi
+        self.amplitudes = np.ones(len(self.frequency_range))
+        self.harmonic_weights = np.array([0.6, 0.3, 0.15, 0.075, 0.037, 0.018, 0.009])[:len(self.frequency_range)]
+        self.harmonic_weights = self.harmonic_weights / np.sum(self.harmonic_weights)
+        self.modulation = {}
+    
+    def generate_harmonic_wave(self, time_point: float, complexity: float = 0.5) -> np.ndarray:
+        """
+        Generate a harmonic waveform at a specific time point.
+        Higher complexity introduces more harmonics and interference patterns.
+        
+        Args:
+            time_point: The time value for waveform generation (0.0 to 1.0)
+            complexity: Controls harmonic richness (0.0 to 1.0)
+            
+        Returns:
+            Waveform vector with values for each frequency component
+        """
+        waves = np.zeros((len(self.frequency_range), self.dimensions))
+        
+        # Base wave components
+        for i, freq in enumerate(self.base_frequencies):
+            # Generate primary wave
+            phase = 2 * np.pi * freq * time_point + self.phase_offsets[i]
+            primary_wave = self.amplitudes[i] * np.sin(phase)
+            
+            # Apply complexity through harmonics and modulation
+            harmonic_content = 0
+            if complexity > 0:
+                # Add harmonics
+                for h in range(1, 1 + int(complexity * 4)):
+                    harmonic_phase = phase * (h + 1) + self.phase_offsets[i] * h * 0.1
+                    harmonic_amp = self.amplitudes[i] * (complexity / (h + 1))
+                    harmonic_content += harmonic_amp * np.sin(harmonic_phase)
+                
+                # Normalize to maintain amplitude range
+                harmonic_content = harmonic_content / (1 + complexity * 2)
+            
+            # Combine primary wave with harmonics
+            combined = (primary_wave * (1 - complexity * 0.5) + 
+                       harmonic_content * complexity)
+            
+            # Apply modulation if present
+            if str(i) in self.modulation:
+                mod_freq, mod_depth = self.modulation[str(i)]
+                mod_signal = np.sin(2 * np.pi * mod_freq * time_point)
+                modulator = 1.0 + mod_depth * mod_signal
+                combined *= modulator
+            
+            # Extend to all dimensions with phase variations
+            for d in range(self.dimensions):
+                dim_phase_offset = d * (np.pi / self.dimensions) * complexity
+                waves[i, d] = combined * np.cos(dim_phase_offset)
+        
+        # Apply phase coupling between frequencies (if enabled)
+        if self.phase_coupling > 0:
+            for i in range(len(self.base_frequencies) - 1):
+                coupling = self.phase_coupling * complexity
+                waves[i+1] += waves[i] * coupling
+                waves[i] += waves[i+1] * coupling * 0.5
+        
+        # Each frequency component is weighted and summed
+        weighted_waves = np.zeros(self.dimensions)
+        for d in range(self.dimensions):
+            for i in range(len(self.base_frequencies)):
+                weighted_waves[d] += waves[i, d] * self.harmonic_weights[i]
+        
+        # Normalize to keep amplitudes in reasonable range
+        scale = np.max(np.abs(weighted_waves)) if np.max(np.abs(weighted_waves)) > 0 else 1.0
+        return weighted_waves / scale
+    
+    def generate_quantum_wavepacket(self, center_positions: np.ndarray, 
+                                   spread: float, 
+                                   time_point: float,
+                                   grid_shape: Tuple[int, ...]) -> np.ndarray:
+        """
+        Generate a quantum wave packet (localized wave function) for quantum simulations.
+        
+        Args:
+            center_positions: Center point of wave packet in normalized coordinates [0,1]
+            spread: Wave packet spread (uncertainty)
+            time_point: Current time for evolution
+            grid_shape: Shape of the output grid
+            
+        Returns:
+            Complex-valued wave function on the specified grid
+        """
+        # Create coordinate grids
+        grids = np.meshgrid(*[np.linspace(0, 1, s) for s in grid_shape], indexing='ij')
+        
+        # Initialize wave packet
+        psi = np.ones(grid_shape, dtype=complex)
+        
+        # For each dimension, apply Gaussian envelope
+        for i in range(len(grid_shape)):
+            # Calculate distance from center
+            dx = grids[i] - center_positions[i]
+            
+            # Apply periodic boundary (wraparound)
+            dx = np.where(dx > 0.5, dx - 1.0, dx)
+            dx = np.where(dx < -0.5, dx + 1.0, dx)
+            
+            # Gaussian envelope
+            gaussian = np.exp(-0.5 * (dx / spread)**2)
+            
+            # Add oscillatory component
+            k = 10.0  # Wave number
+            oscillation = np.exp(1j * k * dx)
+            
+            # Combine
+            psi *= gaussian * oscillation
+        
+        # Add time evolution
+        omega = 2.0  # Angular frequency
+        time_evolution = np.exp(-1j * omega * time_point)
+        psi *= time_evolution
+        
+        # Normalize
+        norm = np.sqrt(np.sum(np.abs(psi)**2))
+        if norm > 0:
+            psi /= norm
+            
+        return psi
+    
+    def add_frequency_modulation(self, frequency_idx: int, modulator_freq: float, depth: float):
+        """
+        Add frequency modulation to a specific frequency component.
+        
+        Args:
+            frequency_idx: Index of frequency to modulate
+            modulator_freq: Frequency of the modulator
+            depth: Modulation depth (0.0 to 1.0)
+        """
+        self.modulation[str(frequency_idx)] = (modulator_freq, depth)
+    
+    def clear_modulation(self):
+        """Remove all modulations."""
+        self.modulation = {}
+    
+    def set_harmonic_weights(self, weights: np.ndarray):
+        """
+        Set custom weights for harmonic components.
+        
+        Args:
+            weights: Array of weights for each frequency component
+        """
+        if len(weights) == len(self.harmonic_weights):
+            weights_sum = np.sum(weights)
+            if weights_sum > 0:
+                self.harmonic_weights = weights / weights_sum
+    
+    def adjust_amplitudes(self, amplitude_profile: np.ndarray):
+        """
+        Adjust amplitudes of frequency components.
+        
+        Args:
+            amplitude_profile: New amplitude values for each frequency
+        """
+        if len(amplitude_profile) == len(self.amplitudes):
+            self.amplitudes = amplitude_profile.copy()
+    
+    def generate_interference_pattern(self, time_point: float, sources: List[Tuple[float, float, float]]) -> np.ndarray:
+        """
+        Generate interference pattern from multiple wave sources.
+        Useful for simulating quantum interference or harmonic field interactions.
+        
+        Args:
+            time_point: Current time point
+            sources: List of (position, frequency, amplitude) tuples
+            
+        Returns:
+            Interference pattern as array
+        """
+        # Create a field grid
+        grid_size = 32
+        grid = np.zeros((grid_size, grid_size))
+        
+        # For each point in the grid
+        for x in range(grid_size):
+            for y in range(grid_size):
+                point = (x / grid_size, y / grid_size)
+                
+                # Sum contributions from all sources
+                for pos, freq, amp in sources:
+                    # Calculate distance
+                    dx = point[0] - pos[0]
+                    dy = point[1] - pos[1]
+                    distance = np.sqrt(dx**2 + dy**2)
+                    
+                    # Wave contribution (amplitude decreases with distance)
+                    phase = 2 * np.pi * freq * (time_point - distance)
+                    contribution = amp * np.sin(phase) / (1 + distance * 5)
+                    
+                    grid[x, y] += contribution
+        
+        return grid
