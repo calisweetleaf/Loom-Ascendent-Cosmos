@@ -713,7 +713,7 @@ class RealityKernel:
         
     def trigger_event(self, event_type: str, event_data: Dict):
         """Trigger reality event"""
-        if event_type in self.event_handlers:
+        if (event_type in self.event_handlers):
             for handler in self.event_handlers[event_type]:
                 try:
                     handler(event_data)
@@ -748,16 +748,16 @@ class PerceptionEngine:
         # Create identity matrix for sensory processing
         self.identity = IdentityMatrix() if 'IdentityMatrix' in globals() else None
         
-        # Advanced sensory filters with higher resolution
+        # Advanced sensory filters with proper initialization
         self.sensory_filters = {
             'visual': SensoryFilter(identity=self.identity),
-            'auditory': WaveformGenerator(sample_rate=self.config['perception_fidelity'] * 10),
-            'tactile': HapticFieldGenerator(resolution=self.config['perception_fidelity'] // 2),
-            'olfactory': ChemicalPerceptionGenerator(),
-            'taste': TastePerceptionGenerator(),
-            'proprioception': ProprioceptionGenerator(),
-            'electromagnetic': ElectromagneticPerceptionGenerator(),
-            'temporal': TemporalPerceptionGenerator()
+            'auditory': WaveformGenerator(dimensions=3, frequency_range=[20, 20000]),
+            'tactile': HapticFieldGenerator(dimensions=3),
+            'olfactory': self._create_chemical_perception_generator(),
+            'taste': self._create_taste_perception_generator(),
+            'proprioception': self._create_proprioception_generator(),
+            'electromagnetic': self._create_electromagnetic_perception_generator(),
+            'temporal': self._create_temporal_perception_generator()
         }
         
         # Perception processing pipeline stages
@@ -769,6 +769,46 @@ class PerceptionEngine:
             self._optimize_for_entities,
             self._apply_temporal_context
         ]
+    
+    def _create_chemical_perception_generator(self):
+        """Create a chemical perception generator"""
+        # Placeholder implementation until the actual class is available
+        class ChemicalPerceptionGenerator:
+            def process(self, data):
+                return data
+        return ChemicalPerceptionGenerator()
+        
+    def _create_taste_perception_generator(self):
+        """Create a taste perception generator"""
+        # Placeholder implementation until the actual class is available
+        class TastePerceptionGenerator:
+            def process(self, data):
+                return data
+        return TastePerceptionGenerator()
+        
+    def _create_proprioception_generator(self):
+        """Create a proprioception generator"""
+        # Placeholder implementation until the actual class is available
+        class ProprioceptionGenerator:
+            def process(self, data):
+                return data
+        return ProprioceptionGenerator()
+        
+    def _create_electromagnetic_perception_generator(self):
+        """Create an electromagnetic perception generator"""
+        # Placeholder implementation until the actual class is available
+        class ElectromagneticPerceptionGenerator:
+            def process(self, data):
+                return data
+        return ElectromagneticPerceptionGenerator()
+        
+    def _create_temporal_perception_generator(self):
+        """Create a temporal perception generator"""
+        # Placeholder implementation until the actual class is available
+        class TemporalPerceptionGenerator:
+            def process(self, data):
+                return data
+        return TemporalPerceptionGenerator()
         
     def render_frame(self, quantum_states: Dict, time_tensors: List) -> Dict:
         """Generate comprehensive multisensory perceptual frame"""
@@ -1559,3 +1599,163 @@ class QuantumEntanglementNetwork:
         self.entity_indices = state['entity_indices']
         self.next_index = state['next_index']
         # Note: Entity quantum states are recreated during anchor restoration
+
+class IdentityMatrix:
+    """Provides identity transformation functions for perceptual processing"""
+    
+    def __init__(self):
+        """Initialize the identity matrix"""
+        self.dimensions = 4  # Default to 4D for spacetime
+        self.matrix = np.eye(self.dimensions)
+        self.transforms = {}
+        self.calibration_factor = 1.0
+        
+    def apply_transform(self, data, transform_type="standard"):
+        """Apply an identity transformation to the data"""
+        if transform_type in self.transforms:
+            return self.transforms[transform_type](data)
+        return data * self.calibration_factor
+    
+    def register_transform(self, name, transform_function):
+        """Register a custom transformation function"""
+        self.transforms[name] = transform_function
+        
+    def get_matrix(self):
+        """Return the current identity matrix"""
+        return self.matrix
+
+class QuantumDecoherenceError(Exception):
+    """Exception raised when quantum decoherence exceeds safety thresholds"""
+    pass
+
+class TimelineParadoxError(Exception):
+    """Exception raised when timeline paradoxes are detected"""
+    pass
+
+class RealityFragmentationError(Exception):
+    """Exception raised when reality becomes fragmented beyond repair"""
+    pass
+
+class SensoryFilter:
+    """Filters raw quantum data into perceptual information"""
+    
+    def __init__(self, identity):
+        """Initialize sensory filter with identity matrix"""
+        self.identity = identity
+        self.calibration = 1.0
+        self.sensitivity = [0.8, 0.9, 1.0, 0.7]  # Sensitivity across dimensions
+        self.attenuation = 0.05
+        self.pattern_recognition = {}
+    
+    def process(self, data):
+        """Process raw data through filter"""
+        if self.identity:
+            return self.identity.apply_transform(data)
+        return data
+    
+    def calibrate(self, reference_data):
+        """Calibrate filter against reference data"""
+        if not reference_data:
+            return
+        # Calculate optimal calibration factor
+        self.calibration = 1.0  # Simplified implementation
+    
+    def recognize_pattern(self, data):
+        """Identify known patterns in the data"""
+        # Pattern recognition implementation
+        return None
+
+class WaveformGenerator:
+    """Generates auditory waveforms for perceptual processing"""
+    
+    def __init__(self, dimensions=3, frequency_range=None):
+        """Initialize waveform generator with proper parameters"""
+        self.dimensions = dimensions
+        self.frequency_range = frequency_range or [20, 20000]
+        self.amplitude_scaling = 1.0
+        self.phase_shift = 0.0
+        self.harmonic_weights = [1.0, 0.5, 0.25, 0.125]
+    
+    def process(self, data):
+        """Process frequency data into auditory waveforms"""
+        # Basic implementation - would be more complex in production
+        if isinstance(data, np.ndarray):
+            # Apply frequency filtering based on range
+            return data  # Simplified implementation
+        return data
+    
+    def generate_harmonic_series(self, fundamental_freq, num_harmonics=4):
+        """Generate harmonic series based on fundamental frequency"""
+        harmonics = []
+        for i in range(1, num_harmonics + 1):
+            harmonic_freq = fundamental_freq * i
+            if self.frequency_range[0] <= harmonic_freq <= self.frequency_range[1]:
+                harmonics.append((harmonic_freq, self.harmonic_weights[min(i-1, len(self.harmonic_weights)-1)]))
+        return harmonics
+
+class HapticFieldGenerator:
+    """Generates tactile feedback fields for perception processing"""
+    
+    def __init__(self, dimensions=3):
+        """Initialize haptic field generator with proper dimension configuration"""
+        self.dimensions = dimensions
+        self.resolution = 32  # Base resolution for tactile grid
+        self.pressure_range = (0.0, 100.0)  # Pressure sensitivity range in kPa
+        self.texture_resolution = 16  # Texture detail level
+        self.temperature_range = (-20.0, 120.0)  # Celsius range for thermal feedback
+        
+    def process(self, data):
+        """Process force vector data into haptic feedback patterns"""
+        if not isinstance(data, np.ndarray):
+            return np.zeros((self.resolution, self.resolution, 3))
+            
+        # Ensure data is properly shaped
+        if data.shape[-1] != 3 and len(data.shape) >= 2:
+            # Reshape if possible, otherwise return zeros
+            try:
+                reshaped = data.reshape((-1, 3))
+                return reshaped
+            except:
+                return np.zeros((self.resolution, self.resolution, 3))
+        
+        # Return the processed data with pressure, texture, and temperature channels
+        return data
+    
+    def generate_field(self, intensity_map, texture_map=None, temperature_map=None):
+        """Generate a complete haptic field from component maps"""
+        field = np.zeros((self.resolution, self.resolution, 3))
+        
+        # Set pressure/intensity channel
+        if isinstance(intensity_map, np.ndarray) and intensity_map.shape[:2] == (self.resolution, self.resolution):
+            field[:,:,0] = intensity_map
+        else:
+            # Fill with default intensity
+            field[:,:,0] = 0.5
+            
+        # Set texture channel
+        if isinstance(texture_map, np.ndarray) and texture_map.shape[:2] == (self.resolution, self.resolution):
+            field[:,:,1] = texture_map
+        else:
+            # Fill with default texture (smooth)
+            field[:,:,1] = 0.1
+            
+        # Set temperature channel
+        if isinstance(temperature_map, np.ndarray) and temperature_map.shape[:2] == (self.resolution, self.resolution):
+            field[:,:,2] = temperature_map
+        else:
+            # Fill with default temperature (neutral)
+            field[:,:,2] = 0.5
+            
+        return field
+
+class QuantumDecoherenceError(Exception):
+    """Exception raised when quantum decoherence exceeds safety thresholds"""
+    pass
+
+class TimelineParadoxError(Exception):
+    """Exception raised when timeline paradoxes are detected"""
+    pass
+
+class RealityFragmentationError(Exception):
+    """Exception raised when reality becomes fragmented beyond repair"""
+    pass
