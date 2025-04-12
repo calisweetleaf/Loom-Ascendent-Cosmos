@@ -3527,6 +3527,7 @@ DIPLOMATIC_REGISTRY = DiplomaticRegistry()
 # This module contains the integrated environmental scroll modules for the Cosmic Scroll system.
 # === World & Environmental Systems ===
 
+```
 # -------------------------------------------------------------------------
 # Life & Biology Systems
 # -------------------------------------------------------------------------
@@ -3566,6 +3567,375 @@ class MetabolicProcess(Enum):
     THERMAL_CYCLING = "thermal_cycling"     # Energy from temperature differences
     ETHERIC_EXTRACTION = "etheric"          # Energy from etheric fields
     HARMONIC_RESONANCE = "harmonic"         # Energy from harmonic fields
+
+
+class MetabolicResource(Enum):
+    """Resources that can be metabolized by entities within the cosmic simulation"""
+    PHYSICAL_MATTER = "physical_matter"          # Standard physical material
+    SYMBOLIC_ESSENCE = "symbolic_essence"        # Raw symbolic potential
+    TEMPORAL_FLUX = "temporal_flux"              # Time-based energy
+    NARRATIVE_THREAD = "narrative_thread"        # Story-based resource
+    EMOTIONAL_RESIDUE = "emotional_residue"      # Crystallized emotion
+    BELIEF_CURRENT = "belief_current"            # Faith and conviction energy
+    VOID_EXTRACT = "void_extract"                # Absence and emptiness distilled
+    MEMORY_FRAGMENT = "memory_fragment"          # Processed memory energy
+    MOTIF_CONCENTRATE = "motif_concentrate"      # Purified pattern energy
+    QUANTUM_POTENTIAL = "quantum_potential"      # Possibility-state energy
+
+
+class MetabolicPathway(Enum):
+    """Fundamental pathways through which entities process resources"""
+    TRANSMUTATION = "transmutation"          # Converting one resource to another
+    RESONANCE = "resonance"                  # Using harmonic matching to extract energy
+    ABSORPTION = "absorption"                # Direct incorporation of resources
+    CATALYSIS = "catalysis"                  # Facilitating reactions without consumption
+    FUSION = "fusion"                        # Combining resources into new forms
+    FILTRATION = "filtration"                # Separating and purifying resources
+    CRYSTALLIZATION = "crystallization"      # Solidifying abstract resources
+    RECURSION = "recursion"                  # Processing through self-similar cycles
+    ENTROPIC = "entropic"                    # Extracting energy from disorder
+    SYMBOLIC = "symbolic"                    # Processing through meaning transformation
+
+
+class RecursiveMetabolism:
+    """
+    Manages the complex resource processing systems within cosmic entities.
+    
+    The RecursiveMetabolism system handles how entities consume, process, transform, 
+    and generate resources within the symbolic ecosystem. It functions as the entity's
+    internal economy, defining how it interacts with available resources and converts
+    them into usable energy and byproducts.
+    
+    Through recursive processing loops that can reference their own outputs as inputs,
+    entities develop complex metabolic networks that evolve over time based on resource
+    availability, environmental conditions, and the entity's changing needs.
+    
+    Key features:
+    - Multi-stage resource processing chains
+    - Symbolic transmutation of resource types
+    - Recursive processing loops with variable depth
+    - Adaptive pathway strengthening based on usage
+    - Metabolic byproduct generation and excretion
+    - Resource storage and usage optimization
+    """
+    
+    def __init__(self, owner_entity: Any, complexity: float = 0.5, 
+                 primary_pathways: List[MetabolicPathway] = None,
+                 preferred_resources: List[MetabolicResource] = None,
+                 max_recursion_depth: int = 3):
+        """
+        Initialize a new RecursiveMetabolism system.
+        
+        Args:
+            owner_entity: The entity this metabolism belongs to
+            complexity: How complex the metabolic network is (0.0-1.0)
+            primary_pathways: List of primary metabolic pathways
+            preferred_resources: List of preferred resource types
+            max_recursion_depth: Maximum depth of recursive processing
+        """
+        self.owner = owner_entity
+        self.complexity = complexity
+        self.primary_pathways = primary_pathways or self._initialize_primary_pathways()
+        self.preferred_resources = preferred_resources or self._initialize_preferred_resources()
+        self.max_recursion_depth = max_recursion_depth
+        
+        # Core metabolism components
+        self.pathways = self._initialize_pathways()
+        self.catalysts = {}
+        self.inhibitors = {}
+        self.storage = {}
+        self.current_processes = []
+        
+        # Performance metrics
+        self.efficiency = {}  # resource_type -> efficiency_value
+        self.processing_rate = {}  # pathway -> rate_value
+        self.waste_production = {}  # resource_type -> waste_amount
+        self.energy_output = 0.0
+        
+        # Adaptive components
+        self.adaptation_history = []
+        self.resource_affinities = {}  # resource_type -> affinity_value
+        self.pathway_strengths = {p: 0.5 for p in self.primary_pathways}  # Initialize pathway strengths
+        
+        # Temporal tracking
+        self.process_cycles = 0
+        self.last_update_time = 0.0
+        self.current_recursion_depth = 0
+        
+        # Symbolic interaction
+        self.motif_resonance = {}  # motif -> resonance_value
+        self.symbolic_byproducts = []
+        self.anomaly_threshold = 0.8
+        self.integration_with_environment = 0.5
+        
+        # Initialize system
+        self._initialize_efficiency()
+        self._initialize_resource_storage()
+        self._initialize_motif_resonance()
+        """
+        Initialize a recursive metabolism system.
+        
+        Args:
+            owner_entity: The entity this metabolism belongs to
+            base_efficiency: Base efficiency of metabolic processes (0.0-1.0)
+            primary_process: Primary metabolic process type
+            secondary_processes: Secondary metabolic processes
+            recursion_depth: How many recursive levels the metabolism operates on
+            symbolic_affinity: Dictionary mapping symbolic motifs to affinity values
+        """
+        self.owner = owner_entity
+        self.base_efficiency = max(0.1, min(0.95, base_efficiency))
+        self.primary_process = primary_process or self._select_default_process()
+        self.secondary_processes = secondary_processes or [self._select_default_process()]
+        self.recursion_depth = max(1, min(5, recursion_depth))
+        self.symbolic_affinity = symbolic_affinity or self._generate_symbolic_affinity()
+        
+        # Subprocesses at different scales (molecular, cellular, organ, organism, ecosystem)
+        self.subprocesses = self._initialize_subprocesses()
+        
+        # Byproducts and wastes generated by metabolism
+        self.byproducts = {}
+        for process in [self.primary_process] + self.secondary_processes:
+            self.byproducts.update(self._generate_subprocess_byproducts(process))
+            
+        # Energy storage in different forms
+        self.energy_reserves = {
+            "physical": 100.0,
+            "symbolic": 50.0,
+            "quantum": 20.0,
+            "harmonic": 30.0
+        }
+        
+        # Input requirements for different processes
+        self.input_requirements = self._calculate_input_requirements()
+        
+        # Metabolic motifs that influence the process
+        self.metabolic_motifs = self._initialize_metabolic_motifs()
+        
+        # Adaptation history
+        self.adaptation_history = []
+        
+        # Current state tracking
+        self.current_efficiency = self.base_efficiency
+        self.cycle_count = 0
+        self.resource_stress = 0.0
+        self.current_input_cache = {}
+        self.output_history = deque(maxlen=10)  # Keep track of recent outputs
+    
+    def _select_default_process(self) -> MetabolicProcess:
+        """Select an appropriate default metabolic process based on entity traits."""
+        if not self.owner:
+            return MetabolicProcess.RESPIRATION
+            
+        # Check for owner's environment
+        environment_type = "unknown"
+        if hasattr(self.owner, "planet_id"):
+            planet_id = self.owner.planet_id
+            planet = DRM.get_entity(planet_id) if planet_id else None
+            if planet:
+                # Check environment conditions
+                if hasattr(planet, "surface"):
+                    water_percent = planet.surface.get("water", 0)
+                    if water_percent > 0.7:
+                        environment_type = "aquatic"
+                    elif water_percent > 0.3:
+                        environment_type = "mixed"
+                    else:
+                        environment_type = "terrestrial"
+                        
+                # Check for radiation levels
+                if hasattr(planet, "star_id"):
+                    star_id = planet.star_id
+                    star = DRM.get_entity(star_id) if star_id else None
+                    if star and hasattr(star, "luminosity") and star.luminosity > 1.5:
+                        return MetabolicProcess.RADIOSYNTHESIS
+                        
+        # Check for entity motifs to determine best process
+        if hasattr(self.owner, "motifs"):
+            motifs = self.owner.motifs
+            
+            if "light_bearer" in motifs or "energy_fountain" in motifs:
+                return MetabolicProcess.PHOTOSYNTHESIS
+                
+            if "quantum_fluctuation" in motifs or "probability_storm" in motifs:
+                return MetabolicProcess.QUANTUM_ENTANGLEMENT
+                
+            if "harmonic_arrangement" in motifs or "resonance_pattern" in motifs:
+                return MetabolicProcess.HARMONIC_RESONANCE
+                
+            if "pattern_recognizer" in motifs or "meaning_weaver" in motifs:
+                return MetabolicProcess.SYMBOLIC_ABSORPTION
+        
+        # Default based on environment
+        if environment_type == "aquatic":
+            return MetabolicProcess.CHEMOSYNTHESIS
+        elif environment_type == "terrestrial":
+            return random.choice([MetabolicProcess.PHOTOSYNTHESIS, MetabolicProcess.RESPIRATION])
+        else:
+            return random.choice([p for p in MetabolicProcess])
+    
+    def _generate_symbolic_affinity(self) -> Dict[str, float]:
+        """Generate symbolic affinities based on entity traits."""
+        affinities = {}
+        
+        # Base affinities
+        base_motifs = [
+            "energy_flow", "recursive_cycle", "transformation_pattern",
+            "harmonic_resonance", "symbolic_digestion", "quantum_conversion"
+        ]
+        
+        # Add base affinities
+        for motif in base_motifs:
+            affinities[motif] = random.uniform(0.3, 0.7)
+            
+        # Add affinities based on owner motifs
+        if hasattr(self.owner, "motifs"):
+            for motif in self.owner.motifs:
+                if "flow" in motif or "energy" in motif or "cycle" in motif:
+                    affinities[motif] = random.uniform(0.6, 0.9)
+        
+        # Add process-specific affinities
+        if self.primary_process == MetabolicProcess.PHOTOSYNTHESIS:
+            affinities["light_conversion"] = random.uniform(0.7, 0.95)
+            affinities["solar_resonance"] = random.uniform(0.6, 0.85)
+            
+        elif self.primary_process == MetabolicProcess.QUANTUM_ENTANGLEMENT:
+            affinities["quantum_uncertainty"] = random.uniform(0.7, 0.95)
+            affinities["probability_weaving"] = random.uniform(0.6, 0.85)
+            
+        elif self.primary_process == MetabolicProcess.SYMBOLIC_ABSORPTION:
+            affinities["meaning_extraction"] = random.uniform(0.7, 0.95)
+            affinities["narrative_digestion"] = random.uniform(0.6, 0.85)
+        
+        return affinities
+    
+    def _initialize_subprocesses(self) -> Dict[str, Dict]:
+        """Initialize metabolic subprocesses at different scales."""
+        processes = {}
+        
+        # Scales from microscopic to macroscopic
+        scales = ["quantum", "molecular", "cellular", "organ", "organism", "ecosystem"]
+        
+        # Limit to recursion depth
+        active_scales = scales[:min(self.recursion_depth + 1, len(scales))]
+        
+        for scale in active_scales:
+            # Process characteristics vary by scale
+            if scale == "quantum":
+                efficiency = self.base_efficiency * random.uniform(0.8, 1.2)
+                process_types = [MetabolicProcess.QUANTUM_ENTANGLEMENT, MetabolicProcess.HARMONIC_RESONANCE]
+                
+            elif scale == "molecular":
+                efficiency = self.base_efficiency * random.uniform(0.9, 1.1)
+                process_types = [MetabolicProcess.RESPIRATION, MetabolicProcess.CHEMOSYNTHESIS]
+                
+            elif scale == "cellular":
+                efficiency = self.base_efficiency * random.uniform(0.9, 1.05)
+                process_types = [self.primary_process]
+                
+            elif scale == "organ":
+                efficiency = self.base_efficiency * random.uniform(0.85, 1.0)
+                process_types = self.secondary_processes
+                
+            elif scale == "organism":
+                efficiency = self.base_efficiency * random.uniform(0.8, 0.95)
+                process_types = [self.primary_process]
+                
+            else:  # ecosystem
+                efficiency = self.base_efficiency * random.uniform(0.7, 0.9)
+                process_types = [random.choice([p for p in MetabolicProcess])]
+            
+            # Create process for this scale
+            processes[scale] = {
+                "efficiency": efficiency,
+                "process_types": process_types,
+                "current_activity": 0.0,
+                "byproducts": {},
+                "inputs": {},
+                "outputs": {},
+                "feedback_loops": []
+            }
+            
+            # Add scale-specific feedback loops between adjacent scales
+            if active_scales.index(scale) > 0:
+                previous_scale = active_scales[active_scales.index(scale) - 1]
+                processes[scale]["feedback_loops"].append({
+                    "from_scale": previous_scale,
+                    "to_scale": scale,
+                    "intensity": random.uniform(0.2, 0.8),
+                    "transformation": random.choice(["amplifying", "dampening", "oscillating"]),
+                    "resource_type": random.choice(["energy", "information", "structure", "entropy"])
+                })
+        
+        return processes
+    
+    def _generate_subprocess_byproducts(self, process_type: MetabolicProcess) -> Dict[str, float]:
+        """Generate byproducts for a specific metabolic process."""
+        byproducts = {}
+        
+        # Common byproducts for all processes
+        byproducts["heat"] = random.uniform(0.1, 0.3)
+        byproducts["entropy"] = random.uniform(0.05, 0.15)
+        
+        # Process-specific byproducts
+        if process_type == MetabolicProcess.PHOTOSYNTHESIS:
+            byproducts["oxygen"] = random.uniform(0.3, 0.5)
+            byproducts["glucose"] = random.uniform(0.4, 0.6)
+            byproducts["growth_potential"] = random.uniform(0.2, 0.4)
+            
+        elif process_type == MetabolicProcess.RESPIRATION:
+            byproducts["carbon_dioxide"] = random.uniform(0.3, 0.5)
+            byproducts["water"] = random.uniform(0.2, 0.4)
+            byproducts["atp"] = random.uniform(0.5, 0.7)
+            
+        elif process_type == MetabolicProcess.CHEMOSYNTHESIS:
+            byproducts["sulfur_compounds"] = random.uniform(0.2, 0.4)
+            byproducts["mineral_structures"] = random.uniform(0.3, 0.5)
+            byproducts["chemical_energy"] = random.uniform(0.4, 0.6)
+            
+        elif process_type == MetabolicProcess.RADIOSYNTHESIS:
+            byproducts["radiation_resistance"] = random.uniform(0.4, 0.6)
+            byproducts["isotopes"] = random.uniform(0.2, 0.4)
+            byproducts["mutation_potential"] = random.uniform(0.3, 0.5)
+            
+        elif process_type == MetabolicProcess.QUANTUM_ENTANGLEMENT:
+            byproducts["quantum_information"] = random.uniform(0.4, 0.6)
+            byproducts["probability_waves"] = random.uniform(0.3, 0.5)
+            byproducts["entanglement_network"] = random.uniform(0.2, 0.4)
+            
+        elif process_type == MetabolicProcess.SYMBOLIC_ABSORPTION:
+            byproducts["meaning_fragments"] = random.uniform(0.4, 0.6)
+            byproducts["narrative_threads"] = random.uniform(0.3, 0.5)
+            byproducts["symbolic_structures"] = random.uniform(0.2, 0.4)
+            
+        elif process_type == MetabolicProcess.MOTIF_CYCLING:
+            byproducts["motif_resonance"] = random.uniform(0.4, 0.6)
+            byproducts["pattern_seeds"] = random.uniform(0.3, 0.5)
+            byproducts["thematic_energy"] = random.uniform(0.2, 0.4)
+            
+        elif process_type == MetabolicProcess.HARMONIC_RESONANCE:
+            byproducts["harmonic_waves"] = random.uniform(0.4, 0.6)
+            byproducts["resonance_nodes"] = random.uniform(0.3, 0.5)
+            byproducts["attunement_field"] = random.uniform(0.2, 0.4)
+            
+        return byproducts
+    
+    def _initialize_metabolic_motifs(self) -> List[str]:
+        """Initialize metabolic motifs based on processes and entity traits."""
+        motifs = []
+        
+        # Base motifs common to all metabolisms
+        base_motifs = ["energy_flow", "resource_cycle", "entropy_management"]
+        motifs.extend(base_motifs)
+        
+        # Process-specific motifs
+        process_motifs = {
+            MetabolicProcess.PHOTOSYNTHESIS: ["light_harvesting", "solar_alchemy", "growth_cycle"],
+            MetabolicProcess.RESPIRATION: ["oxidation_rhythm", "energy_extraction", "cellular_breath"],
+            MetabolicProcess.CHEMOSYNTHESIS: ["mineral_transmutation", "chemical_cascade", "elemental_binding"],
+            MetabolicProcess.RADIOSYNTHESIS: ["radiation_harvest", "particle_weaving", "decay_reversal"],
+            MetabolicProcess.QUANTUM_ENTANGLEMENT: ["probability_harvest", "quantum_threading", "uncertainty_mapping"],
+            MetabolicProcess.SYMBOLIC_ABSORPTION: ["meaning_d
 
 
 class RecursiveMetabolism:
@@ -6784,25 +7154,53 @@ class EmotionalState(Enum):
     TRANSCENDENCE = "transcendence"  # Dissolving, unifying, infinite
 
 
+class EmotionType(Enum):
+    """Fundamental emotion types that can be experienced within the cosmic simulation"""
+    JOY = "joy"                      # Positive, expansive emotional state
+    SORROW = "sorrow"                # Grief, loss, negative but processing state
+    FEAR = "fear"                    # Anticipatory negative state, protective
+    ANGER = "anger"                  # Energetic, boundary-setting state
+    CURIOSITY = "curiosity"          # Exploratory, learning-focused state
+    LOVE = "love"                    # Connection-seeking, bonding state
+    AWE = "awe"                      # Transcendent wonder, perspective-shifting
+    CONTENTMENT = "contentment"      # Peaceful, satisfied state
+    DISGUST = "disgust"              # Rejection-oriented, protective state
+    SURPRISE = "surprise"            # Pattern-interruption, alertness state
+    DESPAIR = "despair"              # Hope-loss, energy-draining state
+    ECSTASY = "ecstasy"              # Peak positive state, boundary-dissolving
+    MALICE = "malice"                # Intentional harm-seeking state
+    COMPASSION = "compassion"        # Suffering-recognition with desire to help
+    AMBIVALENCE = "ambivalence"      # Mixed, contradictory emotional state
+    APATHY = "apathy"                # Depleted, disconnected emotional state
+    NOSTALGIA = "nostalgia"          # Past-oriented, memory-tied state
+
+
 class EmotionalResonanceBody:
     """
-    Manages the emotional field of an entity and its resonance with surrounding entities.
+    Manages the emotional state, processing, and influence of entities within the cosmic simulation.
     
-    The EmotionalResonanceBody functions as an emotional counterpart to physical bodies,
-    creating fields of feeling that influence and are influenced by other entities.
-    It handles the generation, propagation, and reception of emotional harmonics
-    that flow between entities across multiple levels of reality.
+    The EmotionalResonanceBody functions as the feeling center of an entity, allowing it to experience,
+    process, express, and transmit emotions throughout the symbolic ecosystem. Emotions act as a form
+    of energy that can flow between entities, leave resonant traces in environments, and influence
+    the development and behavior of entities over time.
+    
+    Through emotional resonance mechanics, entities can form deep connections, imprint their emotional
+    states onto objects, locations, or other entities, and participate in collective emotional fields
+    that emerge from group dynamics.
     
     Key features:
-    - Generates emotional field projections with varying intensities and harmonics
-    - Creates emergent emotional weather systems from collective resonance
-    - Forms emotional memories that influence future resonance patterns
-    - Develops unique emotional signatures for entities over time
-    - Allows for symbolic transference of emotional states between entities
+    - Multi-layered emotional state tracking
+    - Emotional imprinting and environmental influence
+    - Resonance detection and response
+    - Emotional weather generation and sensitivity
+    - Emotional memory and trauma processing
+    - Harmonic and dissonant emotional field interactions
     """
     
-    def __init__(self, owner_entity: Any, base_resonance: Dict[EmotionalState, float] = None,
-                 projection_radius: float = 10.0, receptivity: float = 0.5):
+    def __init__(self, owner_entity: Any, base_sensitivity: float = 0.5,
+                 dominant_emotions: List[EmotionType] = None,
+                 emotional_capacity: float = 1.0,
+                 memory_persistence: float = 0.7):
         self.owner = owner_entity
         self.base_resonance = base_resonance or self._initialize_base_resonance()
         self.current_state = self._calculate_current_state()
