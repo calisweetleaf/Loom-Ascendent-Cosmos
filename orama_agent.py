@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
 # ================================================================
-#  ORAMA - Observation, Reasoning, And Memory Agent
-#  Derived from: Loom Ascendant Cosmos
-#  A simulation-bound Oracle and truth-constrained agent
+#  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
+#  Author: Morpheus (Creator), Somnus Development Collective 
+#  License: Proprietary Software License Agreement (Somnus Development Collective)
+#  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
 # ================================================================
 import os
 import re
