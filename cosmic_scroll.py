@@ -1519,3 +1519,1995 @@ class Asteroid(CosmicEntity):
         
         # Mark asteroid for removal
         self.motifs.append('marked_for_removal')
+
+
+# -------------------------------------------------------------------------
+# MotifSeeder System
+# -------------------------------------------------------------------------
+class MotifCategory(Enum):
+    """Categories of symbolic motifs that can be applied to entities"""
+    PRIMORDIAL = "primordial"  # Ancient/original patterns
+    ELEMENTAL = "elemental"    # Related to fundamental forces/elements
+    HARMONIC = "harmonic"      # Pattern relationships and resonance
+    CHAOTIC = "chaotic"        # Disorder and unpredictability
+    LUMINOUS = "luminous"      # Light, radiation, visibility
+    SHADOW = "shadow"          # Darkness, obscurity, mystery
+    RECURSIVE = "recursive"    # Self-referential patterns
+    ASCENDANT = "ascendant"    # Evolution, growth, transcendence
+    DIMENSIONAL = "dimensional"  # Spatial and dimensional properties
+    TEMPORAL = "temporal"      # Time-related patterns
+    VITAL = "vital"            # Life and consciousness
+    ENTROPIC = "entropic"      # Decay, dissolution, heat death
+    CRYSTALLINE = "crystalline"  # Order, structure, lattice
+    ABYSSAL = "abyssal"        # Depth, void, emptiness
+
+
+class MotifSeeder:
+    """
+    Symbolic initialization system that assigns thematic motifs to cosmic entities.
+    Creates meaningful patterns and relationships between entities.
+    """
+    
+    # Motif pools for different entity types
+    _motif_pools = {
+        EntityType.UNIVERSE: {
+            MotifCategory.PRIMORDIAL: ["first_breath", "genesis_point", "all_potential", "undivided_unity", "original_void"],
+            MotifCategory.DIMENSIONAL: ["hyperbolic_manifold", "dimensional_flux", "space_weave", "boundary_condition"],
+            MotifCategory.RECURSIVE: ["fractal_seed", "nested_reality", "self_similar_pattern", "recursive_boundary"],
+            MotifCategory.TEMPORAL: ["timestream_source", "eternal_now", "temporal_ocean", "omega_point"],
+        },
+        EntityType.GALAXY: {
+            MotifCategory.LUMINOUS: ["starfire_spiral", "radiant_halo", "stellar_tapestry", "cosmic_lighthouse"],
+            MotifCategory.CHAOTIC: ["stellar_tempest", "void_turbulence", "dark_flow", "random_scatter"],
+            MotifCategory.CRYSTALLINE: ["stellar_lattice", "harmonic_arrangement", "symmetric_pattern"],
+            MotifCategory.ENTROPIC: ["heat_death_advance", "dispersal_pattern", "expansion_drift"],
+        },
+        EntityType.STAR: {
+            MotifCategory.ELEMENTAL: ["plasma_heart", "fusion_crucible", "energy_fountain", "elemental_forge"],
+            MotifCategory.LUMINOUS: ["light_bearer", "radiation_pulse", "constant_dawn", "warmth_giver"],
+            MotifCategory.VITAL: ["life_catalyst", "habitable_anchor", "biosphere_enabler"],
+            MotifCategory.ENTROPIC: ["stellar_decay", "supernova_potential", "fuel_consumer"],
+        },
+        EntityType.PLANET: {
+            MotifCategory.ELEMENTAL: ["earth_dreamer", "water_memory", "air_whisper", "fire_core"],
+            MotifCategory.CRYSTALLINE: ["tectonic_dreams", "mineral_consciousness", "geometric_growth"],
+            MotifCategory.VITAL: ["life_cradle", "sentience_potential", "evolutionary_canvas", "gaia_mind"],
+            MotifCategory.RECURSIVE: ["ecosystem_cycle", "weather_patterns", "geological_layers"],
+        },
+        EntityType.CIVILIZATION: {
+            MotifCategory.VITAL: ["collective_consciousness", "dream_weaver", "thought_network", "memory_keeper"],
+            MotifCategory.ASCENDANT: ["transcendence_path", "knowledge_seeker", "pattern_recognizer"],
+            MotifCategory.RECURSIVE: ["cultural_iteration", "technological_ladder", "historical_cycle"],
+            MotifCategory.TEMPORAL: ["future_dreamer", "past_keeper", "now_experiencer", "legacy_builder"],
+        },
+        EntityType.ANOMALY: {
+            MotifCategory.CHAOTIC: ["pattern_breaker", "uncertainty_spike", "probability_storm", "anomalous_field"],
+            MotifCategory.DIMENSIONAL: ["space_fold", "reality_tear", "boundary_transgression"],
+            MotifCategory.SHADOW: ["dark_secret", "unknown_variable", "void_whisper", "cosmos_blindspot"],
+            MotifCategory.ABYSSAL: ["bottomless_depth", "infinite_recursion", "meaning_void", "null_state"],
+        },
+    }
+    
+    # Counter-motifs create opposing forces and dramatic tension
+    _counter_motifs = {
+        "radiant_halo": "void_shadow",
+        "fusion_crucible": "cold_silence",
+        "light_bearer": "darkness_bringer",
+        "life_cradle": "death_harbor",
+        "knowledge_seeker": "mystery_keeper",
+        "pattern_recognizer": "chaos_embracer",
+        "self_similar_pattern": "fractal_disruption",
+        "timestream_source": "entropy_sink",
+        "dimensional_flux": "spatial_stasis",
+    }
+    
+    # Resonant motifs that reinforce and amplify each other
+    _resonant_motifs = {
+        "first_breath": ["genesis_point", "all_potential"],
+        "stellar_tempest": ["void_turbulence", "dark_flow"],
+        "plasma_heart": ["fusion_crucible", "energy_fountain"],
+        "tectonic_dreams": ["mineral_consciousness", "geometric_growth"],
+        "transcendence_path": ["knowledge_seeker", "pattern_recognizer"],
+    }
+    
+    @classmethod
+    def seed_motifs(cls, entity: CosmicEntity, seed_value: int = None):
+        """
+        Initialize an entity with symbolic motifs based on its type.
+        
+        Args:
+            entity: The cosmic entity to initialize
+            seed_value: Optional seed for deterministic motif generation
+        
+        Returns:
+            List of applied motifs
+        """
+        if not hasattr(entity, 'entity_type'):
+            return []
+            
+        # Use provided seed or entity's hash
+        if seed_value is None:
+            seed_value = hash(entity.entity_id)
+        
+        # Seed random generator for deterministic results
+        random.seed(seed_value)
+        
+        # Get motif pool for this entity type
+        entity_pools = cls._motif_pools.get(entity.entity_type, {})
+        if not entity_pools:
+            # Use generic pool if no specific one exists
+            entity_pools = {
+                MotifCategory.ELEMENTAL: ["generic_pattern", "basic_form", "standard_structure"],
+                MotifCategory.CHAOTIC: ["random_element", "unpredictable_aspect", "complex_behavior"],
+            }
+        
+        # Select 2-5 categories based on seed
+        available_categories = list(entity_pools.keys())
+        num_categories = min(len(available_categories), random.randint(2, 5))
+        selected_categories = random.sample(available_categories, num_categories)
+        
+        # Select 1-3 motifs from each category
+        selected_motifs = []
+        for category in selected_categories:
+            motifs_in_category = entity_pools[category]
+            num_motifs = min(len(motifs_in_category), random.randint(1, 3))
+            selected_motifs.extend(random.sample(motifs_in_category, num_motifs))
+        
+        # Add motifs to entity
+        entity.motifs = selected_motifs.copy()
+        
+        # Add counter-motifs with some probability
+        cls._add_counter_motifs(entity, seed_value)
+        
+        # Reset random seed to avoid affecting other random processes
+        random.seed()
+        
+        return entity.motifs
+    
+    @classmethod
+    def _add_counter_motifs(cls, entity: CosmicEntity, seed_value: int):
+        """Add opposing motifs for dramatic tension"""
+        random.seed(seed_value + 1)  # Different seed from main motifs
+        
+        for motif in entity.motifs.copy():
+            if motif in cls._counter_motifs and random.random() < 0.3:
+                counter = cls._counter_motifs[motif]
+                entity.motifs.append(counter)
+                
+    @classmethod
+    def find_resonance(cls, entity1: CosmicEntity, entity2: CosmicEntity) -> float:
+        """
+        Calculate motif resonance between two entities.
+        Returns a value between 0 (no resonance) and 1 (perfect resonance).
+        """
+        if not hasattr(entity1, 'motifs') or not hasattr(entity2, 'motifs'):
+            return 0.0
+            
+        # Direct motif matches
+        common_motifs = set(entity1.motifs).intersection(set(entity2.motifs))
+        direct_score = len(common_motifs) / max(len(entity1.motifs) + len(entity2.motifs), 1)
+        
+        # Resonant motif groups
+        resonance_score = 0
+        for motif1 in entity1.motifs:
+            if motif1 in cls._resonant_motifs:
+                for resonant in cls._resonant_motifs[motif1]:
+                    if resonant in entity2.motifs:
+                        resonance_score += 0.5  # Half point for resonant matches
+        
+        resonance_score = min(1.0, resonance_score / max(len(entity1.motifs) + len(entity2.motifs), 1))
+        
+        # Counter-motif tension (reduces resonance)
+        tension_score = 0
+        for motif1 in entity1.motifs:
+            if motif1 in cls._counter_motifs and cls._counter_motifs[motif1] in entity2.motifs:
+                tension_score += 1
+                
+        for motif2 in entity2.motifs:
+            if motif2 in cls._counter_motifs and cls._counter_motifs[motif2] in entity1.motifs:
+                tension_score += 1
+                
+        tension_score = min(1.0, tension_score / max(len(entity1.motifs) + len(entity2.motifs), 1))
+        
+        # Combine scores (direct matches + resonance - tension)
+        return max(0, min(1.0, direct_score + resonance_score - tension_score))
+
+
+# -------------------------------------------------------------------------
+# ScrollMemory System
+# -------------------------------------------------------------------------
+class ScrollMemoryEvent:
+    """Represents a significant event in an entity's timeline"""
+    
+    def __init__(self, timestamp: float, event_type: str, description: str, importance: float = 0.5,
+                entities_involved: List[str] = None, motifs_added: List[str] = None, location=None):
+        self.timestamp = timestamp
+        self.event_type = event_type
+        self.description = description
+        self.importance = importance  # 0.0 to 1.0
+        self.entities_involved = entities_involved or []
+        self.motifs_added = motifs_added or []
+        self.location = location  # Coordinates or sector
+        
+    def to_dict(self) -> Dict:
+        """Convert event to dictionary for storage"""
+        return {
+            'timestamp': self.timestamp,
+            'event_type': self.event_type,
+            'description': self.description,
+            'importance': self.importance,
+            'entities_involved': self.entities_involved,
+            'motifs_added': self.motifs_added,
+            'location': self.location
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'ScrollMemoryEvent':
+        """Create event from dictionary"""
+        return cls(
+            timestamp=data.get('timestamp', 0),
+            event_type=data.get('event_type', 'unknown'),
+            description=data.get('description', ''),
+            importance=data.get('importance', 0.5),
+            entities_involved=data.get('entities_involved', []),
+            motifs_added=data.get('motifs_added', []),
+            location=data.get('location')
+        )
+    
+    def __str__(self) -> str:
+        """String representation of event"""
+        return f"[T:{self.timestamp:.2f}] {self.event_type}: {self.description}"
+
+
+class ScrollMemory:
+    """
+    Memory system that records significant events in an entity's history.
+    Provides continuity and emergence of meaningful narratives.
+    """
+    
+    def __init__(self, owner_id: str, capacity: int = 100):
+        self.owner_id = owner_id
+        self.events = []
+        self.capacity = capacity
+        self.last_consolidation = 0
+        self.thematic_summary = {}  # Event type -> frequency count
+        
+    def record_event(self, event: ScrollMemoryEvent):
+        """
+        Add a new event to the memory scroll
+        
+        Args:
+            event: The event to record
+        """
+        self.events.append(event)
+        
+        # Update thematic summary
+        self.thematic_summary[event.event_type] = self.thematic_summary.get(event.event_type, 0) + 1
+        
+        # Ensure we don't exceed capacity by consolidating or pruning
+        if len(self.events) > self.capacity:
+            self._consolidate_memory()
+    
+    def get_events_by_type(self, event_type: str) -> List[ScrollMemoryEvent]:
+        """Retrieve all events of a specific type"""
+        return [e for e in self.events if e.event_type == event_type]
+    
+    def get_events_by_timeframe(self, start_time: float, end_time: float) -> List[ScrollMemoryEvent]:
+        """Retrieve events within a specific timeframe"""
+        return [e for e in self.events if start_time <= e.timestamp <= end_time]
+    
+    def get_events_involving_entity(self, entity_id: str) -> List[ScrollMemoryEvent]:
+        """Retrieve events involving a specific entity"""
+        return [e for e in self.events if entity_id in e.entities_involved]
+    
+    def get_most_important_events(self, count: int = 10) -> List[ScrollMemoryEvent]:
+        """Retrieve the most important events"""
+        sorted_events = sorted(self.events, key=lambda e: e.importance, reverse=True)
+        return sorted_events[:count]
+    
+    def get_narrative_arc(self) -> Dict[str, List[ScrollMemoryEvent]]:
+        """
+        Identify narrative arcs in the entity's history
+        Returns a dict mapping arc type to sequence of events
+        """
+        arcs = {}
+        
+        # Group events by type
+        event_types = set(e.event_type for e in self.events)
+        for etype in event_types:
+            type_events = sorted(self.get_events_by_type(etype), key=lambda e: e.timestamp)
+            if len(type_events) >= 3:  # Minimum 3 events to form an arc
+                arcs[etype] = type_events
+                
+        return arcs
+    
+    def _consolidate_memory(self):
+        """
+        Consolidate memory by merging or removing less important events
+        This is called when the scroll exceeds capacity
+        """
+        if len(self.events) <= self.capacity:
+            return
+            
+        # Sort events by importance
+        sorted_events = sorted(self.events, key=lambda e: e.importance)
+        
+        # Identify candidates for consolidation (lowest importance events)
+        consolidation_candidates = sorted_events[:len(sorted_events) // 3]
+        
+        # Group candidates by type and timeframe
+        by_type_and_time = {}
+        for event in consolidation_candidates:
+            time_bucket = int(event.timestamp / 10) * 10  # Group by 10 time units
+            key = (event.event_type, time_bucket)
+            if key not in by_type_and_time:
+                by_type_and_time[key] = []
+            by_type_and_time[key].append(event)
+        
+        # Merge groups that have multiple events
+        events_to_remove = []
+        for (event_type, _), group in by_type_and_time.items():
+            if len(group) > 1:
+                # Create a consolidated event
+                earliest = min(e.timestamp for e in group)
+                importance = max(e.importance for e in group)
+                entities = set()
+                motifs = set()
+                descriptions = []
+                
+                for e in group:
+                    entities.update(e.entities_involved)
+                    motifs.update(e.motifs_added)
+                    descriptions.append(e.description)
+                    events_to_remove.append(e)
+                
+                consolidated = ScrollMemoryEvent(
+                    timestamp=earliest,
+                    event_type=event_type,
+                    description=f"Multiple events: {'; '.join(descriptions[:3])}",
+                    importance=importance,
+                    entities_involved=list(entities),
+                    motifs_added=list(motifs)
+                )
+                
+                self.events.append(consolidated)
+        
+        # Remove consolidated events
+        for event in events_to_remove:
+            self.events.remove(event)
+            
+        # If still over capacity, remove least important events
+        if len(self.events) > self.capacity:
+            self.events = sorted(self.events, key=lambda e: e.importance, reverse=True)[:self.capacity]
+        
+        # Update last consolidation time
+        self.last_consolidation = max(e.timestamp for e in self.events) if self.events else 0
+        
+        # Rebuild thematic summary
+        self._rebuild_thematic_summary()
+    
+    def _rebuild_thematic_summary(self):
+        """Rebuild the thematic summary after consolidation"""
+        self.thematic_summary = {}
+        for event in self.events:
+            self.thematic_summary[event.event_type] = self.thematic_summary.get(event.event_type, 0) + 1
+    
+    def get_memory_keywords(self) -> List[str]:
+        """Extract keywords that define this entity's identity based on memory"""
+        keywords = []
+        
+        # Add most frequent event types
+        for event_type, count in sorted(self.thematic_summary.items(), key=lambda x: x[1], reverse=True)[:3]:
+            keywords.append(event_type)
+            
+        # Add most common motifs
+        motif_count = {}
+        for event in self.events:
+            for motif in event.motifs_added:
+                motif_count[motif] = motif_count.get(motif, 0) + 1
+                
+        for motif, _ in sorted(motif_count.items(), key=lambda x: x[1], reverse=True)[:3]:
+            keywords.append(motif)
+            
+        return keywords
+    
+    def generate_timeline_summary(self, max_events: int = 5) -> str:
+        """Generate a textual summary of the entity's history"""
+        if not self.events:
+            return "No recorded history."
+        
+        # Sort by timestamp
+        sorted_events = sorted(self.events, key=lambda e: e.timestamp)
+        
+        # Select key events based on importance and distribution across time
+        events_count = len(sorted_events)
+        if events_count <= max_events:
+            key_events = sorted_events
+        else:
+            # Choose some top importance events plus some distributed across time
+            by_importance = sorted(sorted_events, key=lambda e: e.importance, reverse=True)
+            top_half = max_events // 2
+            
+            # Take top events by importance
+            key_events = by_importance[:top_half]
+            
+            # Take some distributed across timeline
+            time_range = sorted_events[-1].timestamp - sorted_events[0].timestamp
+            if time_range > 0:
+                step = time_range / (max_events - top_half)
+                target_times = [sorted_events[0].timestamp + i * step for i in range(max_events - top_half)]
+                
+                for target in target_times:
+                    closest = min(sorted_events, key=lambda e: abs(e.timestamp - target))
+                    if closest not in key_events:
+                        key_events.append(closest)
+            
+            # Sort by timestamp
+            key_events = sorted(key_events, key=lambda e: e.timestamp)
+        
+        # Generate summary text
+        summary = []
+        for event in key_events:
+            summary.append(f"T{event.timestamp:.1f}: {event.description}")
+        
+        return "\n".join(summary)
+
+
+# Augment the CosmicEntity class with ScrollMemory
+def add_scroll_memory_to_entity(entity: CosmicEntity):
+    """Add a ScrollMemory to a cosmic entity if it doesn't already have one"""
+    if not hasattr(entity, 'scroll_memory'):
+        entity.scroll_memory = ScrollMemory(entity.entity_id)
+        return entity.scroll_memory
+    return getattr(entity, 'scroll_memory')
+
+
+# Add scroll_memory attribute and methods to CosmicEntity
+def augment_entities_with_scroll_memory():
+    """Augment all existing entities with ScrollMemory"""
+    for entity_id, entity in DRM.entities.items():
+        if isinstance(entity, CosmicEntity) and not hasattr(entity, 'scroll_memory'):
+            add_scroll_memory_to_entity(entity)
+
+
+# Add record_event method to CosmicEntity
+def record_scroll_event(self, event_type: str, description: str, importance: float = 0.5,
+                      entities_involved: List[str] = None, motifs_added: List[str] = None,
+                      location=None, timestamp: float = None):
+    """
+    Record an event in this entity's memory scroll
+    
+    Args:
+        event_type: Category of event
+        description: Text description
+        importance: How important this event is (0.0-1.0)
+        entities_involved: List of entity IDs involved
+        motifs_added: List of motifs related to this event
+        location: Where the event occurred
+        timestamp: When the event occurred (defaults to current time)
+    """
+    if not hasattr(self, 'scroll_memory'):
+        add_scroll_memory_to_entity(self)
+        
+    if timestamp is None:
+        timestamp = self.last_update_time
+        
+    # Create the event
+    event = ScrollMemoryEvent(
+        timestamp=timestamp,
+        event_type=event_type,
+        description=description,
+        importance=importance,
+        entities_involved=entities_involved or [],
+        motifs_added=motifs_added or [],
+        location=location
+    )
+    
+    # Record in scroll memory
+    self.scroll_memory.record_event(event)
+    
+    # If motifs were added, update entity's motifs
+    if motifs_added:
+        for motif in motifs_added:
+            if motif not in self.motifs:
+                self.motifs.append(motif)
+    
+    # For important events, ensure they're shared with related entities
+    if importance >= 0.7 and entities_involved:
+        self._propagate_event_to_related_entities(event)
+            
+    return event
+
+
+def _propagate_event_to_related_entities(self, event: ScrollMemoryEvent):
+    """Share important events with related entities"""
+    for entity_id in event.entities_involved:
+        if entity_id != self.entity_id:
+            entity = DRM.get_entity(entity_id)
+            if isinstance(entity, CosmicEntity):
+                # Create a copy of the event with reduced importance
+                related_event = ScrollMemoryEvent(
+                    timestamp=event.timestamp,
+                    event_type=event.event_type,
+                    description=f"Related: {event.description}",
+                    importance=event.importance * 0.8,  # Less important for related entities
+                    entities_involved=event.entities_involved,
+                    motifs_added=event.motifs_added,
+                    location=event.location
+                )
+                
+                # Add to other entity's scroll
+                if hasattr(entity, 'scroll_memory'):
+                    entity.scroll_memory.record_event(related_event)
+                else:
+                    add_scroll_memory_to_entity(entity).record_event(related_event)
+
+
+# Bind new methods to CosmicEntity
+CosmicEntity.record_scroll_event = record_scroll_event
+CosmicEntity._propagate_event_to_related_entities = _propagate_event_to_related_entities
+
+
+# -------------------------------------------------------------------------
+# CultureEngine System
+# -------------------------------------------------------------------------
+class BeliefType(Enum):
+    """Types of beliefs that shape cultural identity"""
+    COSMOLOGY = "cosmology"  # Origin/structure of universe
+    MORALITY = "morality"    # Right and wrong
+    ONTOLOGY = "ontology"    # Nature of being/reality
+    EPISTEMOLOGY = "epistemology"  # Knowledge acquisition
+    ESCHATOLOGY = "eschatology"  # Ultimate destiny
+    AXIOLOGY = "axiology"   # Values and value judgments
+    THEOLOGY = "theology"   # Divine/transcendent entities
+    TELEOLOGY = "teleology" # Purpose and design
+
+
+class SocialStructure(Enum):
+    """Organizational patterns for civilizations"""
+    TRIBAL = "tribal"          # Kinship-based groups
+    FEUDAL = "feudal"          # Hierarchical land ownership
+    IMPERIAL = "imperial"      # Centralized empire
+    REPUBLIC = "republic"      # Representative governance
+    DIRECT_DEMOCRACY = "direct_democracy"  # Citizen voting
+    TECHNOCRACY = "technocracy"  # Rule by technical experts
+    OLIGARCHY = "oligarchy"    # Rule by small group
+    HIVE_MIND = "hive_mind"    # Collective consciousness
+    DISTRIBUTED = "distributed"  # Decentralized networks
+    QUANTUM_CONSENSUS = "quantum_consensus"  # Superposition of choices
+
+
+class SymbolicArchetype(Enum):
+    """Cultural archetypes that appear across civilizations"""
+    CREATOR = "creator"        # Creative/generative force
+    DESTROYER = "destroyer"    # Destructive/transformative force
+    TRICKSTER = "trickster"    # Chaos agent, boundary-crosser
+    SAGE = "sage"              # Wisdom figure
+    HERO = "hero"              # Challenger of adversity
+    RULER = "ruler"            # Authority figure
+    CAREGIVER = "caregiver"    # Nurturing force
+    EXPLORER = "explorer"      # Seeker of knowledge/territory
+    INNOCENT = "innocent"      # Pure, untainted perspective
+    SHADOW = "shadow"          # Hidden/suppressed aspects
+
+
+class CultureEngine:
+    """
+    Simulates the emergence and evolution of cultures within civilizations,
+    including belief systems, archetypes, naming conventions, and social structures.
+    """
+    
+    def __init__(self, civilization: Civilization):
+        self.civilization = civilization
+        self.belief_systems = {}  # BeliefType -> value (0.0-1.0 scale)
+        self.social_structure = None
+        self.archetypes = []  # List of active archetypes
+        self.naming_patterns = {}  # Category -> pattern
+        self.languages = []
+        self.values = {}  # Value name -> importance (0.0-1.0)
+        self.taboos = []
+        self.rituals = []
+        self.cultural_motifs = []
+        self.cultural_age = 0
+        self.adaptations = []
+        self.cultural_coherence = 0.8  # How unified the culture is (0.0-1.0)
+        self.divergent_subcultures = []  # List of emerging subcultures
+        
+        # Name components for procedural naming
+        self.name_components = {
+            'prefixes': [],
+            'roots': [],
+            'suffixes': []
+        }
+        
+        # Dynamic variables that track cultural changes over time
+        self.cultural_shift_momentum = {}  # Aspect -> direction and strength
+        self.external_influences = []  # Other cultures influencing this one
+        
+        # Initialize culture based on civilization traits and planet
+        self._initialize_culture()
+    
+    def _initialize_culture(self):
+        """Initialize culture based on civilization traits and environment"""
+        # Get planet data for environmental influences
+        planet = DRM.get_entity(self.civilization.planet_id) if self.civilization.planet_id else None
+        
+        # Initialize belief systems with random tendencies
+        for belief_type in BeliefType:
+            self.belief_systems[belief_type] = random.random()
+        
+        # Environmental influences on beliefs and values
+        if planet:
+            # Planet with extreme climate affects cosmology
+            if hasattr(planet, 'temperature'):
+                if planet.temperature < -30:
+                    # Cold world - more structured, ordered cosmology
+                    self.belief_systems[BeliefType.COSMOLOGY] = max(0.7, self.belief_systems[BeliefType.COSMOLOGY])
+                    self.values['endurance'] = 0.9
+                    self.values['community'] = 0.8
+                elif planet.temperature > 40:
+                    # Hot world - more chaotic cosmology
+                    self.belief_systems[BeliefType.COSMOLOGY] = min(0.3, self.belief_systems[BeliefType.COSMOLOGY])
+                    self.values['adaptation'] = 0.9
+                    self.values['resourcefulness'] = 0.8
+            
+            # Geological activity affects ontology (nature of being)
+            if 'tectonic_dreams' in planet.motifs:
+                self.belief_systems[BeliefType.ONTOLOGY] = max(0.6, self.belief_systems[BeliefType.ONTOLOGY])
+                self.archetypes.append(SymbolicArchetype.DESTROYER)
+            
+            # Water worlds influence values
+            if hasattr(planet, 'surface') and planet.surface.get('water', 0) > 0.7:
+                self.values['flow'] = 0.8
+                self.values['depth'] = 0.7
+                self.archetypes.append(SymbolicArchetype.EXPLORER)
+        
+        # Choose initial social structure based on civ development
+        self._select_social_structure()
+        
+        # Select initial archetypes (2-4 primary ones)
+        self._initialize_archetypes()
+        
+        # Generate naming patterns
+        self._generate_naming_conventions()
+        
+        # Initialize cultural motifs (separate from entity motifs)
+        self._initialize_cultural_motifs()
+    
+    def _select_social_structure(self):
+        """Select appropriate social structure based on civilization traits"""
+        if not self.civilization:
+            self.social_structure = SocialStructure.TRIBAL
+            return
+            
+        # Choose based on development level and tech focus
+        if self.civilization.development_level < 0.2:
+            # Early civilization
+            self.social_structure = SocialStructure.TRIBAL
+        elif self.civilization.development_level < 0.4:
+            # Emerging civilization
+            self.social_structure = random.choice([
+                SocialStructure.TRIBAL, 
+                SocialStructure.FEUDAL
+            ])
+        elif self.civilization.development_level < 0.6:
+            # Established civilization
+            if hasattr(self.civilization, 'tech_focus'):
+                if self.civilization.tech_focus == DevelopmentArea.SOCIAL_ORGANIZATION:
+                    self.social_structure = random.choice([
+                        SocialStructure.REPUBLIC,
+                        SocialStructure.DIRECT_DEMOCRACY
+                    ])
+                else:
+                    self.social_structure = random.choice([
+                        SocialStructure.FEUDAL,
+                        SocialStructure.IMPERIAL,
+                        SocialStructure.OLIGARCHY
+                    ])
+        elif self.civilization.development_level < 0.8:
+            # Advanced civilization
+            if hasattr(self.civilization, 'tech_focus'):
+                if self.civilization.tech_focus == DevelopmentArea.COMPUTATION:
+                    self.social_structure = SocialStructure.TECHNOCRACY
+                elif self.civilization.quantum_understanding > 0.7:
+                    self.social_structure = SocialStructure.QUANTUM_CONSENSUS
+                else:
+                    self.social_structure = random.choice([
+                        SocialStructure.REPUBLIC,
+                        SocialStructure.DIRECT_DEMOCRACY,
+                        SocialStructure.TECHNOCRACY
+                    ])
+        else:
+            # Highly advanced civilization
+            if self.civilization.quantum_understanding > 0.9:
+                if random.random() < 0.3:
+                    self.social_structure = SocialStructure.HIVE_MIND
+                else:
+                    self.social_structure = SocialStructure.QUANTUM_CONSENSUS
+            else:
+                self.social_structure = random.choice([
+                    SocialStructure.TECHNOCRACY,
+                    SocialStructure.DISTRIBUTED
+                ])
+    
+    def _initialize_archetypes(self):
+        """Select initial cultural archetypes"""
+        # Always include CREATOR archetype
+        self.archetypes.append(SymbolicArchetype.CREATOR)
+        
+        # Select 1-3 additional archetypes
+        available_archetypes = [a for a in SymbolicArchetype if a != SymbolicArchetype.CREATOR]
+        num_additional = random.randint(1, 3)
+        self.archetypes.extend(random.sample(available_archetypes, num_additional))
+        
+        # Make sure archetypes list contains Enum values, not plain strings
+        self.archetypes = [a if isinstance(a, SymbolicArchetype) else a for a in self.archetypes]
+    
+    def _generate_naming_conventions(self):
+        """Generate naming patterns for this culture"""
+        # Initialize name components based on culture characteristics
+        consonants = 'bcdfghjklmnpqrstvwxyz'
+        vowels = 'aeiou'
+        
+        # Adjust sound palette based on environment and beliefs
+        if self.belief_systems.get(BeliefType.COSMOLOGY, 0) > 0.7:
+            # Ordered cosmos - more structured names
+            consonants = 'kptbdgmnsr'
+            vowels = 'aeiou'
+        elif self.belief_systems.get(BeliefType.COSMOLOGY, 0) < 0.3:
+            # Chaotic cosmos - more varied sounds
+            consonants = 'bcdfghjklmnpqrstvwxz'
+            vowels = 'aeiouy'
+        
+        # Generate specific components
+        num_prefixes = random.randint(5, 12)
+        num_roots = random.randint(10, 20)
+        num_suffixes = random.randint(5, 12)
+        
+        for _ in range(num_prefixes):
+            length = random.randint(1, 3)
+            prefix = ''
+            for i in range(length):
+                if i % 2 == 0:
+                    prefix += random.choice(consonants)
+                else:
+                    prefix += random.choice(vowels)
+            self.name_components['prefixes'].append(prefix)
+            
+        for _ in range(num_roots):
+            length = random.randint(2, 4)
+            root = ''
+            start_with = random.choice([0, 1])  # 0: consonant, 1: vowel
+            for i in range(length):
+                if (i + start_with) % 2 == 0:
+                    root += random.choice(consonants)
+                else:
+                    root += random.choice(vowels)
+            self.name_components['roots'].append(root)
+            
+        for _ in range(num_suffixes):
+            length = random.randint(1, 3)
+            suffix = ''
+            for i in range(length):
+                if i % 2 == 0:
+                    suffix += random.choice(vowels)
+                else:
+                    suffix += random.choice(consonants)
+            self.name_components['suffixes'].append(suffix)
+        
+        # Define naming patterns for different entity types
+        self.naming_patterns = {
+            'person': lambda: self._generate_name('person'),
+            'place': lambda: self._generate_name('place'),
+            'concept': lambda: self._generate_name('concept'),
+            'deity': lambda: self._generate_name('deity')
+        }
+    
+    def _generate_name(self, entity_type: str) -> str:
+        """Generate a name based on cultural patterns"""
+        result = ''
+        
+        if entity_type == 'person':
+            # Person names can have prefix + root or root + suffix
+            if random.random() < 0.5 and self.name_components['prefixes']:
+                result += random.choice(self.name_components['prefixes'])
+            
+            result += random.choice(self.name_components['roots'])
+            
+            if random.random() < 0.5 and self.name_components['suffixes']:
+                result += random.choice(self.name_components['suffixes'])
+                
+        elif entity_type == 'place':
+            # Places often have compound structure: root + root or root + suffix
+            result += random.choice(self.name_components['roots'])
+            
+            if random.random() < 0.7:
+                if random.random() < 0.5 and self.name_components['roots']:
+                    result += random.choice(self.name_components['roots'])
+                elif self.name_components['suffixes']:
+                    result += random.choice(self.name_components['suffixes'])
+                    
+        elif entity_type == 'concept':
+            # Concepts can be more abstract: prefix + root or root + suffix
+            if random.random() < 0.6 and self.name_components['prefixes']:
+                result += random.choice(self.name_components['prefixes'])
+                
+            result += random.choice(self.name_components['roots'])
+            
+            if random.random() < 0.6 and self.name_components['suffixes']:
+                result += random.choice(self.name_components['suffixes'])
+                
+        elif entity_type == 'deity':
+            # Deities often have grander names: prefix + root + suffix
+            if self.name_components['prefixes']:
+                result += random.choice(self.name_components['prefixes'])
+                
+            result += random.choice(self.name_components['roots'])
+            
+            if self.name_components['suffixes']:
+                result += random.choice(self.name_components['suffixes'])
+        
+        # Capitalize first letter
+        if result:
+            result = result[0].upper() + result[1:]
+            
+        return result
+    
+    def _initialize_cultural_motifs(self):
+        """Initialize cultural motifs based on environment and beliefs"""
+        # Carry over relevant motifs from civilization
+        if hasattr(self.civilization, 'motifs'):
+            for motif in self.civilization.motifs:
+                if any(term in motif for term in ['consciousness', 'mind', 'dream', 'thought', 'memory']):
+                    self.cultural_motifs.append(motif)
+        
+        # Add basic cultural motifs based on social structure
+        if self.social_structure == SocialStructure.TRIBAL:
+            self.cultural_motifs.extend(['kinship_bonds', 'ancestral_wisdom', 'seasonal_cycles'])
+        elif self.social_structure == SocialStructure.FEUDAL:
+            self.cultural_motifs.extend(['hierarchical_order', 'loyalty_chains', 'land_connection'])
+        elif self.social_structure == SocialStructure.IMPERIAL:
+            self.cultural_motifs.extend(['centralized_power', 'expansionist_destiny', 'glory_cult'])
+        elif self.social_structure == SocialStructure.REPUBLIC:
+            self.cultural_motifs.extend(['collective_wisdom', 'balanced_powers', 'civic_duty'])
+        elif self.social_structure == SocialStructure.DIRECT_DEMOCRACY:
+            self.cultural_motifs.extend(['voice_of_all', 'consensus_seeking', 'public_discourse'])
+        elif self.social_structure == SocialStructure.TECHNOCRACY:
+            self.cultural_motifs.extend(['optimization_ideal', 'expertise_value', 'system_thinking'])
+        elif self.social_structure == SocialStructure.QUANTUM_CONSENSUS:
+            self.cultural_motifs.extend(['probability_thinking', 'superposition_identity', 'entangled_fate'])
+        
+        # Add motifs based on archetypes
+        for archetype in self.archetypes:
+            if archetype == SymbolicArchetype.CREATOR:
+                self.cultural_motifs.append('genesis_narrative')
+            elif archetype == SymbolicArchetype.DESTROYER:
+                self.cultural_motifs.append('renewal_through_ending')
+            elif archetype == SymbolicArchetype.TRICKSTER:
+                self.cultural_motifs.append('wisdom_through_disruption')
+            elif archetype == SymbolicArchetype.HERO:
+                self.cultural_motifs.append('individual_transcendence')
+    
+    def evolve_culture(self, time_delta: float):
+        """
+        Evolve culture over time, responding to internal and external pressures
+        
+        Args:
+            time_delta: Time increment for evolution
+        """
+        self.cultural_age += time_delta
+        
+        # Evolve belief systems
+        self._evolve_beliefs(time_delta)
+        
+        # Check for social structure transitions
+        self._check_social_structure_transition(time_delta)
+        
+        # Evolve cultural motifs
+        self._evolve_cultural_motifs(time_delta)
+        
+        # Handle subculture emergence and divergence
+        self._handle_cultural_divergence(time_delta)
+        
+        # Update naming conventions periodically
+        if random.random() < 0.05 * time_delta:
+            self._evolve_naming_conventions()
+        
+        # Record significant cultural events
+        self._generate_cultural_events(time_delta)
+    
+    def _evolve_beliefs(self, time_delta: float):
+        """Evolve belief systems over time"""
+        # Get external influences
+        external_pressure = self._calculate_external_pressure()
+        
+        # Update each belief system
+        for belief_type in self.belief_systems:
+            # Natural drift - beliefs gradually change
+            drift = (random.random() - 0.5) * 0.05 * time_delta
+            
+            # External influence pushes belief systems
+            ext_influence = 0
+            if external_pressure.get(belief_type):
+                target, strength = external_pressure[belief_type]
+                ext_influence = (target - self.belief_systems[belief_type]) * strength * time_delta
+            
+            # Internal consistency pressure
+            internal_pressure = 0
+            if belief_type == BeliefType.COSMOLOGY and BeliefType.ONTOLOGY in self.belief_systems:
+                # Cosmology and ontology tend to align
+                ontology_val = self.belief_systems[BeliefType.ONTOLOGY]
+                internal_pressure = (ontology_val - self.belief_systems[belief_type]) * 0.02 * time_delta
+            
+            # Development level can push certain beliefs
+            dev_pressure = 0
+            if hasattr(self.civilization, 'development_level'):
+                if belief_type == BeliefType.EPISTEMOLOGY:
+                    # Higher development pushes toward rational epistemology
+                    dev_target = min(0.8, self.civilization.development_level)
+                    dev_pressure = (dev_target - self.belief_systems[belief_type]) * 0.03 * time_delta
+                    
+                elif belief_type == BeliefType.THEOLOGY:
+                    # Higher technical development can reduce theological focus
+                    if hasattr(self.civilization, 'tech_levels') and 'computation' in self.civilization.tech_levels:
+                        comp_level = self.civilization.tech_levels['computation']
+                        if comp_level > 0.7:
+                            dev_target = max(0.2, 1.0 - comp_level)
+                            dev_pressure = (dev_target - self.belief_systems[belief_type]) * 0.02 * time_delta
+            
+            # Combine all influences
+            total_change = drift + ext_influence + internal_pressure + dev_pressure
+            
+            # Apply change with limits
+            self.belief_systems[belief_type] = max(0.01, min(0.99, self.belief_systems[belief_type] + total_change))
+    
+    def _calculate_external_pressure(self) -> Dict:
+        """Calculate external cultural influences"""
+        pressure = {}
+        
+        # Consider influences from known civilizations
+        if hasattr(self.civilization, 'known_civilizations'):
+            for civ_id in self.civilization.known_civilizations:
+                other_civ = DRM.get_entity(civ_id)
+                if not other_civ or not hasattr(other_civ, 'culture_engine'):
+                    continue
+                    
+                # Calculate influence strength based on development difference
+                dev_diff = other_civ.development_level - self.civilization.development_level
+                influence_strength = 0.1  # Base influence
+                
+                if dev_diff > 0.2:
+                    # More advanced civilizations have stronger influence
+                    influence_strength += dev_diff * 0.3
+                    
+                # Add influence for each belief system
+                for belief_type, value in other_civ.culture_engine.belief_systems.items():
+                    if belief_type not in pressure:
+                        pressure[belief_type] = (value, influence_strength)
+                    else:
+                        # Average with existing influences
+                        current_target, current_strength = pressure[belief_type]
+                        new_strength = current_strength + influence_strength
+                        new_target = (current_target * current_strength + value * influence_strength) / new_strength
+                        pressure[belief_type] = (new_target, new_strength)
+        
+        return pressure
+    
+    def _check_social_structure_transition(self, time_delta: float):
+        """Check if social structure should evolve"""
+        if not hasattr(self.civilization, 'development_level'):
+            return
+            
+        current = self.social_structure
+        dev_level = self.civilization.development_level
+        
+        # Development thresholds that might trigger transitions
+        if current == SocialStructure.TRIBAL and dev_level > 0.3:
+            if random.random() < 0.1 * time_delta:
+                self.social_structure = SocialStructure.FEUDAL
+                self._record_social_transition(current, self.social_structure)
+                
+        elif current == SocialStructure.FEUDAL and dev_level > 0.5:
+            if random.random() < 0.1 * time_delta:
+                choices = [SocialStructure.IMPERIAL, SocialStructure.REPUBLIC]
+                self.social_structure = random.choice(choices)
+                self._record_social_transition(current, self.social_structure)
+                
+        elif current == SocialStructure.IMPERIAL and dev_level > 0.7:
+            if random.random() < 0.1 * time_delta:
+                if hasattr(self.civilization, 'tech_focus') and self.civilization.tech_focus == DevelopmentArea.COMPUTATION:
+                    self.social_structure = SocialStructure.TECHNOCRACY
+                else:
+                    self.social_structure = SocialStructure.REPUBLIC
+                self._record_social_transition(current, self.social_structure)
+                
+        elif current == SocialStructure.REPUBLIC and dev_level > 0.8:
+            if random.random() < 0.1 * time_delta:
+                choices = [SocialStructure.DIRECT_DEMOCRACY, SocialStructure.TECHNOCRACY]
+                self.social_structure = random.choice(choices)
+                self._record_social_transition(current, self.social_structure)
+                
+        elif dev_level > 0.9 and hasattr(self.civilization, 'quantum_understanding'):
+            if self.civilization.quantum_understanding > 0.8 and random.random() < 0.1 * time_delta:
+                self.social_structure = SocialStructure.QUANTUM_CONSENSUS
+                self._record_social_transition(current, self.social_structure)
+    
+    def _record_social_transition(self, old_structure, new_structure):
+        """Record a social structure transition event"""
+        if hasattr(self.civilization, 'record_scroll_event'):
+            self.civilization.record_scroll_event(
+                event_type="social_evolution",
+                description=f"Society transformed from {old_structure.value} to {new_structure.value}",
+                importance=0.7,
+                motifs_added=[f"social_{new_structure.value}"]
+            )
+    
+    def _evolve_cultural_motifs(self, time_delta: float):
+        """Evolve cultural motifs over time"""
+        # Chance to add new motifs
+        if random.random() < 0.1 * time_delta:
+            # Potential new motifs based on current state
+            potential_motifs = []
+            
+            # Add motifs based on belief strengths
+            for belief_type, value in self.belief_systems.items():
+                if value > 0.7:
+                    if belief_type == BeliefType.COSMOLOGY:
+                        potential_motifs.extend(['cosmic_order', 'celestial_harmony'])
+                    elif belief_type == BeliefType.ONTOLOGY:
+                        potential_motifs.extend(['being_awareness', 'essence_focus'])
+                    elif belief_type == BeliefType.EPISTEMOLOGY:
+                        potential_motifs.extend(['truth_seeking', 'knowledge_path'])
+                    elif belief_type == BeliefType.THEOLOGY:
+                        potential_motifs.extend(['divine_connection', 'transcendent_aspiration'])
+            
+            # Add motifs based on current social structure
+            if self.social_structure == SocialStructure.QUANTUM_CONSENSUS:
+                potential_motifs.extend(['quantum_identity', 'probability_ethics'])
+            elif self.social_structure == SocialStructure.TECHNOCRACY:
+                potential_motifs.extend(['optimization_mandate', 'efficiency_pursuit'])
+                
+            # Select a new motif if any are available
+            if potential_motifs and random.random() < 0.3:
+                new_motif = random.choice(potential_motifs)
+                if new_motif not in self.cultural_motifs:
+                    self.cultural_motifs.append(new_motif)
+                    
+                    # Record this cultural development
+                    if hasattr(self.civilization, 'record_scroll_event'):
+                        self.civilization.record_scroll_event(
+                            event_type="cultural_development",
+                            description=f"Culture developed new motif: {new_motif}",
+                            importance=0.5,
+                            motifs_added=[new_motif]
+                        )
+        
+        # Chance to lose motifs that no longer fit
+        if self.cultural_motifs and random.random() < 0.05 * time_delta:
+            # Find motifs that might be lost based on belief shifts
+            for motif in self.cultural_motifs[:]:  # Copy to avoid modification during iteration
+                # Examples of checking for obsolete motifs
+                if motif == 'divine_connection' and self.belief_systems.get(BeliefType.THEOLOGY, 0.5) < 0.3:
+                    self.cultural_motifs.remove(motif)
+                elif motif == 'cosmic_order' and self.belief_systems.get(BeliefType.COSMOLOGY, 0.5) < 0.3:
+                    self.cultural_motifs.remove(motif)
+    
+    def _handle_cultural_divergence(self, time_delta: float):
+        """Handle emergence of subcultures and cultural divergence"""
+        # Factors that increase chance of subculture formation:
+        # 1. Population size
+        # 2. Multiple colonized planets
+        # 3. Low cultural coherence
+        # 4. High development level
+        
+        divergence_chance = 0.01 * time_delta  # Base chance
+        
+        if hasattr(self.civilization, 'population') and self.civilization.population > 1000000:
+            divergence_chance += 0.05
+            
+        if hasattr(self.civilization, 'colonized_planets') and len(self.civilization.colonized_planets) > 1:
+            divergence_chance += 0.1 * len(self.civilization.colonized_planets)
+            
+        divergence_chance *= (2.0 - self.cultural_coherence)  # Lower coherence increases chance
+        
+        if hasattr(self.civilization, 'development_level'):
+            divergence_chance *= (1.0 + self.civilization.development_level)  # Higher development increases chance
+            
+        # Check for new subculture formation
+        if random.random() < divergence_chance:
+            self._form_new_subculture()
+            
+        # Evolve existing subcultures
+        for subculture in self.divergent_subcultures:
+            subculture['divergence'] = min(1.0, subculture['divergence'] + 0.05 * time_delta)
+            
+            # Subculture might influence main culture
+            if random.random() < 0.1 * time_delta:
+                influence_strength = subculture['divergence'] * 0.1
+                for belief_type, value in subculture['beliefs'].items():
+                    if belief_type in self.belief_systems:
+                        self.belief_systems[belief_type] += (value - self.belief_systems[belief_type]) * influence_strength
+                
+                # Subculture might contribute motifs to main culture
+                if random.random() < subculture['divergence'] * 0.2:
+                    potential_motifs = [m for m in subculture['motifs'] if m not in self.cultural_motifs]
+                    if potential_motifs:
+                        self.cultural_motifs.append(random.choice(potential_motifs))
+    
+    def _form_new_subculture(self):
+        """Create a new divergent subculture"""
+        # Base new subculture on main culture, but with variations
+        new_subculture = {
+            'name': self._generate_name('concept'),
+            'formation_time': self.cultural_age,
+            'divergence': 0.1,  # Starts only slightly different
+            'beliefs': {},
+            'motifs': [],
+            'social_structure': self.social_structure,
+            'location': None  # Will be set if specific location exists
+        }
+        
+        # Copy beliefs with variations
+        for belief_type, value in self.belief_systems.items():
+            variation = (random.random() - 0.5) * 0.4  # -0.2 to 0.2 variation
+            new_subculture['beliefs'][belief_type] = max(0.1, min(0.9, value + variation))
+            
+        # Copy some motifs, add some new ones
+        common_motifs = random.sample(self.cultural_motifs, min(len(self.cultural_motifs), 3))
+        new_subculture['motifs'].extend(common_motifs)
+        
+        # Add some unique motifs
+        unique_motifs = [
+            'identity_seeking',
+            'tradition_breaking',
+            'path_divergence',
+            'alternative_vision',
+            'cultural_rebellion'
+        ]
+        new_subculture['motifs'].append(random.choice(unique_motifs))
+        
+        # Set location if on multiple planets
+        if hasattr(self.civilization, 'colonized_planets') and self.civilization.colonized_planets:
+            new_subculture['location'] = random.choice(self.civilization.colonized_planets)
+            
+        # Add to subcultures list
+        self.divergent_subcultures.append(new_subculture)
+        
+        # Reduce overall cultural coherence
+        self.cultural_coherence = max(0.1, self.cultural_coherence - 0.05)
+        
+        # Record this cultural event
+        if hasattr(self.civilization, 'record_scroll_event'):
+            self.civilization.record_scroll_event(
+                event_type="cultural_divergence",
+                description=f"New subculture formed: {new_subculture['name']}",
+                importance=0.6,
+                motifs_added=['cultural_divergence']
+            )
+            
+        return new_subculture
+    
+    def _evolve_naming_conventions(self):
+        """Evolve naming conventions over time"""
+        # Chance to add new components
+        component_types = ['prefixes', 'roots', 'suffixes']
+        component_type = random.choice(component_types)
+        
+        # Create a new component
+        consonants = 'bcdfghjklmnpqrstvwxyz'
+        vowels = 'aeiou'
+        
+        length = random.randint(1, 3)
+        new_component = ''
+        for i in range(length):
+            if i % 2 == 0:
+                new_component += random.choice(consonants)
+            else:
+                new_component += random.choice(vowels)
+                
+        self.name_components[component_type].append(new_component)
+        
+        # Chance to remove old components (but always keep at least 3 of each)
+        if len(self.name_components[component_type]) > 5 and random.random() < 0.3:
+            removed = random.choice(self.name_components[component_type])
+            self.name_components[component_type].remove(removed)
+    
+    def _generate_cultural_events(self, time_delta: float):
+        """Generate cultural events based on current state"""
+        # Chance for significant cultural events
+        if random.random() < 0.05 * time_delta:
+            # Possible event types
+            event_types = [
+                "artistic_revolution",
+                "philosophical_breakthrough",
+                "spiritual_awakening",
+                "linguistic_evolution",
+                "value_shift",
+                "ritual_creation",
+                "archetype_transformation"
+            ]
+            
+            event_type = random.choice(event_types)
+            event_description = ""
+            event_importance = 0.5
+            event_motifs = []
+            
+            if event_type == "artistic_revolution":
+                art_form = random.choice(["visual", "musical", "literary", "performative", "immersive"])
+                movement_name = self._generate_name('concept')
+                event_description = f"New artistic movement '{movement_name}' revolutionized {art_form} expression"
+                event_motifs = ["artistic_innovation"]
+                
+            elif event_type == "philosophical_breakthrough":
+                philosopher = self._generate_name('person')
+                concept = self._generate_name('concept')
+                event_description = f"Philosopher {philosopher} introduced concept of '{concept}'"
+                event_motifs = ["philosophical_advance"]
+                event_importance = 0.7
+                
+            elif event_type == "spiritual_awakening":
+                leader = self._generate_name('person')
+                teaching = self._generate_name('concept')
+                event_description = f"Spiritual leader {leader} revealed teachings of '{teaching}'"
+                event_motifs = ["spiritual_revelation"]
+                event_importance = 0.8
+                
+            elif event_type == "linguistic_evolution":
+                language_name = self._generate_name('concept')
+                event_description = f"Language evolved into new dialect: {language_name}"
+                event_motifs = ["linguistic_drift"]
+                
+            elif event_type == "value_shift":
+                old_value = random.choice(list(self.values.keys())) if self.values else "tradition"
+                new_value = self._generate_name('concept')
+                event_description = f"Cultural values shifted from '{old_value}' toward '{new_value}'"
+                event_motifs = ["value_evolution"]
+                # Update values dictionary
+                self.values[new_value] = 0.8
+                if old_value in self.values:
+                    self.values[old_value] = max(0.1, self.values[old_value] - 0.3)
+                
+            elif event_type == "ritual_creation":
+                ritual_name = self._generate_name('concept')
+                purpose = random.choice(["harmony", "cleansing", "remembrance", "transition", "union"])
+                event_description = f"New ritual '{ritual_name}' established for {purpose}"
+                event_motifs = ["ritual_creation"]
+                self.rituals.append(ritual_name)
+                
+            elif event_type == "archetype_transformation":
+                old_archetype = random.choice(self.archetypes) if self.archetypes else SymbolicArchetype.CREATOR
+                available_archetypes = [a for a in SymbolicArchetype if a not in self.archetypes]
+                if available_archetypes:
+                    new_archetype = random.choice(available_archetypes)
+                    event_description = f"Cultural archetype shifted from {old_archetype.value} to {new_archetype.value}"
+                    event_motifs = ["archetype_shift"]
+                    # Update archetypes
+                    if old_archetype in self.archetypes:
+                        self.archetypes.remove(old_archetype)
+                    self.archetypes.append(new_archetype)
+            
+            # Record event in civilization's scroll memory
+            if hasattr(self.civilization, 'record_scroll_event') and event_description:
+                self.civilization.record_scroll_event(
+                    event_type=event_type,
+                    description=event_description,
+                    importance=event_importance,
+                    motifs_added=event_motifs
+                )
+
+# Add culture_engine to Civilization class
+def _initialize_culture_engine(self):
+    """Initialize culture engine for this civilization"""
+    if not hasattr(self, 'culture_engine'):
+        self.culture_engine = CultureEngine(self)
+        
+    # Record culture initialization in scroll memory
+    if hasattr(self, 'record_scroll_event'):
+        self.record_scroll_event(
+            event_type="culture_genesis",
+            description=f"Culture established with {self.culture_engine.social_structure.value} structure",
+            importance=0.8,
+            motifs_added=self.culture_engine.cultural_motifs[:3]
+        )
+    
+    return self.culture_engine
+
+# Update evolve method to use culture engine
+def _civilization_evolve_with_culture(self, time_delta: float):
+    """Evolve civilization with cultural component"""
+    # Original evolve method (store reference to original)
+    if hasattr(self, '_original_evolve'):
+        self._original_evolve(time_delta)
+    else:
+        super(Civilization, self).evolve(time_delta)
+    
+    # Ensure culture engine exists
+    if not hasattr(self, 'culture_engine'):
+        self._initialize_culture_engine()
+        
+    # Evolve culture
+    self.culture_engine.evolve_culture(time_delta)
+
+# Bind culture methods to Civilization
+Civilization._initialize_culture_engine = _initialize_culture_engine
+Civilization._original_evolve = Civilization.evolve  # Store original method
+Civilization.evolve = _civilization_evolve_with_culture  # Replace with new method
+
+
+# -------------------------------------------------------------------------
+# Civilization Interaction System
+# -------------------------------------------------------------------------
+class InteractionType(Enum):
+    """Types of relationships between civilizations"""
+    CONFLICT = "conflict"            # Active hostility
+    COOPERATION = "cooperation"      # Mutual aid and exchange
+    COMPETITION = "competition"      # Non-violent rivalry
+    CULTURAL_EXCHANGE = "cultural_exchange"  # Ideas and beliefs flow
+    TRADE = "trade"                  # Economic relations
+    SUBJUGATION = "subjugation"      # Dominance of one over another
+    ISOLATION = "isolation"          # Deliberate separation
+    OBSERVATION = "observation"      # One studying the other covertly
+    HYBRID = "hybrid"                # Complex mix of relationship types
+
+
+class CivilizationInteraction:
+    """
+    Manages relationships and interactions between civilizations,
+    including conflict, cooperation, and hybrid states.
+    """
+    
+    def __init__(self, civ1_id: str, civ2_id: str):
+        self.civ1_id = civ1_id
+        self.civ2_id = civ2_id
+        self.relation_id = f"relation_{civ1_id}_{civ2_id}"
+        self.interaction_type = InteractionType.OBSERVATION
+        self.motif_resonance = 0.0
+        self.technological_parity = 0.0
+        self.cultural_compatibility = 0.0
+        self.tension = 0.0
+        self.shared_history = []  # List of historical events
+        self.diplomatic_status = "neutral"
+        self.treaties = []
+        self.war_status = False
+        self.trade_volume = 0
+        self.last_update_time = 0
+        
+        # Initialize the relationship
+        self._initialize_relationship()
+    
+    def _initialize_relationship(self):
+        """Set initial relationship parameters based on civilizations"""
+        civ1 = DRM.get_entity(self.civ1_id)
+        civ2 = DRM.get_entity(self.civ2_id)
+        
+        if not civ1 or not civ2:
+            return
+            
+        # Calculate technological parity (0 = disparate, 1 = equal)
+        tech_diff = {}
+        for area in DevelopmentArea:
+            if hasattr(civ1.tech_levels, area) and hasattr(civ2.tech_levels, area):
+                tech_diff[area] = abs(civ1.tech_levels[area] - civ2.tech_levels[area])
+                
+        if tech_diff:
+            avg_tech_diff = sum(tech_diff.values()) / len(tech_diff)
+            self.technological_parity = 1.0 - avg_tech_diff
+        
+        # Calculate motif resonance using MotifSeeder
+        self.motif_resonance = MotifSeeder.find_resonance(civ1, civ2)
+        
+        # Initial cultural compatibility based on belief systems
+        if hasattr(civ1, 'culture_engine') and hasattr(civ2, 'culture_engine'):
+            belief_compatibility = 0.0
+            belief_count = 0
+            
+            for belief_type in BeliefType:
+                if (belief_type in civ1.culture_engine.belief_systems and 
+                    belief_type in civ2.culture_engine.belief_systems):
+                    diff = abs(civ1.culture_engine.belief_systems[belief_type] - 
+                               civ2.culture_engine.belief_systems[belief_type])
+                    belief_compatibility += (1.0 - diff)
+                    belief_count += 1
+                    
+            if belief_count > 0:
+                self.cultural_compatibility = belief_compatibility / belief_count
+        
+        # Initialize tension based on inverted compatibility
+        self.tension = 0.3 + (1.0 - self.cultural_compatibility) * 0.4 + (1.0 - self.motif_resonance) * 0.3
+        
+        # Select initial interaction type
+        self._update_interaction_type()
+    
+    def _update_interaction_type(self):
+        """Determine interaction type based on current metrics"""
+        if self.war_status:
+            self.interaction_type = InteractionType.CONFLICT
+            return
+            
+        # Get the civilizations
+        civ1 = DRM.get_entity(self.civ1_id)
+        civ2 = DRM.get_entity(self.civ2_id)
+        
+        if not civ1 or not civ2:
+            return
+            
+        # Development gap can lead to subjugation
+        dev_gap = abs(civ1.development_level - civ2.development_level)
+        if dev_gap > 0.4 and self.tension > 0.6:
+            # Significant development gap and high tension
+            higher_civ = civ1 if civ1.development_level > civ2.development_level else civ2
+            if higher_civ.entity_id == self.civ1_id:
+                self.interaction_type = InteractionType.SUBJUGATION
+                return
+                
+        # High tension leads to conflict or competition
+        if self.tension > 0.7:
+            if self.technological_parity > 0.8:
+                # Similar tech levels mean direct conflict is more likely
+                self.interaction_type = InteractionType.CONFLICT
+            else:
+                # Different tech levels lead to competition
+                self.interaction_type = InteractionType.COMPETITION
+            return
+            
+        # High cultural compatibility encourages cooperation or exchange
+        if self.cultural_compatibility > 0.7:
+            if self.technological_parity > 0.6:
+                # Similar tech and culture leads to full cooperation
+                self.interaction_type = InteractionType.COOPERATION
+            else:
+                # Cultural similarity but tech difference leads to cultural exchange
+                self.interaction_type = InteractionType.CULTURAL_EXCHANGE
+            return
+            
+        # High tech parity and moderate cultural compatibility can lead to trade
+        if self.technological_parity > 0.6 and self.cultural_compatibility > 0.4:
+            self.interaction_type = InteractionType.TRADE
+            return
+            
+        # Low resonance and low tension can lead to isolation
+        if self.motif_resonance < 0.3 and self.tension < 0.4:
+            self.interaction_type = InteractionType.ISOLATION
+            return
+            
+        # Complex mix of factors
+        if (0.3 < self.motif_resonance < 0.7 and 
+            0.3 < self.technological_parity < 0.7 and
+            0.3 < self.cultural_compatibility < 0.7):
+            self.interaction_type = InteractionType.HYBRID
+            return
+            
+        # Default to observation
+        self.interaction_type = InteractionType.OBSERVATION
+    
+    def update_relationship(self, time_delta: float):
+        """Update the relationship between civilizations over time"""
+        self.last_update_time += time_delta
+        
+        # Get the civilizations
+        civ1 = DRM.get_entity(self.civ1_id)
+        civ2 = DRM.get_entity(self.civ2_id)
+        
+        if not civ1 or not civ2:
+            return
+            
+        # Update tech parity
+        tech_diff = {}
+        for area in DevelopmentArea:
+            if hasattr(civ1.tech_levels, area) and hasattr(civ2.tech_levels, area):
+                tech_diff[area] = abs(civ1.tech_levels[area] - civ2.tech_levels[area])
+                
+        if tech_diff:
+            avg_tech_diff = sum(tech_diff.values()) / len(tech_diff)
+            self.technological_parity = 1.0 - avg_tech_diff
+            
+        # Cultural compatibility evolves based on current interaction
+        if hasattr(civ1, 'culture_engine') and hasattr(civ2, 'culture_engine'):
+            if self.interaction_type == InteractionType.CULTURAL_EXCHANGE:
+                # Cultural exchange increases compatibility
+                self.cultural_compatibility = min(1.0, self.cultural_compatibility + 0.05 * time_delta)
+            elif self.interaction_type == InteractionType.CONFLICT:
+                # Conflict decreases compatibility
+                self.cultural_compatibility = max(0.0, self.cultural_compatibility - 0.05 * time_delta)
+                
+        # Tension evolves based on interaction type and random factors
+        tension_change = 0.0
+        
+        if self.interaction_type == InteractionType.CONFLICT:
+            tension_change = 0.05  # Conflicts increase tension
+        elif self.interaction_type == InteractionType.COOPERATION:
+            tension_change = -0.05  # Cooperation decreases tension
+        elif self.interaction_type == InteractionType.TRADE:
+            tension_change = -0.02  # Trade slightly decreases tension
+        
+        # Random factors
+        tension_change += (random.random() - 0.5) * 0.04 * time_delta
+        
+        # Apply tension change
+        self.tension = max(0.1, min(0.9, self.tension + tension_change))
+        
+        # Check for significant events
+        if random.random() < 0.1 * time_delta:
+            self._generate_interaction_event()
+            
+        # Re-evaluate interaction type
+        self._update_interaction_type()
+        
+        # Update each civilization based on interaction
+        self._apply_interaction_effects(time_delta)
+    
+    def _generate_interaction_event(self):
+        """Generate a significant event in the relationship"""
+        civ1 = DRM.get_entity(self.civ1_id)
+        civ2 = DRM.get_entity(self.civ2_id)
+        
+        if not civ1 or not civ2:
+            return
+            
+        event_desc = ""
+        event_importance = 0.5
+        event_motifs = []
+        
+        # Different events based on interaction type
+        if self.interaction_type == InteractionType.CONFLICT:
+            if random.random() < 0.3:
+                # Major conflict
+                event_desc = f"War broke out between {civ1.entity_id} and {civ2.entity_id}"
+                event_importance = 0.9
+                event_motifs = ["interspecies_war"]
+                self.war_status = True
+            else:
+                # Minor conflict
+                event_desc = f"Border skirmish between {civ1.entity_id} and {civ2.entity_id}"
+                event_importance = 0.7
+                event_motifs = ["territorial_dispute"]
+                
+        elif self.interaction_type == InteractionType.COOPERATION:
+            if random.random() < 0.3:
+                # Major alliance
+                event_desc = f"Alliance formed between {civ1.entity_id} and {civ2.entity_id}"
+                event_importance = 0.8
+                event_motifs = ["interspecies_alliance"]
+                self.treaties.append(("Alliance", self.last_update_time))
+            else:
+                # Joint project
+                event_desc = f"Joint technological project between {civ1.entity_id} and {civ2.entity_id}"
+                event_importance = 0.6
+                event_motifs = ["technological_cooperation"]
+                
+        elif self.interaction_type == InteractionType.TRADE:
+            event_desc = f"Trade agreement established between {civ1.entity_id} and {civ2.entity_id}"
+            event_importance = 0.5
+            event_motifs = ["interspecies_commerce"]
+            self.trade_volume += 0.2
+            self.treaties.append(("Trade Agreement", self.last_update_time))
+            
+        elif self.interaction_type == InteractionType.CULTURAL_EXCHANGE:
+            event_desc = f"Cultural exchange program between {civ1.entity_id} and {civ2.entity_id}"
+            event_importance = 0.6
+            event_motifs = ["cultural_transmission"]
+            
+        elif self.interaction_type == InteractionType.SUBJUGATION:
+            # Determine which civilization is dominant
+            dominant = civ1 if civ1.development_level > civ2.development_level else civ2
+            subjugated = civ2 if dominant == civ1 else civ1
+            
+            event_desc = f"{dominant.entity_id} established dominance over {subjugated.entity_id}"
+            event_importance = 0.8
+            event_motifs = ["power_hierarchy", "empire_building"]
+            
+        # Record the event in both civilizations' scroll memories
+        if event_desc:
+            if hasattr(civ1, 'record_scroll_event'):
+                civ1.record_scroll_event(
+                    event_type="diplomacy",
+                    description=event_desc,
+                    importance=event_importance,
+                    entities_involved=[civ1.entity_id, civ2.entity_id],
+                    motifs_added=event_motifs
+                )
+                
+            if hasattr(civ2, 'record_scroll_event'):
+                civ2.record_scroll_event(
+                    event_type="diplomacy",
+                    description=event_desc,
+                    importance=event_importance,
+                    entities_involved=[civ1.entity_id, civ2.entity_id],
+                    motifs_added=event_motifs
+                )
+                
+            # Add to shared history
+            self.shared_history.append({
+                'time': self.last_update_time,
+                'description': event_desc,
+                'type': self.interaction_type.value,
+                'importance': event_importance
+            })
+    
+    def _apply_interaction_effects(self, time_delta: float):
+        """Apply effects of the relationship to both civilizations"""
+        civ1 = DRM.get_entity(self.civ1_id)
+        civ2 = DRM.get_entity(self.civ2_id)
+        
+        if not civ1 or not civ2:
+            return
+            
+        # Different effects based on interaction type
+        if self.interaction_type == InteractionType.COOPERATION:
+            # Boost tech in areas where the other civ is stronger
+            for area in DevelopmentArea:
+                if (hasattr(civ1.tech_levels, area) and 
+                    hasattr(civ2.tech_levels, area)):
+                    # Civ 1 learns from Civ 2 in areas where Civ 2 is stronger
+                    if civ2.tech_levels[area] > civ1.tech_levels[area]:
+                        boost = (civ2.tech_levels[area] - civ1.tech_levels[area]) * 0.1 * time_delta
+                        civ1.tech_levels[area] = min(1.0, civ1.tech_levels[area] + boost)
+                    
+                    # Civ 2 learns from Civ 1
+                    if civ1.tech_levels[area] > civ2.tech_levels[area]:
+                        boost = (civ1.tech_levels[area] - civ2.tech_levels[area]) * 0.1 * time_delta
+                        civ2.tech_levels[area] = min(1.0, civ2.tech_levels[area] + boost)
+            
+        elif self.interaction_type == InteractionType.CONFLICT:
+            # War pushes military technology but drains resources
+            if hasattr(civ1.tech_levels, DevelopmentArea.WEAPONRY):
+                civ1.tech_levels[DevelopmentArea.WEAPONRY] = min(1.0, civ1.tech_levels[DevelopmentArea.WEAPONRY] + 0.05 * time_delta)
+                
+            if hasattr(civ2.tech_levels, DevelopmentArea.WEAPONRY):
+                civ2.tech_levels[DevelopmentArea.WEAPONRY] = min(1.0, civ2.tech_levels[DevelopmentArea.WEAPONRY] + 0.05 * time_delta)
+                
+            # Population and development penalties
+            civ1.population = max(1000, int(civ1.population * (1 - 0.02 * time_delta)))
+            civ2.population = max(1000, int(civ2.population * (1 - 0.02 * time_delta)))
+            
+            # Check for war resolution
+            if random.random() < 0.05 * time_delta:
+                self._resolve_conflict()
+                
+        elif self.interaction_type == InteractionType.CULTURAL_EXCHANGE:
+            # Exchange cultural motifs
+            if hasattr(civ1, 'culture_engine') and hasattr(civ2, 'culture_engine'):
+                if random.random() < 0.1 * time_delta:
+                    # Civ 1 learns from Civ 2
+                    if civ2.culture_engine.cultural_motifs:
+                        motif = random.choice(civ2.culture_engine.cultural_motifs)
+                        if motif not in civ1.culture_engine.cultural_motifs:
+                            civ1.culture_engine.cultural_motifs.append(motif)
+                    
+                    # Civ 2 learns from Civ 1
+                    if civ1.culture_engine.cultural_motifs:
+                        motif = random.choice(civ1.culture_engine.cultural_motifs)
+                        if motif not in civ2.culture_engine.cultural_motifs:
+                            civ2.culture_engine.cultural_motifs.append(motif)
+                            
+                # Belief systems influence each other
+                for belief_type in BeliefType:
+                    if (belief_type in civ1.culture_engine.belief_systems and 
+                        belief_type in civ2.culture_engine.belief_systems):
+                        # Both belief systems drift toward each other
+                        civ1_belief = civ1.culture_engine.belief_systems[belief_type]
+                        civ2_belief = civ2.culture_engine.belief_systems[belief_type]
+                        
+                        drift = (civ2_belief - civ1_belief) * 0.05 * time_delta
+                        civ1.culture_engine.belief_systems[belief_type] += drift
+                        civ2.culture_engine.belief_systems[belief_type] -= drift
+        
+        elif self.interaction_type == InteractionType.TRADE:
+            # Trade boosts economies and certain technologies
+            boost = 0.02 * time_delta * self.trade_volume
+            
+            # Population growth boost
+            civ1.population = int(civ1.population * (1 + 0.01 * boost))
+            civ2.population = int(civ2.population * (1 + 0.01 * boost))
+            
+            # Technology boost in energy, materials, computation
+            for area in [DevelopmentArea.ENERGY, DevelopmentArea.MATERIALS, DevelopmentArea.COMPUTATION]:
+                if hasattr(civ1.tech_levels, area):
+                    civ1.tech_levels[area] = min(1.0, civ1.tech_levels[area] + 0.01 * boost)
+                if hasattr(civ2.tech_levels, area):
+                    civ2.tech_levels[area] = min(1.0, civ2.tech_levels[area] + 0.01 * boost)
+                    
+        elif self.interaction_type == InteractionType.SUBJUGATION:
+            # Determine dominant civilization
+            dominant = civ1 if civ1.development_level > civ2.development_level else civ2
+            subjugated = civ2 if dominant == civ1 else civ1
+            
+            # Resource flow from subjugated to dominant
+            # Dominant grows faster, subjugated grows slower
+            dominant.population = int(dominant.population * (1 + 0.02 * time_delta))
+            subjugated.population = max(1000, int(subjugated.population * (1 - 0.01 * time_delta)))
+            
+            # Technology transfer (one-way)
+            for area in DevelopmentArea:
+                if (hasattr(dominant.tech_levels, area) and 
+                    hasattr(subjugated.tech_levels, area)):
+                    if dominant.tech_levels[area] > subjugated.tech_levels[area]:
+                        # Slow tech transfer to subjugated
+                        boost = (dominant.tech_levels[area] - subjugated.tech_levels[area]) * 0.05 * time_delta
+                        subjugated.tech_levels[area] = min(dominant.tech_levels[area] * 0.8, 
+                                                         subjugated.tech_levels[area] + boost)
+    
+    def _resolve_conflict(self):
+        """Resolve an ongoing conflict between civilizations"""
+        civ1 = DRM.get_entity(self.civ1_id)
+        civ2 = DRM.get_entity(self.civ2_id)
+        
+        if not civ1 or not civ2:
+            return
+            
+        # Determine victor based on multiple factors
+        # - Military technology
+        # - Population
+        # - Overall development
+        # - Random chance
+        
+        # Calculate military strength
+        mil_tech1 = civ1.tech_levels.get(DevelopmentArea.WEAPONRY, 0.1)
+        mil_tech2 = civ2.tech_levels.get(DevelopmentArea.WEAPONRY, 0.1)
+        
+        # Population factor (logarithmic to avoid pure numbers determining outcome)
+        pop_factor1 = math.log10(max(1000, civ1.population)) / 10
+        pop_factor2 = math.log10(max(1000, civ2.population)) / 10
+        
+        # Overall development
+        dev1 = civ1.development_level
+        dev2 = civ2.development_level
+        
+        # Calculate total strength
+        strength1 = mil_tech1 * 0.5 + pop_factor1 * 0.3 + dev1 * 0.2
+        strength2 = mil_tech2 * 0.5 + pop_factor2 * 0.3 + dev2 * 0.2
+        
+        # Add random factor (fog of war)
+        strength1 *= random.uniform(0.8, 1.2)
+        strength2 *= random.uniform(0.8, 1.2)
+        
+        # Determine victor
+        victor = civ1 if strength1 > strength2 else civ2
+        defeated = civ2 if victor == civ1 else civ1
+        
+        # War resolution effects
+        self.war_status = False
+        
+        # Victor gains, defeated loses
+        if victor.development_level > 0.7 and defeated.development_level > 0.7:
+            # Advanced civilizations sign peace treaty
+            event_desc = f"Peace treaty signed between {civ1.entity_id} and {civ2.entity_id}"
+            self.treaties.append(("Peace Treaty", self.last_update_time))
+            
+            # Reset tension
+            self.tension = 0.4
+            
+            # Both lose some population
+            victor.population = int(victor.population * 0.95)
+            defeated.population = int(defeated.population * 0.9)
+            
+        elif victor.development_level - defeated.development_level > 0.3:
+            # Significant tech gap leads to subjugation
+            event_desc = f"{victor.entity_id} defeated and subjugated {defeated.entity_id}"
+            
+            # Set interaction to subjugation
+            self.interaction_type = InteractionType.SUBJUGATION
+            
+            # Population effects
+            victor.population = int(victor.population * 0.97)
+            defeated.population = int(defeated.population * 0.7)
+            
+        else:
+            # Standard victory
+            event_desc = f"{victor.entity_id} defeated {defeated.entity_id} in war"
+            
+            # Population effects
+            victor.population = int(victor.population * 0.95)
+            defeated.population = int(defeated.population * 0.8)
+            
+            # Reset tension
+            self.tension = 0.5
+            
+        # Record event in both civilizations' scroll memories
+        if hasattr(civ1, 'record_scroll_event'):
+            civ1.record_scroll_event(
+                event_type="war_resolution",
+                description=event_desc,
+                importance=0.8,
+                entities_involved=[civ1.entity_id, civ2.entity_id],
+                motifs_added=["war_conclusion"]
+            )
+            
+        if hasattr(civ2, 'record_scroll_event'):
+            civ2.record_scroll_event(
+                event_type="war_resolution",
+                description=event_desc,
+                importance=0.8,
+                entities_involved=[civ1.entity_id, civ2.entity_id],
+                motifs_added=["war_conclusion"]
+            )
+            
+        # Add to shared history
+        self.shared_history.append({
+            'time': self.last_update_time,
+            'description': event_desc,
+            'type': 'war_resolution',
+            'importance': 0.8
+        })
+
+
+# Central registry for civilization interactions
+class DiplomaticRegistry:
+    """Manages all civilization interactions in the simulation"""
+    
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(DiplomaticRegistry, cls).__new__(cls)
+            cls._instance._initialize()
+        return cls._instance
+    
+    def _initialize(self):
+        """Initialize the diplomatic registry"""
+        self.relationships = {}  # (civ1_id, civ2_id) -> CivilizationInteraction
+        self.alliances = {}  # alliance_id -> [civ_ids]
+        self.wars = {}  # war_id -> [civ_ids, start_time, cause]
+        self.trade_networks = {}  # network_id -> [civ_ids, trade_volume]
+    
+    def get_relationship(self, civ1_id: str, civ2_id: str) -> CivilizationInteraction:
+        """Get or create relationship between two civilizations"""
+        # Sort IDs to ensure consistent key
+        if civ1_id > civ2_id:
+            civ1_id, civ2_id = civ2_id, civ1_id
+            
+        key = (civ1_id, civ2_id)
+        
+        if key not in self.relationships:
+            self.relationships[key] = CivilizationInteraction(civ1_id, civ2_id)
+            
+        return self.relationships[key]
+    
+    def update_all_relationships(self, time_delta: float):
+        """Update all diplomatic relationships"""
+        for relationship in self.relationships.values():
+            relationship.update_relationship(time_delta)
+            
+        # Update meta-structures like alliances and trade networks
+        self._update_diplomatic_structures()
+    
+    def _update_diplomatic_structures(self):
+        """Update alliance networks, trade blocs, etc."""
+        # Reset structures
+        self.alliances = {}
+        self.trade_networks = {}
+        
+        # Rebuild based on current relationships
+        processed = set()
+        
+        for (civ1_id, civ2_id), relationship in self.relationships.items():
+            if (civ1_id, civ2_id) in processed:
+                continue
+                
+            processed.add((civ1_id, civ2_id))
+            
+            # Check for alliances
+            if relationship.interaction_type == InteractionType.COOPERATION:
+                # Find existing alliance to add to
+                alliance_id = None
+                for aid, members in self.alliances.items():
+                    if civ1_id in members or civ2_id in members:
+                        alliance_id = aid
+                        break
+                        
+                if alliance_id:
+                    # Add to existing alliance
+                    if civ1_id not in self.alliances[alliance_id]:
+                        self.alliances[alliance_id].append(civ1_id)
+                    if civ2_id not in self.alliances[alliance_id]:
+                        self.alliances[alliance_id].append(civ2_id)
+                else:
+                    # Create new alliance
+                    alliance_id = f"alliance_{civ1_id}_{civ2_id}"
+                    self.alliances[alliance_id] = [civ1_id, civ2_id]
+                    
+            # Check for trade networks
+            elif relationship.interaction_type == InteractionType.TRADE:
+                # Find existing trade network
+                network_id = None
+                for nid, data in self.trade_networks.items():
+                    members = data['members']
+                    if civ1_id in members or civ2_id in members:
+                        network_id = nid
+                        break
+                        
+                if network_id:
+                    # Add to existing network
+                    if civ1_id not in self.trade_networks[network_id]['members']:
+                        self.trade_networks[network_id]['members'].append(civ1_id)
+                    if civ2_id not in self.trade_networks[network_id]['members']:
+                        self.trade_networks[network_id]['members'].append(civ2_id)
+                    # Update volume
+                    self.trade_networks[network_id]['volume'] += relationship.trade_volume
+                else:
+                    # Create new trade network
+                    network_id = f"trade_{civ1_id}_{civ2_id}"
+                    self.trade_networks[network_id] = {
+                        'members': [civ1_id, civ2_id],
+                        'volume': relationship.trade_volume
+                    }
+                    
+        # Update wars
+        active_wars = {}
+        for (civ1_id, civ2_id), relationship in self.relationships.items():
+            if relationship.war_status:
+                # Find existing war
+                war_id = None
+                for wid, data in self.wars.items():
+                    if civ1_id in data['members'] and civ2_id in data['members']:
+                        war_id = wid
+                        break
+                        
+                if not war_id:
+                    # New war
+                    war_id = f"war_{civ1_id}_{civ2_id}"
+                    history = relationship.shared_history
+                    cause = "Unknown"
+                    
+                    # Find war cause in history
+                    for event in reversed(history):
+                        if event['type'] == InteractionType.CONFLICT.value:
+                            cause = event['description']
+                            break
+                            
+                    active_wars[war_id] = {
+                        'members': [civ1_id, civ2_id],
+                        'start_time': relationship.last_update_time,
+                        'cause': cause
+                    }
+                else:
+                    # Existing war
+                    active_wars[war_id] = self.wars[war_id]
+                    
+        self.wars = active_wars
+    
+    def get_civilization_conflicts(self, civ_id: str) -> List[Dict]:
+        """Get all conflicts a civilization is involved in"""
+        conflicts = []
+        
+        for war_id, data in self.wars.items():
+            if civ_id in data['members']:
+                conflicts.append({
+                    'war_id': war_id,
+                    'opponents': [m for m in data['members'] if m != civ_id],
+                    'start_time': data['start_time'],
+                    'cause': data['cause']
+                })
+                
+        return conflicts
+    
+    def get_civilization_alliances(self, civ_id: str) -> List[Dict]:
+        """Get all alliances a civilization is part of"""
+        alliances = []
+        
+        for alliance_id, members in self.alliances.items():
+            if civ_id in members:
+                alliances.append({
+                    'alliance_id': alliance_id,
+                    'members': [m for m in members if m != civ_id]
+                })
+                
+        return alliances
+    
+    def get_civilization_trade_partners(self, civ_id: str) -> List[Dict]:
+        """Get all trade partners of a civilization"""
+        partners = []
+        
+        for network_id, data in self.trade_networks.items():
+            if civ_id in data['members']:
+                partners.append({
+                    'network_id': network_id,
+                    'partners': [m for m in data['members'] if m != civ_id],
+                    'volume': data['volume']
+                })
+                
+        return partners
+
+
+# Initialize the diplomatic registry singleton
+DIPLOMATIC_REGISTRY = DiplomaticRegistry()
