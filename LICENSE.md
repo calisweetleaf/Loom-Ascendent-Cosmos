@@ -78,9 +78,9 @@ The exact technical boundaries and specifications of the Software are documented
 
 3.1. **Prohibition on Unauthorized Access.** NO ACCESS OR USE OF THE SOFTWARE IS PERMITTED WITHOUT PRIOR WRITTEN AUTHORIZATION FROM THE LICENSOR. All inquiries regarding authorization must be submitted via the following specific channels:
 
-   Email: <authorization@morpheustech.com>  
-   Secure Communication: Signal: @MorpheusAuthorizationOfficial  
-   Secure Web Portal: <https://secure.morpheustech.com/authorization>  
+   Email: <daeronblackfyre@tutamail.com>
+   Secure Communication: Signal: daeronblackfyre.22
+   Secure Web Portal: calisweetleaf.com
 
 3.2. **Authorization Process.**
    a) All authorization requests must be submitted in writing using the official Authorization Request Form available at <https://secure.morpheustech.com/authorization-form>;
@@ -273,8 +273,8 @@ Cryptographic Seal: [Digital Signature with SHA-256 Hash]
 ## AUTHORIZED SIGNATORY FOR LICENSOR**
 
 Somnus Development Collective
-By: ________________________
-Name: Christian Rowell
+By:DaeronBlackfyre
+Name:Daeron_Blackfyre
 Title: Chief Legal Officer
 Date: April 12, 2025
 
