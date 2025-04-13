@@ -16,6 +16,7 @@ import argparse
 import threading
 import asyncio
 import signal
+import traceback
 from typing import Dict, Any, List, Union, Optional, Tuple, Callable
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
@@ -126,7 +127,7 @@ class QueryContext:
     timestamp: str = field(default_factory=lambda: datetime.datetime.now().isoformat())
     relevant_memories: List[MemoryEvent] = field(default_factory=list)
     relevant_knowledge: List[KnowledgeEntity] = field(default_factory=list)
-    recent_perceptions: List<SimulationPerception] = field(default_factory=list)
+    recent_perceptions: List[SimulationPerception] = field(default_factory=list)
 
 @dataclass
 class OramaState:
@@ -389,7 +390,7 @@ class PerceptionParser:
         
         return perception
     
-    def get_recent_perceptions(self, count: int = 10) -> List<SimulationPerception]:
+    def get_recent_perceptions(self, count: int = 10) -> List[SimulationPerception]:
         """Get the most recent perceptions"""
         return self.perception_buffer[-count:][::-1]
 
@@ -737,10 +738,36 @@ class OramaSystem:
         
         self.truth_validator = TruthValidator()
         
+        # Initialize Genesis Cosmos Engine components
+        self.engine = None
+        self.initialize_cosmos_engine()
+        
         # Set initialization flag
         self.state.is_initialized = True
         
         system_logger.info("ORAMA system initialized successfully")
+    
+    def initialize_cosmos_engine(self):
+        """Initialize the Genesis Cosmos Engine"""
+        try:
+            from main import GenesisCosmosEngine
+            
+            system_logger.info("Initializing Genesis Cosmos Engine...")
+            self.engine = GenesisCosmosEngine()
+            system_logger.info("Genesis Cosmos Engine initialized successfully")
+            
+            # Record this in memory
+            self.memory_manager.add_memory(MemoryEvent(
+                timestamp=datetime.datetime.now().isoformat(),
+                event_type="SYSTEM_INITIALIZATION",
+                content="Genesis Cosmos Engine initialized successfully",
+                source="system",
+                metadata={"engine_status": "active"}
+            ))
+            
+        except Exception as e:
+            system_logger.error(f"Failed to initialize Genesis Cosmos Engine: {e}")
+            self.engine = None
     
     def process_perception(self, raw_input: str) -> SimulationPerception:
         """Process raw perception input"""
@@ -768,9 +795,23 @@ class OramaSystem:
             recent_perceptions=self.perception_parser.get_recent_perceptions(count=3)
         )
         
-        # Process the query and generate a response
-        # This is where a real LLM would be used
-        response = f"ORAMA has processed your query: {query_text}"
+        # Determine if this is a command for the Genesis Cosmos Engine
+        engine_commands = {
+            "start engine": self._start_cosmos_engine,
+            "stop engine": self._stop_cosmos_engine,
+            "pause engine": self._pause_cosmos_engine,
+            "resume engine": self._resume_cosmos_engine,
+            "engine status": self._get_cosmos_engine_status
+        }
+        
+        # Check for engine commands
+        for cmd, handler in engine_commands.items():
+            if cmd in query_text.lower():
+                response = handler()
+                return response, context
+        
+        # Process normal query
+        response = self._generate_response(query_text, context)
         
         # Validate response with truth constraints
         is_valid, response, violation = self.truth_validator.validate_response(response)
@@ -781,26 +822,176 @@ class OramaSystem:
         
         return response, context
     
-    def execute_command(self, command: str) -> Tuple[bool, str]:
-        """Safely execute a terminal command"""
+    def _generate_response(self, query_text: str, context: QueryContext) -> str:
+        """Generate a response to the user query"""
+        # In a real implementation, this would use an LLM or similar
+        # Here we'll create a simple response based on available context
+        
+        # Check if we have relevant memories
+        if context.relevant_memories:
+            memory_content = context.relevant_memories[0].content
+            return f"Based on my memory: {memory_content}\n\nYour query '{query_text}' has been processed."
+        
+        # Check if we have engine information
+        if self.engine:
+            engine_status = self.engine.get_status()
+            return f"The Genesis Cosmos Engine is {engine_status['status']}.\nCycle count: {engine_status['cycle_count']}\n\nYour query '{query_text}' has been processed."
+        
+        # Default response
+        return f"ORAMA has processed your query: '{query_text}'\nThe system is operational and waiting for further input."
+    
+    def _start_cosmos_engine(self) -> str:
+        """Start the Genesis Cosmos Engine"""
+        if not self.engine:
+            return "Error: Genesis Cosmos Engine is not initialized"
+        
+        try:
+            if self.engine.is_running:
+                return "Genesis Cosmos Engine is already running"
+            
+            self.engine.start()
+            return "Genesis Cosmos Engine has been started"
+        except Exception as e:
+            system_logger.error(f"Error starting Genesis Cosmos Engine: {e}")
+            return f"Error starting Genesis Cosmos Engine: {str(e)}"
+    
+    def _stop_cosmos_engine(self) -> str:
+        """Stop the Genesis Cosmos Engine"""
+        if not self.engine:
+            return "Error: Genesis Cosmos Engine is not initialized"
+        
+        try:
+            if not self.engine.is_running:
+                return "Genesis Cosmos Engine is not running"
+            
+            self.engine.stop()
+            return "Genesis Cosmos Engine has been stopped"
+        except Exception as e:
+            system_logger.error(f"Error stopping Genesis Cosmos Engine: {e}")
+            return f"Error stopping Genesis Cosmos Engine: {str(e)}"
+    
+    def _pause_cosmos_engine(self) -> str:
+        """Pause the Genesis Cosmos Engine"""
+        if not self.engine:
+            return "Error: Genesis Cosmos Engine is not initialized"
+        
+        try:
+            if not self.engine.is_running:
+                return "Genesis Cosmos Engine is not running"
+            
+            self.engine.pause()
+            return "Genesis Cosmos Engine has been paused"
+        except Exception as e:
+            system_logger.error(f"Error pausing Genesis Cosmos Engine: {e}")
+            return f"Error pausing Genesis Cosmos Engine: {str(e)}"
+    
+    def _resume_cosmos_engine(self) -> str:
+        """Resume the Genesis Cosmos Engine"""
+        if not self.engine:
+            return "Error: Genesis Cosmos Engine is not initialized"
+        
+        try:
+            if not self.engine.is_running:
+                return "Genesis Cosmos Engine is not running"
+            
+            self.engine.resume()
+            return "Genesis Cosmos Engine has been resumed"
+        except Exception as e:
+            system_logger.error(f"Error resuming Genesis Cosmos Engine: {e}")
+            return f"Error resuming Genesis Cosmos Engine: {str(e)}"
+    
+    def _get_cosmos_engine_status(self) -> str:
+        """Get the status of the Genesis Cosmos Engine"""
+        if not self.engine:
+            return "Genesis Cosmos Engine is not initialized"
+        
+        try:
+            status = self.engine.get_status()
+            status_str = f"Genesis Cosmos Engine Status:\n"
+            status_str += f"- Status: {status['status']}\n"
+            status_str += f"- Cycle Count: {status['cycle_count']}\n"
+            
+            if status.get('run_time'):
+                status_str += f"- Run Time: {status['run_time']}\n"
+            
+            if status.get('timeline_metrics'):
+                status_str += f"- Timeline Coherence: {status['timeline_metrics'].get('coherence', 'N/A')}\n"
+            
+            if status.get('breath_phase') is not None:
+                status_str += f"- Breath Phase: {status['breath_phase']:.2f}\n"
+            
+            return status_str
+        except Exception as e:
+            system_logger.error(f"Error getting Genesis Cosmos Engine status: {e}")
+            return f"Error getting Genesis Cosmos Engine status: {str(e)}"
+    
+    def execute_command(self, command: str) -> str:
+        """Execute a terminal command and return the output"""
         success, output, error = self.terminal_agent.safe_execute(command)
         
-        if not success:
-            self.state.error_count += 1
-            return False, f"Command failed: {error}"
+        if success:
+            return f"Command executed successfully:\n\n{output}"
+        else:
+            return f"Error executing command: {error}\n{output}"
+    
+    def interactive_chat_mode(self):
+        """Run the ORAMA system in interactive chat mode"""
+        print("\n" + "="*60)
+        print("ORAMA INTERACTIVE CHAT MODE")
+        print("Type 'exit' or 'quit' to end the session")
+        print("Type 'command: <cmd>' to execute a terminal command")
+        print("Type 'engine start', 'engine stop', etc. to control the Genesis Cosmos Engine")
+        print("="*60 + "\n")
         
-        return True, output
-    
-    def get_state(self) -> Dict[str, Any]:
-        """Get the current system state"""
-        return asdict(self.state)
-    
-    def shutdown(self) -> None:
-        """Safely shut down the system, saving all data"""
-        system_logger.info("Shutting down ORAMA system")
+        if self.engine:
+            print("Genesis Cosmos Engine is initialized and ready.")
+        else:
+            print("Warning: Genesis Cosmos Engine is not initialized.")
+        
+        while True:
+            try:
+                user_input = input("\nYou: ").strip()
+                
+                if user_input.lower() in ["exit", "quit"]:
+                    print("\nExiting ORAMA interactive chat mode...")
+                    break
+                
+                # Check if this is a terminal command
+                if user_input.lower().startswith("command:"):
+                    command = user_input[8:].strip()
+                    response = self.execute_command(command)
+                    print(f"\nORAMA: {response}")
+                    continue
+                
+                # Process engine commands directly
+                if user_input.lower() == "engine start":
+                    response = self._start_cosmos_engine()
+                elif user_input.lower() == "engine stop":
+                    response = self._stop_cosmos_engine()
+                elif user_input.lower() == "engine pause":
+                    response = self._pause_cosmos_engine()
+                elif user_input.lower() == "engine resume":
+                    response = self._resume_cosmos_engine()
+                elif user_input.lower() == "engine status":
+                    response = self._get_cosmos_engine_status()
+                else:
+                    # Process as a normal query
+                    response, context = self.process_query(user_input)
+                
+                print(f"\nORAMA: {response}")
+                
+            except KeyboardInterrupt:
+                print("\n\nKeyboard interrupt received. Exiting...")
+                break
+            except Exception as e:
+                system_logger.error(f"Error in interactive chat mode: {e}")
+                print(f"\nORAMA: An error occurred: {str(e)}")
+                
+        print("\nORAMA chat session ended.")
+        
+        # Save memories and knowledge before exiting
         self.memory_manager.save_memories()
         self.knowledge_synthesizer.save_knowledge()
-        system_logger.info("Shutdown complete")
 
 # ================================================================
 #  Main Entry Point
@@ -1010,6 +1201,86 @@ def interactive_mode(orama: OramaSystem) -> None:
             print(f"Error: {e}")
     
     print("Exiting interactive mode")
+
+def interactive_chat_mode(orama_system: OramaSystem):
+    """
+    Run an interactive chat session with the ORAMA system.
+    This allows direct communication with the Genesis Cosmos Engine.
+    """
+    print("\n" + "="*60)
+    print("ORAMA INTERACTIVE AGENT - GENESIS COSMOS ENGINE INTERFACE")
+    print("="*60)
+    print("Type 'exit', 'quit', or 'bye' to end the session.")
+    print("Type 'help' for a list of commands.")
+    print("Type 'start engine' to initialize the Genesis Cosmos Engine.")
+    print("="*60 + "\n")
+    
+    # Print system status
+    engine_status = "Not initialized"
+    if orama_system.engine:
+        try:
+            status = orama_system.engine.get_status()
+            engine_status = status['status']
+        except:
+            engine_status = "Error fetching status"
+    
+    print(f"Genesis Cosmos Engine Status: {engine_status}")
+    print(f"System Initialized: {orama_system.state.is_initialized}")
+    print(f"Memory Count: {len(orama_system.memory_manager.memories)}")
+    print("\nEnter your message below:")
+    
+    # Main chat loop
+    while True:
+        try:
+            # Get user input
+            user_input = input("\nYou: ").strip()
+            
+            # Check for exit command
+            if user_input.lower() in ['exit', 'quit', 'bye']:
+                print("\nShutting down ORAMA system...")
+                orama_system.shutdown()
+                print("Goodbye!")
+                break
+            
+            # Check for help command
+            if user_input.lower() == 'help':
+                print("\nAvailable commands:")
+                print("  help            - Display this help message")
+                print("  start engine    - Start the Genesis Cosmos Engine")
+                print("  stop engine     - Stop the Genesis Cosmos Engine")
+                print("  pause engine    - Pause the Genesis Cosmos Engine")
+                print("  resume engine   - Resume the Genesis Cosmos Engine")
+                print("  engine status   - Get the current status of the Engine")
+                print("  run <command>   - Execute a terminal command")
+                print("  exit/quit/bye   - Exit the chat session")
+                continue
+            
+            # Check for terminal command
+            if user_input.lower().startswith('run '):
+                command = user_input[4:].strip()
+                print(f"\nExecuting command: {command}")
+                success, output = orama_system.execute_command(command)
+                print(f"\nCommand {'succeeded' if success else 'failed'}")
+                print(output)
+                continue
+            
+            # Process regular query
+            print("\nProcessing your message...")
+            response, context = orama_system.process_query(user_input)
+            
+            # Display response
+            print("\nORAMA:", response)
+            
+        except KeyboardInterrupt:
+            print("\n\nInterrupted by user. Shutting down...")
+            orama_system.shutdown()
+            break
+            
+        except Exception as e:
+            error_message = f"Error processing message: {str(e)}"
+            print("\nORAMA:", error_message)
+            system_logger.error(error_message)
+            system_logger.error(traceback.format_exc())
 
 if __name__ == "__main__":
     main()

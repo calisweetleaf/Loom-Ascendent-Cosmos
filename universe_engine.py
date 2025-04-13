@@ -1342,3 +1342,24 @@ class UniverseEngine:
             logger.info(f"Interaction processed: {interaction_details}")
         else:
             logger.warning(f"Unhandled AetherEngine event type: {event_type}")
+
+    def get_scroll_ready_entities(self) -> List[Dict[str, Any]]:
+        """
+        Retrieve entities that are ready for lifecycle processing by the Cosmic Scroll.
+
+        Returns:
+            A list of entities with lifecycle-relevant fields.
+        """
+        scroll_ready_entities = []
+        for structure in self.structural_hierarchy:
+            if hasattr(structure, 'metadata') and 'birth_time' in structure.metadata:
+                scroll_ready_entities.append({
+                    'name': structure.structure_id,
+                    'birth_time': structure.metadata.get('birth_time'),
+                    'lifespan': structure.metadata.get('lifespan', float('inf')),
+                    'growth_cycle_duration': structure.metadata.get('growth_cycle_duration', 1.0),
+                    'last_update_time': structure.metadata.get('last_update_time', 0.0),
+                    'age': structure.metadata.get('age', 0.0),
+                    'health': structure.metadata.get('health', 1.0),
+                })
+        return scroll_ready_entities
