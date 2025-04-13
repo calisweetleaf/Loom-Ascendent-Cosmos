@@ -893,8 +893,15 @@ def continuous_mode(orama: OramaSystem, interval: float = 5.0, runtime: int = 0)
             
             # Generate a random perception
             template = random.choice(perception_templates)
+            perception_text = ""
             
-            if "Entity:" in template:
+            # Generate the appropriate perception based on template type
+            if "Entity:" in template and "interacting" in template:
+                entity = random.choice(entities)
+                other_entity = random.choice([e for e in entities if e != entity])
+                context = random.choice(contexts)
+                perception_text = template.format(entity=entity, other_entity=other_entity, context=context)
+            elif "Entity:" in template:
                 entity = random.choice(entities)
                 location = random.choice(locations)
                 state = random.choice(states)
@@ -914,11 +921,6 @@ def continuous_mode(orama: OramaSystem, interval: float = 5.0, runtime: int = 0)
                 metric = random.choice(metrics)
                 value = round(random.uniform(0, 100), 2)
                 perception_text = template.format(entity=entity, metric=metric, value=value)
-            elif "interacting" in template:
-                entity = random.choice(entities)
-                other_entity = random.choice([e for e in entities if e != entity])
-                context = random.choice(contexts)
-                perception_text = template.format(entity=entity, other_entity=other_entity, context=context)
             else:
                 # Fallback
                 perception_text = f"Event: Generic observation cycle {cycle_count}"
