@@ -1,20 +1,366 @@
 # ================================================================
 #  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
-#  Author: Morpheus (Creator), Somnus Development Collective 
+#  AuthorNo : Morpheus (Creator), Somnus Development Collective 
 #  License: Proprietary Software License Agreement (Somnus Development Collective)
 #  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
 # ================================================================
 import math
 import random
 import uuid
+import numpy as np
+import logging
+import time
+import threading
 from datetime import datetime
 from enum import Enum, auto
-from typing import Dict, List, Tuple, Any, Optional, Set, Union
+from typing import Dict, List, Tuple, Any, Optional, Set, Union, Callable
+from collections import deque
 
-from perception_module import PerceptionIntegrator
-from behavior_module import BehaviorEngine
-from recursive_simulator import RecursiveSimulator
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("MindSeed")
 
+# ================================================================
+# Implementation of modules that were previously imported
+# ================================================================
+
+# PerceptionModule implementation
+class PerceptionIntegrator:
+    """Integrates various perception sources into a unified perception field."""
+    
+    def __init__(self, perception_channels=None):
+        self.perception_channels = perception_channels or {
+            "visual": True,
+            "auditory": True,
+            "tactile": True,
+            "proprioceptive": True,
+            "cognitive": True
+        }
+        self.last_perception = {}
+        self.perception_history = deque(maxlen=100)
+        
+    def integrate(self, perceptions: Dict) -> Dict:
+        """Integrate multiple perception channels into a unified perception."""
+        integrated = {}
+        
+        # Process each active channel
+        for channel, active in self.perception_channels.items():
+            if active and channel in perceptions:
+                integrated[channel] = perceptions[channel]
+                
+        # Store in history
+        self.last_perception = integrated
+        self.perception_history.append(integrated)
+        
+        return integrated
+    
+    def filter(self, perception: Dict, filters: Dict) -> Dict:
+        """Apply filters to perception channels."""
+        filtered = perception.copy()
+        
+        for channel, filter_params in filters.items():
+            if channel in filtered:
+                # Apply the filter (simplified implementation)
+                if "threshold" in filter_params:
+                    threshold = filter_params["threshold"]
+                    if isinstance(filtered[channel], dict):
+                        filtered[channel] = {
+                            k: v for k, v in filtered[channel].items() 
+                            if v >= threshold
+                        }
+                    elif isinstance(filtered[channel], (list, tuple)):
+                        filtered[channel] = [
+                            v for v in filtered[channel] 
+                            if v >= threshold
+                        ]
+                        
+        return filtered
+    
+    def get_perception_history(self, channel=None) -> List:
+        """Retrieve perception history, optionally filtered by channel."""
+        if channel:
+            return [p.get(channel, {}) for p in self.perception_history if channel in p]
+        return list(self.perception_history)
+
+
+# BehaviorModule implementation
+class BehaviorEngine:
+    """Generates behaviors based on perception, identity, and goals."""
+    
+    def __init__(self):
+        self.behavior_patterns = {}
+        self.action_history = []
+        self.current_action = None
+        self.goals = {}
+        
+    def register_behavior_pattern(self, name: str, pattern: Dict):
+        """Register a behavior pattern for later use."""
+        self.behavior_patterns[name] = pattern
+        
+    def set_goals(self, goals: Dict):
+        """Set the current goals for behavior generation."""
+        self.goals = goals
+        
+    def generate_action(self, perception: Dict, identity: Dict) -> Dict:
+        """Generate an action based on current perception and identity."""
+        # Determine which behavior patterns are applicable
+        applicable_patterns = self._find_applicable_patterns(perception)
+        
+        # If no applicable patterns, use default exploration
+        if not applicable_patterns:
+            action = self._generate_default_action()
+        else:
+            # Choose the highest priority applicable pattern
+            pattern_name = max(applicable_patterns, key=lambda p: applicable_patterns[p])
+            pattern = self.behavior_patterns[pattern_name]
+            
+            # Generate action using this pattern
+            action = self._apply_pattern(pattern, perception, identity)
+            
+        # Record the action
+        self.current_action = action
+        self.action_history.append(action)
+        
+        return action
+    
+    def _find_applicable_patterns(self, perception: Dict) -> Dict:
+        """Find behavior patterns that apply to the current perception."""
+        applicable = {}
+        
+        for name, pattern in self.behavior_patterns.items():
+            # Check pattern conditions against perception
+            if "conditions" in pattern:
+                match_score = self._evaluate_conditions(pattern["conditions"], perception)
+                if match_score > 0:
+                    applicable[name] = match_score
+                    
+        return applicable
+    
+    def _evaluate_conditions(self, conditions: Dict, perception: Dict) -> float:
+        """Evaluate how well perception matches behavior conditions."""
+        # This is a simplified implementation
+        # A more sophisticated version would have a detailed matching algorithm
+        
+        match_score = 0.0
+        for channel, condition in conditions.items():
+            if channel in perception:
+                # Simple string matching for demonstration
+                if isinstance(condition, str) and isinstance(perception[channel], str):
+                    if condition in perception[channel]:
+                        match_score += 1.0
+                # Threshold matching for numeric values
+                elif isinstance(condition, dict) and "min" in condition:
+                    if perception[channel] >= condition["min"]:
+                        match_score += 1.0
+                        
+        return match_score
+    
+    def _apply_pattern(self, pattern: Dict, perception: Dict, identity: Dict) -> Dict:
+        """Apply a behavior pattern to generate an action."""
+        # Extract action template
+        template = pattern.get("action_template", {})
+        
+        # Copy the template
+        action = template.copy()
+        
+        # Add contextual information
+        action["timestamp"] = datetime.now().isoformat()
+        action["pattern_source"] = pattern.get("name", "unnamed_pattern")
+        
+        # Add perception influence
+        if "perception_mapping" in pattern:
+            for action_field, perception_path in pattern["perception_mapping"].items():
+                # Extract value from perception using the path
+                value = self._get_nested_value(perception, perception_path)
+                if value is not None:
+                    action[action_field] = value
+                    
+        # Add identity influence
+        if "identity_mapping" in pattern:
+            for action_field, identity_path in pattern["identity_mapping"].items():
+                # Extract value from identity using the path
+                value = self._get_nested_value(identity, identity_path)
+                if value is not None:
+                    action[action_field] = value
+                    
+        return action
+    
+    def _get_nested_value(self, data: Dict, path: str):
+        """Get a value from a nested dictionary using dot notation path."""
+        parts = path.split(".")
+        current = data
+        
+        for part in parts:
+            if isinstance(current, dict) and part in current:
+                current = current[part]
+            else:
+                return None
+                
+        return current
+    
+    def _generate_default_action(self) -> Dict:
+        """Generate a default exploratory action when no patterns apply."""
+        action = {
+            "type": "explore",
+            "target": "environment",
+            "intensity": 0.5,
+            "timestamp": datetime.now().isoformat(),
+            "pattern_source": "default_exploration"
+        }
+        
+        return action
+    
+    def get_action_history(self) -> List[Dict]:
+        """Get the history of actions taken."""
+        return self.action_history
+
+
+# RecursiveSimulator implementation
+class RecursiveSimulator:
+    """Provides recursive simulation capabilities for mental modeling."""
+    
+    def __init__(self, max_depth=3):
+        self.max_depth = max_depth
+        self.current_depth = 0
+        self.simulation_stack = []
+        self.simulation_results = {}
+        
+    def enter_simulation(self, context: Dict) -> int:
+        """Enter a new recursive simulation level."""
+        if self.current_depth >= self.max_depth:
+            raise RuntimeError(f"Maximum recursion depth exceeded: {self.max_depth}")
+            
+        # Create a simulation context
+        simulation_id = len(self.simulation_stack)
+        simulation_context = {
+            "id": simulation_id,
+            "parent": self.current_depth - 1 if self.current_depth > 0 else None,
+            "depth": self.current_depth,
+            "context": context,
+            "start_time": datetime.now()
+        }
+        
+        # Push onto the stack
+        self.simulation_stack.append(simulation_context)
+        self.current_depth += 1
+        
+        return simulation_id
+    
+    def exit_simulation(self, results: Dict) -> Optional[int]:
+        """Exit the current simulation level, returning to the parent level."""
+        if not self.simulation_stack:
+            raise RuntimeError("No active simulation to exit")
+            
+        # Pop the current simulation
+        simulation = self.simulation_stack.pop()
+        self.current_depth -= 1
+        
+        # Store the results
+        simulation["end_time"] = datetime.now()
+        simulation["results"] = results
+        self.simulation_results[simulation["id"]] = simulation
+        
+        # Return the parent simulation ID
+        return simulation["parent"]
+    
+    def get_current_depth(self) -> int:
+        """Get the current recursion depth."""
+        return self.current_depth
+    
+    def is_in_simulation(self) -> bool:
+        """Check if currently in a simulation."""
+        return len(self.simulation_stack) > 0
+    
+    def get_simulation_results(self, simulation_id: int) -> Optional[Dict]:
+        """Get the results of a completed simulation."""
+        return self.simulation_results.get(simulation_id)
+    
+    def run_scenario(self, initial_state: Dict, actions: List[Dict], max_steps=10) -> Dict:
+        """Run a simulated scenario to predict outcomes."""
+        # Enter a new simulation
+        sim_id = self.enter_simulation({
+            "initial_state": initial_state,
+            "actions": actions,
+            "max_steps": max_steps
+        })
+        
+        try:
+            # Start with the initial state
+            current_state = initial_state.copy()
+            states = [current_state]
+            
+            # Apply each action in sequence
+            for i, action in enumerate(actions):
+                if i >= max_steps:
+                    break
+                    
+                # Apply the action to the current state
+                next_state = self._apply_action_to_state(current_state, action)
+                states.append(next_state)
+                current_state = next_state
+                
+            # Compile the results
+            results = {
+                "final_state": current_state,
+                "state_history": states,
+                "steps_executed": min(len(actions), max_steps)
+            }
+            
+            # Exit the simulation
+            self.exit_simulation(results)
+            return results
+            
+        except Exception as e:
+            # Ensure we exit the simulation even if an error occurs
+            self.exit_simulation({"error": str(e)})
+            raise
+    
+    def _apply_action_to_state(self, state: Dict, action: Dict) -> Dict:
+        """Apply an action to a state to produce the next state."""
+        # This is a simplified implementation
+        # A more sophisticated version would have a detailed state transition model
+        
+        # Create a copy of the state to modify
+        next_state = state.copy()
+        
+        # Apply the action based on its type
+        action_type = action.get("type")
+        
+        if action_type == "move":
+            # Update position
+            if "position" in next_state and "direction" in action:
+                for i, coord in enumerate(action["direction"]):
+                    if i < len(next_state["position"]):
+                        next_state["position"][i] += coord
+                        
+        elif action_type == "interact":
+            # Update interaction state
+            if "entities" in next_state and "target" in action:
+                target = action["target"]
+                if target in next_state["entities"]:
+                    # Mark as interacted
+                    next_state["entities"][target]["interacted"] = True
+                    
+        elif action_type == "observe":
+            # Update observation state
+            if "observed" not in next_state:
+                next_state["observed"] = set()
+            if "target" in action:
+                next_state["observed"].add(action["target"])
+                
+        # Add action to history
+        if "action_history" not in next_state:
+            next_state["action_history"] = []
+        next_state["action_history"].append(action)
+        
+        # Update timestamp
+        next_state["timestamp"] = datetime.now().isoformat()
+        
+        return next_state
+
+# ================================================================
+# Original MemoryType Enum and the rest of the code
+# ================================================================
 
 class MemoryType(Enum):
     """Defines the different types of memory that can be stored in the MemoryEcho system."""
@@ -780,4 +1126,5 @@ class TimelineProjection:
         # Add a timestamp for this projection
         evolved_state["projection_timestamp"] = datetime.now().isoformat()
         
-                      
+        return evolved_state
+

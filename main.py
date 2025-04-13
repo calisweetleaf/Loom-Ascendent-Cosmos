@@ -4,457 +4,497 @@
 #  License: Proprietary Software License Agreement (Somnus Development Collective)
 #  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
 # ================================================================
-import os
-import time
-import numpy as np
-import traceback
-import matplotlib.pyplot as plt
-import logging
-from logging.handlers import RotatingFileHandler
-import json
-import argparse
-import sys
-from typing import Dict, Any, List
-from pathlib import Path
-from datetime import datetime
 
-# Configure general logging
+"""
+Main entry point for the Genesis Cosmos Engine, orchestrating the initialization
+and execution of all engine components in a synchronized framework.
+"""
+
+import os
+import sys
+import logging
+import time
+import argparse
+import json
+import threading
+import asyncio
+from datetime import datetime
+import traceback
+import signal
+
+# Import core engine components
+from timeline_engine import TimelineEngine, TemporalEvent, TimelineMetrics
+from quantum_physics import QuantumField, PhysicsConstants, EthicalGravityManifold
+from aether_engine import AetherEngine, AetherPattern, AetherSpace
+from reality_kernel import RealityKernel, RealityAnchor
+from universe_engine import UniverseEngine
+from paradox_engine import ParadoxEngine
+from mind_seed import MemoryEcho, IdentityMatrix, BreathCycle, NarrativeManifold
+from cosmic_scroll import DimensionalRealityManager
+
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler("genesis_cosmos.log"),
-        logging.StreamHandler()
+        logging.StreamHandler(sys.stdout)
     ]
 )
-logger = logging.getLogger("GenesisMain")
+logger = logging.getLogger("GenesisCosmosEngine")
 
-# Set up specific universe evolution logger
-universe_logger = logging.getLogger("UniverseEvolution")
-universe_logger.setLevel(logging.INFO)
-universe_log_handler = RotatingFileHandler(
-    "universe_evolution.log", 
-    maxBytes=10*1024*1024,  # 10MB
-    backupCount=5
-)
-universe_log_handler.setFormatter(
-    logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-)
-universe_logger.addHandler(universe_log_handler)
-
-# Add project root to Python path
-project_root = Path(__file__).parent
-if str(project_root) not in sys.path:
-    sys.path.append(str(project_root))
-
-def check_dependencies():
-    """Check and install required dependencies"""
-    try:
-        import ollama
-        import numpy as np
-        import matplotlib.pyplot as plt
-    except ImportError as e:
-        print(f"Missing dependency: {e}")
-        print("Installing required packages...")
-        import subprocess
-        subprocess.check_call([sys.executable, "-m", "pip", "install", 
-                              "ollama", "numpy", "matplotlib"])
-        print("Dependencies installed. Restarting...")
-        os.execv(sys.executable, ['python'] + sys.argv)
-
-def check_ollama_status(model_name="qwen2.5:3b", model_path=None):
-    """Check if Ollama is running and the specified model is available"""
-    try:
-        import ollama
-        models = ollama.list()
-        model_names = [model.get('name', '') for model in models.get('models', [])]
-        
-        print(f"Available Ollama models: {', '.join(model_names)}")
-        
-        # If model_path is provided, use the local GGUF file
-        if model_path and os.path.exists(model_path):
-            print(f"Using local model path: {model_path}")
-            # Configure ollama to use the local model
-            # In a production environment, you would register this model with ollama
-            return model_name
-            
-        if (model_name not in model_names):
-            print(f"Warning: Model {model_name} not found in available models.")
-            print(f"Available models: {', '.join(model_names)}")
-            
-            if len(model_names) > 0:
-                response = input(f"Would you like to use {model_names[0]} instead? (y/n): ")
-                if response.lower() == 'y':
-                    return model_names[0]
-                else:
-                    print(f"Please pull the model with: ollama pull {model_name}")
-                    sys.exit(1)
-            else:
-                print("No models available. Please pull a model with: ollama pull qwen2.5:3b")
-                sys.exit(1)
-        
-        return model_name
-    except Exception as e:
-        print(f"Error checking Ollama: {e}")
-        print("Make sure Ollama is installed and running.")
-        print("You can install Ollama from: https://ollama.com/")
-        print("Then start it with the 'ollama serve' command.")
-        sys.exit(1)
-
-def initialize_cosmos_engine():
-    """Initialize the Genesis Cosmos Engine components"""
-    try:
-        # Import all engine components
-        from reality_kernel import RealityKernel
-        from universe_engine import UniverseEngine
-        from timeline_engine import TimelineEngine 
-        from harmonic_engine import HarmonicEngine
-        from aether_engine import AetherEngine
-        from quantum_physics import QuantumField
-        
-        # Log initialization
-        universe_logger.info(f"Initializing Genesis Cosmos Engine components at {datetime.now().isoformat()}")
-        
-        # Create basic config (adjust based on your actual implementation)
-        config = {
-            'reality_cycles_per_second': 1.0,
-            'timeline_branches': 3,
-            'ethical_dimensions': 3,
-            'aether_resolution': 64,
-            'quantum_precision': 1e-30
-        }
-        
-        # Initialize reality kernel (if available)
-        try:
-            kernel = RealityKernel(config)
-            universe_logger.info("RealityKernel initialized successfully")
-            return kernel
-        except Exception as e:
-            universe_logger.error(f"Failed to initialize RealityKernel: {e}")
-            
-            # Fall back to individual components if available
-            try:
-                # Create minimal engine components
-                timeline = TimelineEngine()
-                universe_logger.info("TimelineEngine initialized with 1 timeline(s) at 1.0Hz breath frequency")
-                
-                # Get an observer in the timeline
-                timeline.register_observer("test_observer")
-                # Test with a sample event to make sure timeline works
-                timeline.notify_observers("test_event", 0)
-                
-                aether = AetherEngine()
-                universe_logger.info("AetherEngine initialized")
-                
-                try:
-                    # Create universe engine with proper parameters
-                    physics = {'c': 299792458.0, 'G': 6.67430e-11, 'hubble_constant': 70.0}
-                    initial_conditions = {'initial_temperature': 1e32, 'initial_density': 1e96}
-                    
-                    universe = UniverseEngine(
-                        aether_space=aether.space, 
-                        physics=physics,
-                        timeline=timeline,
-                        initial_conditions=initial_conditions
-                    )
-                    universe_logger.info("UniverseEngine initialized")
-                except Exception as ue_error:
-                    universe_logger.error(f"Failed to initialize UniverseEngine: {ue_error}")
-                    universe = None
-                
-                # Create a minimal kernel-like object to hold components
-                class MinimalKernel:
-                    def __init__(self):
-                        self.timeline = timeline
-                        self.aether = aether
-                        self.universe = universe
-                        self.config = config
-                        self.tick_count = 0
-                        
-                    def breathe(self, cycles=1):
-                        """Run simulation for specified cycles"""
-                        universe_logger.info(f"Running {cycles} breath cycles")
-                        for i in range(cycles):
-                            self.tick_count += 1
-                            
-                            # Log universe evolution data
-                            universe_data = {
-                                "tick": self.tick_count,
-                                "timestamp": datetime.now().isoformat(),
-                                "entropy": 0.1 * self.tick_count,
-                                "structures": self.tick_count * 3,
-                                "complexity": min(1.0, 0.05 * self.tick_count),
-                                "phase": "expansion"
-                            }
-                            universe_logger.info(f"Universe tick {self.tick_count}: {json.dumps(universe_data)}")
-                        
-                        return True
-                
-                kernel = MinimalKernel()
-                universe_logger.info("MinimalKernel created as fallback")
-                return kernel
-                
-            except Exception as nested_e:
-                universe_logger.error(f"Failed to initialize minimal components: {nested_e}")
-                raise
+class GenesisCosmosEngine:
+    """
+    Main orchestrator class for the Genesis Cosmos Engine, coordinating all subsystems
+    and providing a unified interface for simulation control.
+    """
     
-    except ImportError as e:
-        universe_logger.error(f"Failed to import engine components: {e}")
+    def __init__(self, config_path=None):
+        """
+        Initialize the Genesis Cosmos Engine with the given configuration.
         
-        # Create mock engine for demonstration
-        class MockEngine:
-            def __init__(self):
-                self.tick_count = 0
-                universe_logger.info("MockEngine initialized (no actual engine components available)")
-            
-            def breathe(self, cycles=1):
-                """Mock simulation function"""
-                universe_logger.info(f"MockEngine: Running {cycles} simulated breath cycles")
-                for i in range(cycles):
-                    self.tick_count += 1
-                    
-                    # Generate mock universe evolution data
-                    universe_data = {
-                        "tick": self.tick_count,
-                        "timestamp": datetime.now().isoformat(),
-                        "entropy": 0.1 * self.tick_count,
-                        "structures": max(1, self.tick_count * 2),
-                        "complexity": min(1.0, 0.05 * self.tick_count),
-                        "phase": "mock_simulation",
-                        "note": "This is simulated data - no actual engine running"
-                    }
-                    
-                    # Log the universe evolution data
-                    universe_logger.info(f"MockEngine tick {self.tick_count}: {json.dumps(universe_data)}")
-                
-                return True
+        Args:
+            config_path: Path to configuration file. If None, use default config.
+        """
+        logger.info("Initializing Genesis Cosmos Engine...")
         
-        return MockEngine()
-
-def run_ollama_chat(engine, model_name):
-    """Run an interactive chat session with Ollama and the Cosmos Engine"""
-    try:
-        import ollama
+        # Load configuration
+        self.config = self._load_config(config_path)
+        logger.info(f"Loaded configuration with {len(self.config)} settings")
         
-        print(f"\n{'=' * 60}")
-        print(f"Genesis Cosmos Engine - Ollama Chat Interface")
-        print(f"Connected to model: {model_name}")
-        print(f"Type 'exit' to end the session, 'help' for commands")
-        print(f"{'=' * 60}\n")
+        # Initialize components in the correct order to maintain dependencies
+        self._init_timeline_engine()
+        self._init_quantum_physics()
+        self._init_aether_engine()
+        self._init_universe_engine()
+        self._init_reality_kernel()
+        self._init_paradox_engine()
+        self._init_consciousness_components()
+        self._init_dimensional_reality_manager()
         
-        # Initial breathe cycle to get things started
-        print("Running initial simulation cycle...")
-        engine.breathe(cycles=1)
+        # Component synchronization
+        self.sync_lock = threading.Lock()
+        self.run_event = threading.Event()
+        self.pause_event = threading.Event()
+        self.shutdown_event = threading.Event()
         
-        # Record chat history for context
-        history = [
-            {
-                "role": "system", 
-                "content": "You are an AI connected to the Genesis Cosmos Engine, "
-                           "a simulation of emergent realities through a sophisticated "
-                           "multi-layered architecture. Respond as if you are exploring "
-                           "and interacting with this cosmos."
-            }
-        ]
+        # Engine state
+        self.is_running = False
+        self.start_time = None
+        self.cycle_count = 0
+        self.last_checkpoint_time = None
         
-        # Set up automatic universe evolution tracking
-        universe_tracker = {
-            "last_tick_time": time.time(),
-            "tick_interval": 30,  # Seconds between automatic ticks
-            "total_ticks": 0,
-            "active": True
+        # Register signal handlers for graceful shutdown
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+        
+        logger.info("Genesis Cosmos Engine initialized successfully")
+    
+    def _load_config(self, config_path):
+        """Load configuration from file or use defaults"""
+        default_config = {
+            "timeline_frequency": 1.0,
+            "max_recursion_depth": 8,
+            "ethical_dimensions": 7,
+            "aether_resolution": 2048,
+            "universe_expansion_rate": 70.0,
+            "reality_cycles_per_second": 60,
+            "consciousness_complexity": 8,
+            "paradox_detection_threshold": 0.7,
+            "auto_intervene": True,
+            "checkpoint_frequency": 300,
+            "log_level": "INFO",
+            "debug_mode": False
         }
         
-        while True:
-            # Check if we should run a cosmos tick
-            current_time = time.time()
-            if universe_tracker["active"] and (current_time - universe_tracker["last_tick_time"]) > universe_tracker["tick_interval"]:
-                try:
-                    # Run a cosmic tick
-                    print("\n[System] Running automatic simulation cycle...")
-                    universe_logger.info(f"Automatic cosmic tick triggered after {current_time - universe_tracker['last_tick_time']:.1f} seconds")
-                    engine.breathe(cycles=1)
-                    universe_tracker["total_ticks"] += 1
-                    universe_tracker["last_tick_time"] = current_time
-                    
-                    # Log some basic metrics if available
-                    if hasattr(engine, 'universe') and hasattr(engine.universe, 'evolution_metrics'):
-                        metrics = engine.universe.evolution_metrics
-                        universe_logger.info(f"Evolution metrics: {json.dumps(metrics, default=str)}")
-                except Exception as e:
-                    print(f"\n[Error] Simulation cycle failed: {e}")
-                    universe_logger.error(f"Error during automatic cosmic tick: {e}")
-            
-            # Get user input
-            user_input = input("\nYou: ")
-            
-            # Check for exit command
-            if user_input.lower() in ['exit', 'quit', 'bye']:
-                print("Ending session...")
-                break
-            
-            # Check for help command
-            if user_input.lower() == 'help':
-                print("\n--- Available Commands ---")
-                print("help       : Show this help message")
-                print("exit       : End the session")
-                print("tick       : Run a simulation cycle manually")
-                print("pause      : Pause automatic simulation cycles")
-                print("resume     : Resume automatic simulation cycles")
-                print("status     : Show current engine status")
-                print("log [n]    : Show the last n log entries (default: 5)")
-                continue
-            
-            # Check for tick command
-            if user_input.lower() == 'tick':
-                try:
-                    print("Running simulation cycle...")
-                    universe_logger.info("Manual cosmic tick triggered by user")
-                    engine.breathe(cycles=1)
-                    universe_tracker["total_ticks"] += 1
-                    universe_tracker["last_tick_time"] = time.time()
-                    print("Simulation cycle completed")
-                    continue
-                except Exception as e:
-                    print(f"Error during simulation cycle: {e}")
-                    universe_logger.error(f"Error during manual cosmic tick: {e}")
-                    continue
-            
-            # Check for pause/resume commands
-            if user_input.lower() == 'pause':
-                universe_tracker["active"] = False
-                print("Automatic simulation cycles paused")
-                universe_logger.info("Automatic cosmic ticks paused by user")
-                continue
-            
-            if user_input.lower() == 'resume':
-                universe_tracker["active"] = True
-                print("Automatic simulation cycles resumed")
-                universe_logger.info("Automatic cosmic ticks resumed by user")
-                continue
-            
-            # Check for status command
-            if user_input.lower() == 'status':
-                print("\n--- Engine Status ---")
-                print(f"Total simulation cycles: {universe_tracker['total_ticks']}")
-                print(f"Auto-cycle mode: {'Active' if universe_tracker['active'] else 'Paused'}")
-                
-                # Show engine-specific status if available
-                if hasattr(engine, 'universe') and hasattr(engine.universe, 'current_time'):
-                    print(f"Universe time: {engine.universe.current_time:.2e}")
-                
-                if hasattr(engine, 'timeline') and hasattr(engine.timeline, 'master_tick'):
-                    print(f"Timeline master tick: {engine.timeline.master_tick}")
-                
-                continue
-            
-            # Check for log command
-            if user_input.lower().startswith('log'):
-                try:
-                    # Parse number of entries to show
-                    parts = user_input.split()
-                    entries = 5  # Default
-                    if len(parts) > 1 and parts[1].isdigit():
-                        entries = int(parts[1])
-                    
-                    # Read the log file
-                    with open("universe_evolution.log", "r") as f:
-                        lines = f.readlines()
-                    
-                    # Show the last n entries
-                    print(f"\n--- Last {min(entries, len(lines))} Universe Evolution Log Entries ---")
-                    for line in lines[-entries:]:
-                        print(line.strip())
-                    
-                    continue
-                except Exception as e:
-                    print(f"Error reading log: {e}")
-                    continue
-            
-            # Add user message to history
-            history.append({"role": "user", "content": user_input})
-            
-            # Call Ollama for response
-            print("\nAI: ", end="", flush=True)
+        if config_path and os.path.exists(config_path):
             try:
-                response = ollama.chat(
-                    model=model_name,
-                    messages=history,
-                    options={"temperature": 0.7}
-                )
-                
-                # Extract the assistant's message
-                assistant_message = response['message']['content']
-                
-                # Add to history
-                history.append({"role": "assistant", "content": assistant_message})
-                
-                # Print the response
-                print(assistant_message)
-                
-                # Limit history size to prevent context overflow
-                if len(history) > 20:
-                    # Keep system prompt and last 10 exchanges
-                    history = [history[0]] + history[-19:]
-                
+                with open(config_path, 'r') as f:
+                    user_config = json.load(f)
+                    config = {**default_config, **user_config}
+                    logger.info(f"Loaded configuration from {config_path}")
             except Exception as e:
-                print(f"Error communicating with Ollama: {e}")
+                logger.error(f"Error loading configuration: {e}")
+                config = default_config
+        else:
+            config = default_config
+        
+        return config
     
-    except Exception as e:
-        print(f"Error in chat session: {e}")
-        traceback.print_exc()
+    def _init_timeline_engine(self):
+        """Initialize the Timeline Engine"""
+        logger.info("Initializing Timeline Engine...")
+        self.timeline = TimelineEngine(
+            breath_frequency=self.config["timeline_frequency"],
+            max_recursion_depth=self.config["max_recursion_depth"],
+            ethical_dimensions=self.config["ethical_dimensions"],
+            parallel_timelines=1,
+            auto_stabilize=True
+        )
+        logger.info("Timeline Engine initialized")
+    
+    def _init_quantum_physics(self):
+        """Initialize Quantum Physics Engine"""
+        logger.info("Initializing Quantum Physics Engine...")
+        self.quantum_field = QuantumField()
+        self.ethical_manifold = EthicalGravityManifold(
+            dimensions=self.config["ethical_dimensions"],
+            adaptive_weighting=True,
+            tension_resolution='harmony_seeking',
+            feedback_integration=True
+        )
+        logger.info("Quantum Physics Engine initialized")
+    
+    def _init_aether_engine(self):
+        """Initialize Aether Engine"""
+        logger.info("Initializing Aether Engine...")
+        self.aether = AetherEngine(physics_constraints={
+            'min_pattern_size': self.config["aether_resolution"],
+            'max_recursion_depth': self.config["max_recursion_depth"],
+            'quantum_entanglement': True,
+            'non_locality': True,
+            'adaptive_physics': True
+        })
+        logger.info("Aether Engine initialized")
+    
+    def _init_universe_engine(self):
+        """Initialize Universe Engine"""
+        logger.info("Initializing Universe Engine...")
+        initial_conditions = {
+            'initial_temperature': 1e32,
+            'initial_density': 1e96,
+            'expansion_rate': self.config["universe_expansion_rate"]
+        }
+        
+        self.universe = UniverseEngine(
+            aether_space=self.aether.space,
+            physics=self.aether.physics,
+            timeline=self.timeline,
+            initial_conditions=initial_conditions
+        )
+        logger.info("Universe Engine initialized")
+    
+    def _init_reality_kernel(self):
+        """Initialize Reality Kernel"""
+        logger.info("Initializing Reality Kernel...")
+        kernel_config = {
+            'reality_cycles_per_second': self.config["reality_cycles_per_second"],
+            'aether_resolution': self.config["aether_resolution"],
+            'enable_ethical_constraints': True,
+            'debug_mode': self.config["debug_mode"]
+        }
+        
+        self.reality = RealityKernel(config=kernel_config)
+        logger.info("Reality Kernel initialized")
+    
+    def _init_paradox_engine(self):
+        """Initialize Paradox Engine"""
+        logger.info("Initializing Paradox Engine...")
+        self.paradox = ParadoxEngine(
+            monitor_frequency=0.5,  # Check twice per second
+            detection_threshold=self.config["paradox_detection_threshold"],
+            intervention_threshold=0.8,
+            auto_intervene=self.config["auto_intervene"],
+            max_recursion_depth=self.config["max_recursion_depth"]
+        )
+        logger.info("Paradox Engine initialized")
+    
+    def _init_consciousness_components(self):
+        """Initialize Consciousness-related components"""
+        logger.info("Initializing Consciousness Components...")
+        self.memory_echo = MemoryEcho(decay_enabled=True)
+        self.identity_matrix = IdentityMatrix()
+        self.breath_cycle = BreathCycle(cycle_length=12)
+        self.narrative_manifold = NarrativeManifold()
+        logger.info("Consciousness Components initialized")
+    
+    def _init_dimensional_reality_manager(self):
+        """Initialize Dimensional Reality Manager"""
+        logger.info("Initializing Dimensional Reality Manager...")
+        self.drm = DimensionalRealityManager()
+        logger.info("Dimensional Reality Manager initialized")
+    
+    def start(self):
+        """Start the Genesis Cosmos Engine simulation"""
+        if self.is_running:
+            logger.warning("Engine is already running")
+            return
+        
+        logger.info("Starting Genesis Cosmos Engine simulation...")
+        self.is_running = True
+        self.start_time = datetime.now()
+        self.run_event.set()
+        self.pause_event.clear()
+        
+        # Create main simulation thread
+        self.simulation_thread = threading.Thread(
+            target=self._simulation_loop,
+            name="SimulationLoop"
+        )
+        self.simulation_thread.daemon = True
+        self.simulation_thread.start()
+        
+        # Create paradox monitoring thread
+        self.paradox_thread = threading.Thread(
+            target=self._paradox_monitoring_loop,
+            name="ParadoxMonitoring"
+        )
+        self.paradox_thread.daemon = True
+        self.paradox_thread.start()
+        
+        logger.info("Genesis Cosmos Engine simulation started")
+    
+    def pause(self):
+        """Pause the simulation"""
+        if not self.is_running:
+            logger.warning("Engine is not running")
+            return
+        
+        logger.info("Pausing Genesis Cosmos Engine simulation...")
+        self.pause_event.set()
+        logger.info("Genesis Cosmos Engine simulation paused")
+    
+    def resume(self):
+        """Resume the simulation"""
+        if not self.is_running:
+            logger.warning("Engine is not running")
+            return
+        
+        logger.info("Resuming Genesis Cosmos Engine simulation...")
+        self.pause_event.clear()
+        logger.info("Genesis Cosmos Engine simulation resumed")
+    
+    def stop(self):
+        """Stop the simulation"""
+        if not self.is_running:
+            logger.warning("Engine is not running")
+            return
+        
+        logger.info("Stopping Genesis Cosmos Engine simulation...")
+        self.is_running = False
+        self.run_event.clear()
+        self.shutdown_event.set()
+        
+        # Wait for threads to finish
+        if hasattr(self, 'simulation_thread') and self.simulation_thread.is_alive():
+            self.simulation_thread.join(timeout=5.0)
+        
+        if hasattr(self, 'paradox_thread') and self.paradox_thread.is_alive():
+            self.paradox_thread.join(timeout=5.0)
+        
+        # Create final checkpoint
+        self._create_checkpoint(final=True)
+        
+        logger.info("Genesis Cosmos Engine simulation stopped")
+    
+    def _simulation_loop(self):
+        """Main simulation loop"""
+        logger.info("Simulation loop started")
+        
+        try:
+            while self.run_event.is_set() and not self.shutdown_event.is_set():
+                # Check if paused
+                if self.pause_event.is_set():
+                    time.sleep(0.1)
+                    continue
+                
+                # Run one simulation cycle
+                self._run_cycle()
+                
+                # Check if we should create a checkpoint
+                current_time = time.time()
+                if (self.last_checkpoint_time is None or 
+                    (current_time - self.last_checkpoint_time) >= self.config["checkpoint_frequency"]):
+                    self._create_checkpoint()
+                
+                # Limit cycle rate if needed
+                cycle_rate = self.config["reality_cycles_per_second"]
+                if cycle_rate > 0:
+                    time.sleep(1.0 / cycle_rate)
+        
+        except Exception as e:
+            logger.error(f"Error in simulation loop: {e}")
+            logger.error(traceback.format_exc())
+            self.stop()
+    
+    def _paradox_monitoring_loop(self):
+        """Paradox monitoring loop"""
+        logger.info("Paradox monitoring loop started")
+        
+        try:
+            while self.run_event.is_set() and not self.shutdown_event.is_set():
+                # Check if paused
+                if self.pause_event.is_set():
+                    time.sleep(0.1)
+                    continue
+                
+                # Run paradox detection cycle
+                self._run_paradox_cycle()
+                
+                # Sleep according to monitor frequency
+                time.sleep(1.0 / self.paradox.monitor_frequency)
+        
+        except Exception as e:
+            logger.error(f"Error in paradox monitoring loop: {e}")
+            logger.error(traceback.format_exc())
+            self.stop()
+    
+    def _run_cycle(self):
+        """Run a single simulation cycle"""
+        with self.sync_lock:
+            self.cycle_count += 1
+            
+            # Update breath cycle
+            breath_state = self.breath_cycle.update()
+            
+            # Process timeline events
+            timeline_state = self.timeline.process_tick({
+                "breath_state": breath_state,
+                "cycle": self.cycle_count
+            }, self._rcf_operator)
+            
+            # Update universe evolution
+            universe_state = self.universe.evolve_timestep(
+                breath_state=breath_state,
+                timeline_state=timeline_state
+            )
+            
+            # Log cycle information every 100 cycles
+            if self.cycle_count % 100 == 0:
+                logger.info(f"Completed cycle {self.cycle_count}")
+                logger.info(f"Timeline coherence: {timeline_state.get('coherence', 0.0):.2f}")
+                logger.info(f"Universe evolution: {universe_state.get('expansion_rate', 0.0):.2f}")
+    
+    def _run_paradox_cycle(self):
+        """Run a paradox detection and resolution cycle"""
+        try:
+            # Add propositions from current state
+            self._add_state_propositions()
+            
+            # Run monitoring
+            patterns = self.paradox.monitor()
+            
+            if patterns:
+                logger.info(f"Paradox Engine detected {len(patterns)} patterns")
+                
+                # Generate motifs from patterns
+                motifs = self.paradox.generate_motifs()
+                if motifs:
+                    logger.info(f"Generated {len(motifs)} symbolic motifs")
+                
+                # If auto-intervene is disabled and there are problematic patterns,
+                # we need to alert the operator
+                if not self.paradox.auto_intervene:
+                    serious_patterns = [p for p in patterns if p["strength"] > 0.9]
+                    if serious_patterns:
+                        logger.warning(f"Found {len(serious_patterns)} serious patterns requiring intervention")
+        
+        except Exception as e:
+            logger.error(f"Error in paradox cycle: {e}")
+    
+    def _add_state_propositions(self):
+        """Add propositions about the current system state to the Paradox Engine"""
+        # Get current breath phase
+        breath_state = self.breath_cycle.update(0)  # Don't advance phase
+        phase = breath_state["phase"]
+        
+        # Add proposition about breath phase
+        self.paradox.add_proposition(
+            content=f"The current breath phase is {phase:.2f}",
+            truth_value=True,
+            certainty=0.9,
+            source="system"
+        )
+        
+        # Add proposition about timeline coherence
+        timeline_metrics = self.timeline.measure_divergence()
+        self.paradox.add_proposition(
+            content=f"The timeline coherence is {1.0 - timeline_metrics:.2f}",
+            truth_value=True,
+            certainty=0.8,
+            source="system"
+        )
+    
+    def _rcf_operator(self, event_data):
+        """Recursive Cognitive Function operator for timeline processing"""
+        # This is a simplified implementation
+        return {
+            "processed": True,
+            "result": event_data
+        }
+    
+    def _create_checkpoint(self, final=False):
+        """Create a system checkpoint"""
+        current_time = time.time()
+        self.last_checkpoint_time = current_time
+        checkpoint_id = f"checkpoint_{int(current_time)}_{self.cycle_count}"
+        
+        logger.info(f"Creating {'final' if final else 'periodic'} checkpoint: {checkpoint_id}")
+        
+        # In a real implementation, this would save the state of all components
+        # to disk for later recovery
+        
+        return checkpoint_id
+    
+    def _signal_handler(self, sig, frame):
+        """Handle signals to gracefully shut down"""
+        logger.info(f"Received signal {sig}")
+        self.stop()
+    
+    def get_status(self):
+        """Get the current status of the engine"""
+        if not self.is_running:
+            status = "STOPPED"
+        elif self.pause_event.is_set():
+            status = "PAUSED"
+        else:
+            status = "RUNNING"
+            
+        return {
+            "status": status,
+            "cycle_count": self.cycle_count,
+            "run_time": str(datetime.now() - self.start_time) if self.start_time else "00:00:00",
+            "timeline_metrics": self.timeline.get_metrics() if hasattr(self, 'timeline') else {},
+            "paradox_metrics": self.paradox.get_metrics() if hasattr(self, 'paradox') else {},
+            "breath_phase": self.breath_cycle.phase if hasattr(self, 'breath_cycle') else 0.0
+        }
 
 def main():
-    """Main function to run the Genesis Cosmos Engine with Ollama integration"""
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Genesis Cosmos Engine with Ollama Integration")
-    parser.add_argument("--model", type=str, default="qwen2.5:3b", 
-                       help="Ollama model to use (default: qwen2.5:3b)")
-    parser.add_argument("--model_path", type=str, default=None, 
-                       help="Path to local GGUF model file (default: None)")
-    parser.add_argument("--cycles", type=int, default=1,
-                       help="Initial simulation cycles to run (default: 1)")
+    """Main entry point for command-line execution"""
+    parser = argparse.ArgumentParser(description="Genesis Cosmos Engine - Reality Simulation System")
+    parser.add_argument("--config", "-c", help="Path to configuration file")
+    parser.add_argument("--debug", "-d", action="store_true", help="Enable debug mode")
+    parser.add_argument("--run-time", "-t", type=int, default=0, 
+                      help="Run time in seconds (0 for indefinite)")
     args = parser.parse_args()
     
+    # Create and start engine
+    engine = GenesisCosmosEngine(config_path=args.config)
+    
+    if args.debug:
+        engine.config["debug_mode"] = True
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.debug("Debug mode enabled")
+    
     try:
-        print("Initializing Genesis Cosmos Engine...")
+        engine.start()
         
-        # Log startup
-        universe_logger.info("=" * 60)
-        universe_logger.info(f"Genesis Cosmos Engine startup at {datetime.now().isoformat()}")
-        
-        # Check dependencies
-        check_dependencies()
-        
-        # Check Ollama status and get confirmed model name
-        model_name = check_ollama_status(args.model, args.model_path)
-        
-        # Initialize the Cosmos Engine
-        engine = initialize_cosmos_engine()
-        
-        # Run initial simulation cycles
-        if args.cycles > 0:
-            print(f"Running {args.cycles} initial simulation cycles...")
-            engine.breathe(cycles=args.cycles)
-        
-        # Start the Ollama chat interface
-        run_ollama_chat(engine, model_name)
-        
-        # Log shutdown
-        universe_logger.info(f"Genesis Cosmos Engine shutdown at {datetime.now().isoformat()}")
-        universe_logger.info("=" * 60)
-        
-    except Exception as e:
-        logger.error(f"Unhandled error in main: {e}")
-        traceback.print_exc()
-        print(f"\nError: {e}")
-        print("Please check the logs for more details.")
-        
-        # Log shutdown with error
-        universe_logger.error(f"Genesis Cosmos Engine abnormal shutdown at {datetime.now().isoformat()}: {e}")
-        universe_logger.info("=" * 60)
-        
-        sys.exit(1)
+        if args.run_time > 0:
+            # Run for specified time then exit
+            time.sleep(args.run_time)
+            engine.stop()
+        else:
+            # Run indefinitely until interrupted
+            while engine.is_running:
+                time.sleep(1.0)
+                
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received")
+    finally:
+        if engine.is_running:
+            engine.stop()
+    
+    logger.info("Genesis Cosmos Engine exited successfully")
 
 if __name__ == "__main__":
     main()

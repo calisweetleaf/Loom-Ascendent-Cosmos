@@ -1,3 +1,920 @@
+class BeliefSymbioteProcessor:
+    """
+    A system for modeling the symbiotic relationship between beliefs, their carriers,
+    and broader ecosystems of meaning.
+    
+    The BeliefSymbioteProcessor treats beliefs as living entities that form symbiotic 
+    relationships with conscious beings, evolving, spreading, competing, and forming
+    complex interdependent networks. It implements memetic theory, ideological evolution,
+    and conceptual ecosystem dynamics.
+    """
+    
+    def __init__(self, cosmic_scroll=None, pantheon_system=None):
+        """
+        Initialize the BeliefSymbioteProcessor.
+        
+        Args:
+            cosmic_scroll: Reference to the parent CosmicScroll instance
+            pantheon_system: Reference to the PantheonEvolutionSystem
+        """
+        self.cosmic_scroll = cosmic_scroll
+        self.pantheon_system = pantheon_system
+        
+        # Core belief structures
+        self.belief_entities = {}  # Belief memes and complexes
+        self.carrier_beliefs = defaultdict(set)  # Entity ID -> beliefs carried
+        self.belief_carriers = defaultdict(set)  # Belief ID -> entities carrying it
+        self.belief_networks = {}  # Networks of related beliefs
+        
+        # Metrics and tracking
+        self.belief_metrics = {
+            "total_beliefs": 0,
+            "belief_by_type": defaultdict(int),
+            "total_transmissions": 0,
+            "total_mutations": 0,
+            "dominant_beliefs": []
+        }
+        self.transmission_events = []  # History of belief transmissions
+        self.mutation_events = []  # History of belief mutations
+        
+        # Evolution parameters
+        self.transmission_rate = 0.3  # Base rate of belief transmission
+        self.mutation_rate = 0.05  # Base rate of belief mutation
+        self.competition_factor = 0.2  # How strongly beliefs compete
+        self.compatibility_threshold = 0.4  # Threshold for belief compatibility
+        self.network_influence_factor = 0.3  # How much networks influence beliefs
+        
+        # Initialize core belief types
+        self._initialize_belief_types()
+    
+    def _initialize_belief_types(self) -> None:
+        """
+        Initialize the system with core belief type definitions.
+        """
+        self.belief_types = {
+            "axiom": {
+                "description": "Fundamental assumption about reality",
+                "complexity": 0.3,
+                "stability": 0.9,
+                "transmissibility": 0.5,
+                "mutability": 0.2
+            },
+            "value": {
+                "description": "Moral or ethical principle",
+                "complexity": 0.4,
+                "stability": 0.7,
+                "transmissibility": 0.7, 
+                "mutability": 0.4
+            },
+            "narrative": {
+                "description": "Story explaining events or phenomena",
+                "complexity": 0.7,
+                "stability": 0.5,
+                "transmissibility": 0.8,
+                "mutability": 0.6
+            },
+            "practice": {
+                "description": "Behavioral pattern or ritual",
+                "complexity": 0.6,
+                "stability": 0.6,
+                "transmissibility": 0.6,
+                "mutability": 0.5
+            },
+            "identity": {
+                "description": "Self-concept or group membership",
+                "complexity": 0.8,
+                "stability": 0.8,
+                "transmissibility": 0.5,
+                "mutability": 0.3
+            },
+            "explanation": {
+                "description": "Causal explanation of phenomena",
+                "complexity": 0.6,
+                "stability": 0.4,
+                "transmissibility": 0.7,
+                "mutability": 0.6
+            }
+        }
+    
+    def create_belief(self, content: str, belief_type: str, 
+                     initial_strength: float = 0.5,
+                     attributes: Dict = None,
+                     parent_beliefs: List[str] = None) -> str:
+        """
+        Create a new belief entity.
+        
+        Args:
+            content: The content of the belief
+            belief_type: Type of belief (axiom, value, narrative, etc.)
+            initial_strength: Initial strength of belief (0.0-1.0)
+            attributes: Additional belief attributes
+            parent_beliefs: IDs of parent beliefs (for mutations)
+            
+        Returns:
+            ID of the created belief
+        """
+        # Validate belief type
+        if belief_type not in self.belief_types:
+            raise ValueError(f"Unknown belief type: {belief_type}")
+        
+        # Generate unique ID
+        belief_id = f"belief_{uuid.uuid4().hex[:8]}"
+        
+        # Get type parameters
+        type_params = self.belief_types[belief_type]
+        
+        # Create belief entity
+        belief = {
+            "id": belief_id,
+            "content": content,
+            "type": belief_type,
+            "type_params": type_params,
+            "strength": initial_strength,
+            "creation_time": datetime.now(),
+            "last_update": datetime.now(),
+            "parent_beliefs": parent_beliefs or [],
+            "child_beliefs": [],
+            "mutations": [],
+            "transmission_count": 0,
+            "carrier_count": 0,
+            "attributes": attributes or {},
+            "compatibility_matrix": {},  # How compatible with other beliefs
+            "competition_matrix": {}  # How much it competes with other beliefs
+        }
+        
+        # Register the belief
+        self.belief_entities[belief_id] = belief
+        
+        # Update metrics
+        self.belief_metrics["total_beliefs"] += 1
+        self.belief_metrics["belief_by_type"][belief_type] += 1
+        
+        # Update parent beliefs
+        if parent_beliefs:
+            for parent_id in parent_beliefs:
+                if parent_id in self.belief_entities:
+                    parent = self.belief_entities[parent_id]
+                    parent["child_beliefs"].append(belief_id)
+        
+        # Calculate initial compatibilities
+        self._calculate_belief_compatibilities(belief_id)
+        
+        return belief_id
+    
+    def _calculate_belief_compatibilities(self, belief_id: str) -> None:
+        """
+        Calculate compatibility between a belief and all others.
+        
+        Args:
+            belief_id: ID of belief to calculate compatibilities for
+        """
+        if belief_id not in self.belief_entities:
+            return
+            
+        belief = self.belief_entities[belief_id]
+        belief_content = belief["content"]
+        
+        for other_id, other_belief in self.belief_entities.items():
+            if other_id == belief_id:
+                continue
+                
+            # Calculate semantic compatibility
+            compatibility = self._calculate_semantic_compatibility(
+                belief_content, 
+                other_belief["content"],
+                belief["type"],
+                other_belief["type"]
+            )
+            
+            # Store compatibility
+            belief["compatibility_matrix"][other_id] = compatibility
+            
+            # Calculate competition (inverse of compatibility for same type)
+            if belief["type"] == other_belief["type"]:
+                competition = 1.0 - compatibility
+            else:
+                competition = max(0.0, 0.5 - compatibility)
+                
+            # Competition is stronger between similar beliefs
+            belief["competition_matrix"][other_id] = competition
+            
+            # Update the other belief too
+            other_belief["compatibility_matrix"][belief_id] = compatibility
+            other_belief["competition_matrix"][belief_id] = competition
+    
+    def _calculate_semantic_compatibility(self, content1: str, content2: str,
+                                         type1: str, type2: str) -> float:
+        """
+        Calculate semantic compatibility between belief contents.
+        
+        Args:
+            content1: Content of first belief
+            content2: Content of second belief
+            type1: Type of first belief
+            type2: Type of second belief
+            
+        Returns:
+            Compatibility score (0.0-1.0)
+        """
+        # This is a simplified implementation - a real system would use
+        # natural language processing and semantic analysis
+        
+        # Different types have base compatibility penalties
+        type_compatibility = self._get_type_compatibility(type1, type2)
+        
+        # Very basic content similarity (word overlap)
+        words1 = set(content1.lower().split())
+        words2 = set(content2.lower().split())
+        
+        if not words1 or not words2:
+            return 0.0
+            
+        # Calculate Jaccard similarity
+        intersection = words1.intersection(words2)
+        union = words1.union(words2)
+        
+        content_similarity = len(intersection) / len(union)
+        
+        # Combine type and content compatibility
+        return (type_compatibility * 0.4) + (content_similarity * 0.6)
+    
+    def _get_type_compatibility(self, type1: str, type2: str) -> float:
+        """
+        Get baseline compatibility between belief types.
+        
+        Args:
+            type1: First belief type
+            type2: Second belief type
+            
+        Returns:
+            Type compatibility score (0.0-1.0)
+        """
+        # Same types are highly compatible
+        if type1 == type2:
+            return 0.9
+            
+        # Defined compatibility matrix
+        compatibility_matrix = {
+            ("axiom", "value"): 0.7,
+            ("axiom", "explanation"): 0.8,
+            ("axiom", "narrative"): 0.5,
+            ("axiom", "practice"): 0.4,
+            ("axiom", "identity"): 0.5,
+            
+            ("value", "narrative"): 0.6,
+            ("value", "practice"): 0.7,
+            ("value", "identity"): 0.8,
+            ("value", "explanation"): 0.5,
+            
+            ("narrative", "practice"): 0.6,
+            ("narrative", "identity"): 0.7,
+            ("narrative", "explanation"): 0.6,
+            
+            ("practice", "identity"): 0.6,
+            ("practice", "explanation"): 0.4,
+            
+            ("identity", "explanation"): 0.3
+        }
+        
+        # Check both orderings
+        if (type1, type2) in compatibility_matrix:
+            return compatibility_matrix[(type1, type2)]
+        elif (type2, type1) in compatibility_matrix:
+            return compatibility_matrix[(type2, type1)]
+        else:
+            # Default compatibility
+            return 0.5
+class WorshipFieldConductor:
+    """
+    A system for managing the flow, accumulation, and effects of worship energy
+    throughout the symbolic universe.
+    
+    The WorshipFieldConductor acts as an intermediary between sentient entities and
+    divine entities, processing worship intent, channeling belief energy, and creating
+    feedback loops that shape both worshippers and deities. It implements concepts of
+    faith resonance, ritual amplification, and devotional imprinting.
+    """
+    
+    def __init__(self, cosmic_scroll=None, pantheon_system=None):
+        """
+        Initialize the WorshipFieldConductor.
+        
+        Args:
+            cosmic_scroll: Reference to the parent CosmicScroll instance
+            pantheon_system: Reference to the PantheonEvolutionSystem
+        """
+        self.cosmic_scroll = cosmic_scroll
+        self.pantheon_system = pantheon_system
+        self.worship_events = []  # History of worship events
+        self.active_rituals = {}  # Currently ongoing rituals
+        self.worship_fields = {}  # Accumulated worship energy by location/region
+        self.sacred_sites = {}  # Locations with special worship properties
+        self.faith_communities = {}  # Groups of worshippers
+        self.ritual_templates = {}  # Known ritual patterns
+        self.worship_metrics = {  # Statistical metrics on worship
+            "total_worship_events": 0,
+            "worship_by_deity": defaultdict(float),
+            "worship_by_ritual_type": defaultdict(float),
+            "worship_by_region": defaultdict(float),
+            "most_devout_communities": []
+        }
+        
+        # Worship propagation parameters
+        self.belief_decay_rate = 0.01  # Base rate at which belief energy dissipates
+        self.ritual_efficacy_base = 1.0  # Base multiplier for ritual effectiveness
+        self.regional_influence_radius = 10.0  # How far worship influence spreads
+        self.community_coherence_factor = 1.0  # How unified worship communities are
+        self.sacred_site_resonance = 1.5  # Multiplier for worship at sacred sites
+        
+        # Initialize basic ritual templates
+        self._initialize_ritual_templates()
+    
+    def _initialize_ritual_templates(self) -> None:
+        """
+        Initialize the system with basic ritual templates that represent
+        common worship patterns.
+        """
+        base_templates = [
+            {
+                "name": "Devotional Prayer",
+                "type": "prayer",
+                "energy_base": 0.05,
+                "duration": 0.1,  # In hours
+                "components": ["invocation", "supplication"],
+                "complexity": 0.2,
+                "communal": False,
+                "description": "Simple individual prayer to a deity"
+            },
+            {
+                "name": "Offering Ritual",
+                "type": "offering",
+                "energy_base": 0.15,
+                "duration": 0.5,
+                "components": ["preparation", "offering", "invocation"],
+                "complexity": 0.4,
+                "communal": False,
+                "description": "Presenting offerings to a deity"
+            },
+            {
+                "name": "Community Ceremony",
+                "type": "ceremony",
+                "energy_base": 0.3,
+                "duration": 2.0,
+                "components": ["gathering", "invocation", "communal_worship", "blessing"],
+                "complexity": 0.6,
+                "communal": True,
+                "description": "Organized community worship event"
+            },
+            {
+                "name": "High Ritual",
+                "type": "high_ritual",
+                "energy_base": 0.5,
+                "duration": 4.0,
+                "components": ["purification", "sacred_space", "invocation", "offering", "communion", "blessing"],
+                "complexity": 0.8,
+                "communal": True,
+                "description": "Complex formal ritual conducted by trained clergy"
+            },
+            {
+                "name": "Sacrifice",
+                "type": "sacrifice",
+                "energy_base": 0.4,
+                "duration": 1.0,
+                "components": ["preparation", "invocation", "sacrifice", "communion"],
+                "complexity": 0.7,
+                "communal": True,
+                "description": "Ritual sacrifice of valuable goods to a deity"
+            }
+        ]
+        
+        # Register templates
+        for template in base_templates:
+            template_id = f"ritual_{template['type']}"
+            self.ritual_templates[template_id] = template
+from collections import defaultdict
+from datetime import datetime
+from typing import List, Dict, Optional, Union, Any, Set, Tuple, Callable
+import uuid
+import random
+import math
+import logging
+import numpy as np
+from enum import Enum, auto
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("CosmicScroll")
+
+# Enums for various systems
+class EntityType(Enum):
+    DEITY = "deity"
+    CONCEPT = "concept"
+    PHENOMENON = "phenomenon"
+    BEING = "being"
+    LOCATION = "location"
+    ARTIFACT = "artifact"
+
+class MotifCategory(Enum):
+    LUMINOUS = "luminous"
+    ABYSSAL = "abyssal"
+    VITAL = "vital"
+    ENTROPIC = "entropic"
+    HARMONIC = "harmonic"
+    CHAOTIC = "chaotic"
+    TRANSCENDENT = "transcendent"
+    IMMANENT = "immanent"
+
+class BreathPhase(Enum):
+    INHALE = "inhale"
+    HOLD_FULL = "hold_full"
+    EXHALE = "exhale"
+    HOLD_EMPTY = "hold_empty"
+
+# === Divine Ecology ===
+
+class PantheonEvolutionSystem:
+    """
+    A system for the dynamic evolution of deity networks within the symbolic universe.
+    
+    The PantheonEvolutionSystem manages how deities form, interact, evolve, merge, 
+    split, and fade based on belief patterns, worship energy, and cosmic events.
+    It implements complex adaptive belief network concepts where deities are emergent
+    entities shaped by symbolic forces and collective worship patterns.
+    """
+    
+    def __init__(self, cosmic_scroll=None):
+        """
+        Initialize the PantheonEvolutionSystem.
+        
+        Args:
+            cosmic_scroll: Reference to the parent CosmicScroll instance
+        """
+        self.cosmic_scroll = cosmic_scroll
+        self.deities = {}  # deity_id -> deity data
+        self.domains = defaultdict(set)  # domain -> set of deity_ids
+        self.pantheons = defaultdict(set)  # pantheon_id -> set of deity_ids
+        self.deity_relationships = defaultdict(dict)  # deity_id -> {other_deity_id -> relationship}
+        self.belief_energy_matrix = {}  # deity_id -> current belief energy
+        self.historical_rankings = []  # Snapshots of deity power rankings over time
+        self.potential_deities = []  # Concepts that may ascend to deity status
+        self.evolution_history = []  # Records of significant deity changes
+        
+        # Configuration parameters
+        self.ascension_threshold = 0.75  # Belief energy needed for concept -> deity
+        self.dissolution_threshold = 0.15  # Belief energy below which deities fade
+        self.evolution_rate = 0.05  # Base rate of deity attribute changes
+        self.conflict_influence = 0.2  # How much conflicts affect evolution
+        self.syncretism_chance = 0.03  # Base chance of deity mergers
+        self.schism_tension_threshold = 0.8  # Tension level that may trigger schism
+        
+        # Initialize with seed archetypes if no deities exist
+        if not self.deities:
+            self._initialize_primal_deities()
+    
+    def _initialize_primal_deities(self) -> None:
+        """
+        Initialize the system with primal archetypal deities that represent
+        foundational cosmic forces.
+        """
+        primal_archetypes = [
+            {
+                "name": "The Luminous One",
+                "domains": ["light", "creation", "order", "knowledge"],
+                "attributes": {
+                    "radiance": 0.9,
+                    "harmony": 0.8,
+                    "wisdom": 0.85,
+                    "compassion": 0.7
+                },
+                "initial_energy": 0.8
+            },
+            {
+                "name": "The Abyssal Depth",
+                "domains": ["darkness", "void", "mystery", "potential"],
+                "attributes": {
+                    "depth": 0.9,
+                    "secrecy": 0.85,
+                    "transformation": 0.7,
+                    "intuition": 0.75
+                },
+                "initial_energy": 0.75
+            },
+            {
+                "name": "The Vital Weaver",
+                "domains": ["life", "growth", "fertility", "cycles"],
+                "attributes": {
+                    "vitality": 0.9,
+                    "regeneration": 0.8,
+                    "connection": 0.85,
+                    "abundance": 0.75
+                },
+                "initial_energy": 0.85
+            },
+            {
+                "name": "The Entropic Force",
+                "domains": ["decay", "entropy", "endings", "transformation"],
+                "attributes": {
+                    "dissolution": 0.9,
+                    "inevitability": 0.85,
+                    "recycling": 0.7,
+                    "finality": 0.8
+                },
+                "initial_energy": 0.7
+            }
+        ]
+        
+        # Create each primal deity
+        for archetype in primal_archetypes:
+            deity_id = self.create_deity(
+                name=archetype["name"],
+                domains=archetype["domains"],
+                attributes=archetype["attributes"],
+                initial_energy=archetype["initial_energy"],
+                is_primal=True
+            )
+            
+            logger.info(f"Created primal deity: {archetype['name']} (ID: {deity_id})")
+    
+    def create_deity(self, name: str, domains: List[str], attributes: Dict[str, float],
+                    initial_energy: float = 0.5, pantheon_id: str = None,
+                    parent_deities: List[str] = None, is_primal: bool = False) -> str:
+        """
+        Create a new deity entity within the pantheon system.
+        
+        Args:
+            name: The deity's name
+            domains: List of domains/concepts this deity governs
+            attributes: Dictionary of attribute values (0.0-1.0)
+            initial_energy: Starting belief energy (0.0-1.0)
+            pantheon_id: ID of pantheon this deity belongs to
+            parent_deities: List of parent deity IDs (for evolved/split deities)
+            is_primal: Whether this is a foundational primal deity
+            
+        Returns:
+            deity_id: Unique identifier for the new deity
+        """
+        deity_id = f"deity_{uuid.uuid4().hex[:8]}"
+        
+        # Creation timestamp
+        creation_time = datetime.now()
+        
+        # Build the deity record
+        deity = {
+            "id": deity_id,
+            "name": name,
+            "domains": domains.copy(),
+            "attributes": attributes.copy(),
+            "pantheon_id": pantheon_id,
+            "parent_deities": parent_deities.copy() if parent_deities else [],
+            "child_deities": [],
+            "is_primal": is_primal,
+            "creation_time": creation_time,
+            "last_evolution": creation_time,
+            "evolution_stage": 1,
+            "narrative_aspects": [],
+            "symbolic_representations": [],
+            "worshippers": 0,
+            "temples": 0,
+            "artifacts": []
+        }
+        
+        # Register the deity
+        self.deities[deity_id] = deity
+        self.belief_energy_matrix[deity_id] = initial_energy
+        
+        # Register domains
+        for domain in domains:
+            self.domains[domain].add(deity_id)
+        
+        # Register with pantheon
+        if pantheon_id:
+            self.pantheons[pantheon_id].add(deity_id)
+        
+        # Update parent deities if they exist
+        if parent_deities:
+            for parent_id in parent_deities:
+                if parent_id in self.deities:
+                    self.deities[parent_id]["child_deities"].append(deity_id)
+        
+        # Record creation in evolution history
+        self.evolution_history.append({
+            "event_type": "creation",
+            "deity_id": deity_id,
+            "deity_name": name,
+            "timestamp": creation_time,
+            "initial_energy": initial_energy,
+            "parent_deities": parent_deities
+        })
+        
+        return deity_id
+    
+    def process_worship_energy(self, worship_events: List[Dict]) -> None:
+        """
+        Process incoming worship energy events and update deity belief energy.
+        
+        Args:
+            worship_events: List of worship event dictionaries with:
+                - deity_id: Target deity
+                - energy: Amount of belief energy
+                - source: Source of worship (e.g., "ritual", "prayer", "sacrifice")
+                - domain_focus: Optional specific domain being invoked
+        """
+        for event in worship_events:
+            deity_id = event.get("deity_id")
+            energy = event.get("energy", 0.1)
+            source = event.get("source", "undefined")
+            domain_focus = event.get("domain_focus")
+            
+            # Skip if deity doesn't exist
+            if deity_id not in self.deities:
+                continue
+            
+            # Calculate energy modifiers based on source
+            source_modifier = {
+                "ritual": 1.2,
+                "prayer": 0.8,
+                "sacrifice": 1.5,
+                "devotion": 1.0,
+                "temple_ceremony": 1.3,
+                "myth_telling": 0.9,
+                "undefined": 0.7
+            }.get(source, 1.0)
+            
+            modified_energy = energy * source_modifier
+            
+            # Apply energy to deity
+            current_energy = self.belief_energy_matrix.get(deity_id, 0)
+            new_energy = min(1.0, current_energy + modified_energy)
+            self.belief_energy_matrix[deity_id] = new_energy
+            
+            # If domain focused, strengthen that domain connection
+            if domain_focus and domain_focus in self.deities[deity_id]["domains"]:
+                # Reinforce domain connection
+                pass
+            
+            # Check for potential resonance with other deities in same domains
+            self._check_domain_resonance(deity_id, domain_focus)
+    
+    def update_pantheon_dynamics(self) -> List[Dict]:
+        """
+        Update pantheon dynamics including deity evolution, conflicts,
+        mergers, and potential new deity formation.
+        
+        Returns:
+            List of significant events that occurred during this update
+        """
+        events = []
+        
+        # Step 1: Check for deity evolution (attribute changes)
+        evolved_deities = self._evolve_deity_attributes()
+        events.extend(evolved_deities)
+        
+        # Step 2: Check for syncretism (deity mergers)
+        syncretism_events = self._process_potential_syncretism()
+        events.extend(syncretism_events)
+        
+        # Step 3: Check for schisms (deity splitting)
+        schism_events = self._check_schism_potential()
+        events.extend(schism_events)
+        
+        # Step 4: Check for deity ascensions (concept -> deity)
+        ascension_events = self._check_concept_ascensions()
+        events.extend(ascension_events)
+        
+        # Step 5: Check for deity dissolutions (deity fades away)
+        dissolution_events = self._check_deity_dissolutions()
+        events.extend(dissolution_events)
+        
+        # Step 6: Process deity conflicts and relationships
+        conflict_events = self._process_deity_conflicts()
+        events.extend(conflict_events)
+        
+        # Update historical rankings
+        self._update_historical_rankings()
+        
+        return events
+    
+    # Additional methods for PantheonEvolutionSystem are implemented here...
+from collections import defaultdict
+from datetime import datetime
+from typing import List, Dict, Optional, Union, Any
+
+class CosmicScroll:
+    def get_motif_feedback(self, max_items: int = 10) -> List[Dict]:
+        """
+        Retrieve motif data for external systems.
+        
+        Args:
+            max_items: Maximum number of motif items to return
+            
+        Returns:
+            List of recent motif data
+        """
+        # Get the most recent motifs from the feedback queue
+        recent_motifs = list(self.motif_feedback_queue)[-max_items:]
+        
+        # Create a feedback packet
+        feedback = {
+            "tick_count": self.tick_count,
+            "breath_phase": self.breath_phase.value,
+            "breath_progress": self.breath_progress,
+            "motifs": recent_motifs,
+            "motif_count": len(self.motif_library),
+            "entity_count": len(self.entities),
+            "dominant_categories": self._get_dominant_motif_categories()
+        }
+        
+        return feedback
+    
+    def _get_dominant_motif_categories(self) -> Dict[str, float]:
+        """Calculate the currently dominant motif categories in the system"""
+        category_strengths = defaultdict(float)
+        
+        # Sum the strength of all motifs by category
+        for motif in self.motif_library.values():
+            category = motif["category"]
+            strength = motif["strength"] * motif["resonance"]
+            category_strengths[category] += strength
+        
+        # Normalize to get relative strengths
+        total_strength = sum(category_strengths.values()) or 1.0
+        return {category: strength/total_strength for category, strength in category_strengths.items()}
+    
+    def get_entity_by_id(self, entity_id: str) -> Optional[Any]:
+        """Retrieve an entity by its ID"""
+        return self.entities.get(entity_id)
+    
+    def get_entities_by_type(self, entity_type: Union[str, EntityType]) -> List[Any]:
+        """Retrieve all entities of a specific type"""
+        if isinstance(entity_type, EntityType):
+            entity_type = entity_type.value
+            
+        entity_ids = self.entity_types.get(entity_type, set())
+        return [self.entities[eid] for eid in entity_ids if eid in self.entities]
+    
+    def get_entity_motifs(self, entity_id: str) -> List[Dict]:
+        """Get all motifs associated with an entity"""
+        motif_ids = self.entity_motifs.get(entity_id, set())
+        return [self.motif_library[mid] for mid in motif_ids if mid in self.motif_library]
+    
+    def get_events_by_entity(self, entity_id: str, max_events: int = 10) -> List[Dict]:
+        """Get events involving a specific entity"""
+        events = [
+            event for event in self.event_history 
+            if entity_id in event.get("entities_involved", [])
+        ]
+        return sorted(events, key=lambda e: e.get("timestamp", 0), reverse=True)[:max_events]
+    
+    def get_simulation_stats(self) -> Dict:
+        """Get current statistics about the simulation"""
+        entity_type_counts = {etype: len(eids) for etype, eids in self.entity_types.items()}
+        
+        return {
+            "tick_count": self.tick_count,
+            "entity_count": len(self.entities),
+            "entity_types": entity_type_counts,
+            "event_count": len(self.event_history),
+            "motif_count": len(self.motif_library),
+            "breath_phase": self.breath_phase.value,
+            "creation_time": self.history["creation_time"],
+            "runtime": (datetime.now() - self.history["creation_time"]).total_seconds(),
+            "significant_events": len(self.history["significant_events"])
+        }
+def _generate_motif_name(self, category: MotifCategory) -> str:
+    """Generate a thematic name for a motif based on its category"""
+    # Dictionary of prefix and suffix options for each category
+    name_components = {
+        MotifCategory.LUMINOUS: {
+            "prefixes": ["radiant", "glowing", "shining", "illuminated", "bright"],
+            "roots": ["light", "sun", "star", "dawn", "glow"],
+            "suffixes": ["beam", "ray", "flare", "spark", "corona"]
+        },
+        MotifCategory.ABYSSAL: {
+            "prefixes": ["deep", "dark", "void", "hollow", "endless"],
+            "roots": ["abyss", "depth", "void", "darkness", "shadow"],
+            "suffixes": ["pit", "chasm", "well", "trench", "gulf"]
+        },
+        MotifCategory.VITAL: {
+            "prefixes": ["living", "growing", "thriving", "flourishing", "verdant"],
+            "roots": ["life", "growth", "bloom", "pulse", "breath"],
+            "suffixes": ["seed", "root", "heart", "core", "essence"]
+        },
+        MotifCategory.ENTROPIC: {
+            "prefixes": ["decaying", "fading", "eroding", "dissolving", "withering"],
+            "roots": ["entropy", "decay", "dust", "ash", "rust"],
+            "suffixes": ["dissolution", "erosion", "fall", "decline", "end"]
+        },
+        MotifCategory.CRYSTALLINE: {
+            "prefixes": ["ordered", "structured", "patterned", "aligned", "latticed"],
+            "roots": ["crystal", "pattern", "form", "structure", "symmetry"],
+            "suffixes": ["lattice", "matrix", "grid", "array", "framework"]
+        },
+        MotifCategory.CHAOTIC: {
+            "prefixes": ["wild", "turbulent", "swirling", "disordered", "random"],
+            "roots": ["chaos", "storm", "maelstrom", "tempest", "turmoil"],
+            "suffixes": ["vortex", "whirl", "tumult", "frenzy", "disorder"]
+        },
+        MotifCategory.ELEMENTAL: {
+            "prefixes": ["primal", "raw", "fundamental", "essential", "primordial"],
+            "roots": ["element", "earth", "water", "fire", "air"],
+            "suffixes": ["essence", "force", "power", "current", "flow"]
+        },
+        MotifCategory.HARMONIC: {
+            "prefixes": ["resonant", "balanced", "harmonious", "attuned", "aligned"],
+            "roots": ["harmony", "resonance", "balance", "chord", "rhythm"],
+            "suffixes": ["wave", "pulse", "oscillation", "cycle", "frequency"]
+        },
+        MotifCategory.RECURSIVE: {
+            "prefixes": ["nested", "iterative", "folded", "layered", "self-similar"],
+            "roots": ["recursion", "fractal", "loop", "cycle", "pattern"],
+            "suffixes": ["iteration", "reflection", "echo", "mirror", "spiral"]
+        },
+        MotifCategory.TEMPORAL: {
+            "prefixes": ["flowing", "passing", "changing", "cycling", "eternal"],
+            "roots": ["time", "moment", "epoch", "era", "age"],
+            "suffixes": ["flow", "stream", "cycle", "continuity", "progression"]
+        },
+        MotifCategory.DIMENSIONAL: {
+            "prefixes": ["spatial", "volumetric", "expansive", "containing", "vast"],
+            "roots": ["space", "dimension", "realm", "domain", "field"],
+            "suffixes": ["expanse", "extent", "boundary", "horizon", "frontier"]
+        },
+        MotifCategory.CONNECTIVE: {
+            "prefixes": ["linking", "binding", "joining", "weaving", "connecting"],
+            "roots": ["connection", "network", "web", "link", "bond"],
+            "suffixes": ["thread", "bridge", "nexus", "junction", "pathway"]
+        },
+        MotifCategory.SHADOW: {
+            "prefixes": ["hidden", "veiled", "obscured", "occluded", "shrouded"],
+            "roots": ["shadow", "veil", "mask", "secret", "mystery"],
+            "suffixes": ["cloak", "curtain", "shroud", "cover", "fog"]
+        },
+        MotifCategory.ASCENDANT: {
+            "prefixes": ["rising", "ascending", "elevating", "transcending", "surpassing"],
+            "roots": ["ascension", "peak", "summit", "zenith", "pinnacle"],
+            "suffixes": ["flight", "climb", "journey", "transformation", "evolution"]
+        }
+    }
+    
+    components = name_components.get(category, {
+        "prefixes": ["mysterious", "unknown", "undefined"],
+        "roots": ["pattern", "form", "essence"],
+        "suffixes": ["manifestation", "presence", "aspect"]
+    })
+    
+    # Generate a name using the components
+    name_structure = random.choice([
+        "{prefix}_{root}",
+        "{root}_{suffix}",
+        "{prefix}_{root}_{suffix}"
+    ])
+    
+    name_parts = {
+        "prefix": random.choice(components["prefixes"]),
+        "root": random.choice(components["roots"]),
+        "suffix": random.choice(components["suffixes"])
+    }
+    
+    return name_structure.format(**name_parts)
+from enum import Enum
+
+class MotifCategory(Enum):
+    """Categories of symbolic motifs that can be applied to entities"""
+    LUMINOUS = "luminous"     # Light, radiance, illumination
+    ABYSSAL = "abyssal"       # Depth, void, darkness
+    VITAL = "vital"           # Life, growth, adaptation
+    ENTROPIC = "entropic"     # Decay, dissolution, transformation
+    CRYSTALLINE = "crystalline"  # Order, structure, pattern
+    CHAOTIC = "chaotic"       # Disorder, unpredictability, complexity
+    ELEMENTAL = "elemental"   # Fundamental forces and substrates
+    HARMONIC = "harmonic"     # Resonance, harmony, balance
+    RECURSIVE = "recursive"   # Self-reference, fractals, depth
+    TEMPORAL = "temporal"     # Time, memory, anticipation
+    DIMENSIONAL = "dimensional"  # Space, boundaries, containment
+    CONNECTIVE = "connective" # Relationships, networks, communication
+    SHADOW = "shadow"         # Hidden aspects, potentials, mysteries
+    ASCENDANT = "ascendant"   # Transcendence, evolution, higher order
+from enum import Enum
+
+class BreathPhase(Enum):
+    """Phases of the cosmic breath cycle"""
+    INHALE = "inhale"
+    HOLD_IN = "hold_in"
+    EXHALE = "exhale"
+    HOLD_OUT = "hold_out"
+
+class EventType(Enum):
+    """Types of events that can occur in the cosmic scroll"""
+    CREATION = "creation"
+    DESTRUCTION = "destruction"
+    TRANSFORMATION = "transformation"
+    INTERACTION = "interaction"
+    DISCOVERY = "discovery"
+    CONVERGENCE = "convergence"
+    DIVERGENCE = "divergence"
+    AWAKENING = "awakening"
+    DORMANCY = "dormancy"
+    EMERGENCE = "emergence"
 # ================================================================
 #  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
 #  Author: Morpheus (Creator), Somnus Development Collective 
@@ -42,16 +959,323 @@ class EntityType(Enum):
     ANOMALY = "anomaly"
 
 
-class DimensionalRealityManager:
+```
+class CosmicScrollManager:
     """
-    Central registry for all entities in the simulation.
-    Acts as an interface between the cosmic scroll and other engine components.
+    Central management system for the Loom Ascendant Cosmos engine.
+    
+    Handles simulation ticks, scroll memory, motif generation, and symbolic narrative progression.
+    Acts as the runtime loop for the entire system.
     """
     
     _instance = None
     
     def __new__(cls):
         if cls._instance is None:
+            cls._instance = super(CosmicScrollManager, cls).__new__(cls)
+            cls._instance._initialize()
+        return cls._instance
+    
+    def _initialize(self):
+        """Initialize the Cosmic Scroll Manager"""
+        self.entities = {}  # entity_id -> entity object
+        self.entity_types = defaultdict(set)  # entity_type -> set of entity_ids
+        
+        self.motif_library = {}  # motif_id -> motif data
+        self.entity_motifs = defaultdict(set)  # entity_id -> set of motif_ids
+        
+        self.event_history = []  # List of all events
+        self.recent_events = deque(maxlen=100)  # Recent events for quick access
+        
+        self.tick_count = 0
+        self.time_scale = 1.0  # Time dilation factor
+        self.breath_cycle_length = 12  # Ticks per complete breath cycle
+        self.breath_phase = BreathPhase.INHALE
+        self.breath_progress = 0.0  # 0.0 to 1.0 within current phase
+        
+        self.inhale_ratio = 0.3    # Proportion of cycle spent inhaling
+        self.hold_in_ratio = 0.2   # Proportion of cycle spent holding in
+        self.exhale_ratio = 0.3    # Proportion of cycle spent exhaling
+        self.hold_out_ratio = 0.2  # Proportion of cycle spent holding out
+        
+        self.history = {
+            "creation_time": datetime.now(),
+            "tick_history": [],
+            "significant_events": []
+        }
+        
+        self.motif_feedback_queue = deque(maxlen=50)  # Recent motif data for external systems
+        
+        logger.info("CosmicScrollManager initialized")
+    
+    def tick(self, delta_time: float = 1.0) -> Dict:
+        """
+        Advance the simulation forward one step.
+        
+        Args:
+            delta_time: Time multiplier for this tick
+            
+        Returns:
+            Dict containing information about the current tick
+        """
+        adjusted_delta = delta_time * self.time_scale
+        self.tick_count += 1
+        
+        # Update breath cycle
+        self._update_breath_cycle()
+        
+        # Process entity evolution
+        evolved_entities = self._evolve_entities(adjusted_delta)
+        
+        # Generate events from entity interactions
+        generated_events = self._generate_events()
+        
+        # Process any pending events
+        for event in generated_events:
+            self.log_event(event)
+        
+        # Record tick information
+        tick_info = {
+            "tick_id": self.tick_count,
+            "timestamp": datetime.now(),
+            "delta_time": adjusted_delta,
+            "breath_phase": self.breath_phase.value,
+            "breath_progress": self.breath_progress,
+            "entities_evolved": len(evolved_entities),
+            "events_generated": len(generated_events)
+        }
+        
+        # Store tick history (limiting to last 100 ticks)
+        self.history["tick_history"].append(tick_info)
+        if len(self.history["tick_history"]) > 100:
+            self.history["tick_history"] = self.history["tick_history"][-100:]
+            
+        logger.debug(f"Tick {self.tick_count} completed")
+        return tick_info
+    
+    def _update_breath_cycle(self):
+        """Update the breath cycle phase and progress"""
+        total_progress = (self.tick_count % self.breath_cycle_length) / self.breath_cycle_length
+        
+        # Determine current phase
+        if total_progress < self.inhale_ratio:
+            self.breath_phase = BreathPhase.INHALE
+            self.breath_progress = total_progress / self.inhale_ratio
+        elif total_progress < (self.inhale_ratio + self.hold_in_ratio):
+            self.breath_phase = BreathPhase.HOLD_IN
+            self.breath_progress = (total_progress - self.inhale_ratio) / self.hold_in_ratio
+        elif total_progress < (self.inhale_ratio + self.hold_in_ratio + self.exhale_ratio):
+            self.breath_phase = BreathPhase.EXHALE
+            self.breath_progress = (total_progress - self.inhale_ratio - self.hold_in_ratio) / self.exhale_ratio
+        else:
+            self.breath_phase = BreathPhase.HOLD_OUT
+            self.breath_progress = (total_progress - self.inhale_ratio - self.hold_in_ratio - self.exhale_ratio) / self.hold_out_ratio
+    
+    def _evolve_entities(self, delta_time: float) -> List[str]:
+        """
+        Evolve all entities forward in time.
+        
+        Args:
+            delta_time: Time multiplier for this evolution step
+            
+        Returns:
+            List of entity IDs that were evolved
+        """
+        evolved_entities = []
+        
+        for entity_id, entity in self.entities.items():
+            if hasattr(entity, 'evolve'):
+                try:
+                    entity.evolve(delta_time)
+                    evolved_entities.append(entity_id)
+                except Exception as e:
+                    logger.error(f"Error evolving entity {entity_id}: {str(e)}")
+        
+        return evolved_entities
+    
+    def _generate_events(self) -> List[Dict]:
+        """
+        Generate events from entity interactions.
+        This is a placeholder for more complex event generation logic.
+        
+        Returns:
+            List of generated events
+        """
+        # This would be implemented with more sophisticated logic
+        # that detects meaningful interactions between entities
+        events = []
+        
+        # Simple example: random events for demonstration
+        if random.random() < 0.1:  # 10% chance per tick
+            # Get random entities for interaction
+            if len(self.entities) >= 2:
+                entities = random.sample(list(self.entities.keys()), 2)
+                
+                event = {
+                    "type": random.choice(list(EventType)).value,
+                    "timestamp": self.tick_count,
+                    "entities_involved": entities,
+                    "description": f"Random interaction between {entities[0]} and {entities[1]}",
+                    "importance": random.uniform(0.1, 1.0)
+                }
+                
+                events.append(event)
+        
+        return events
+    
+    def register_entity(self, entity) -> str:
+        """
+        Register an entity with the Cosmic Scroll system.
+        
+        Args:
+            entity: The entity object to register
+            
+        Returns:
+            The entity ID
+        """
+        # Ensure entity has an ID
+        if not hasattr(entity, 'entity_id'):
+            entity.entity_id = f"{entity.__class__.__name__.lower()}_{uuid.uuid4().hex}"
+        
+        entity_id = entity.entity_id
+        
+        # Register the entity
+        self.entities[entity_id] = entity
+        
+        # Register by type if available
+        if hasattr(entity, 'entity_type'):
+            entity_type = entity.entity_type.value if isinstance(entity.entity_type, Enum) else entity.entity_type
+            self.entity_types[entity_type].add(entity_id)
+        
+        # Initialize entity with default motifs if applicable
+        if hasattr(self, '_seed_default_motifs'):
+            self._seed_default_motifs(entity)
+        
+        # Generate creation event
+        creation_event = {
+            "type": EventType.CREATION.value,
+            "timestamp": self.tick_count,
+            "entities_involved": [entity_id],
+            "description": f"Creation of {entity.__class__.__name__}",
+            "importance": 0.7  # Creation is a significant event
+        }
+        
+        self.log_event(creation_event)
+        
+        logger.info(f"Entity registered: {entity_id}")
+        return entity_id
+    
+    def log_event(self, event: Dict) -> str:
+        """
+        Record an event in the cosmic scroll.
+        
+        Args:
+            event: Dictionary containing event data
+            
+        Returns:
+            Event ID
+        """
+        # Add event ID if not present
+        if "id" not in event:
+            event["id"] = f"event_{uuid.uuid4().hex}"
+        
+        # Add timestamp if not present
+        if "timestamp" not in event:
+            event["timestamp"] = self.tick_count
+        
+        # Store the event
+        self.event_history.append(event)
+        self.recent_events.append(event)
+        
+        # Check if this is a significant event
+        if event.get("importance", 0) > 0.7:
+            self.history["significant_events"].append(event)
+        
+        # Process event for motif generation
+        if event.get("importance", 0) > 0.3:  # Only generate motifs for moderately important events
+            self.generate_motif(event)
+        
+        logger.debug(f"Event logged: {event['id']}")
+        return event["id"]
+    
+    def generate_motif(self, event: Dict) -> Optional[str]:
+        """
+        Generate a symbolic motif from an event.
+        
+        Args:
+            event: Dictionary containing event data
+            
+        Returns:
+            Motif ID if generated, None otherwise
+        """
+        # Skip if no entities involved
+        if not event.get("entities_involved"):
+            return None
+        
+        # Determine a motif category based on event type
+        event_type = event.get("type", "")
+        
+        # Map event types to likely motif categories (simplified)
+        category_mapping = {
+            EventType.CREATION.value: [MotifCategory.LUMINOUS, MotifCategory.VITAL, MotifCategory.CRYSTALLINE],
+            EventType.DESTRUCTION.value: [MotifCategory.ENTROPIC, MotifCategory.ABYSSAL, MotifCategory.CHAOTIC],
+            EventType.TRANSFORMATION.value: [MotifCategory.ENTROPIC, MotifCategory.RECURSIVE, MotifCategory.SHADOW],
+            EventType.INTERACTION.value: [MotifCategory.CONNECTIVE, MotifCategory.HARMONIC, MotifCategory.DIMENSIONAL],
+            EventType.DISCOVERY.value: [MotifCategory.LUMINOUS, MotifCategory.SHADOW, MotifCategory.DIMENSIONAL],
+            EventType.CONVERGENCE.value: [MotifCategory.CONNECTIVE, MotifCategory.HARMONIC, MotifCategory.RECURSIVE],
+            EventType.DIVERGENCE.value: [MotifCategory.CHAOTIC, MotifCategory.DIMENSIONAL, MotifCategory.TEMPORAL],
+            EventType.AWAKENING.value: [MotifCategory.VITAL, MotifCategory.LUMINOUS, MotifCategory.ASCENDANT],
+            EventType.DORMANCY.value: [MotifCategory.ABYSSAL, MotifCategory.TEMPORAL, MotifCategory.SHADOW],
+            EventType.EMERGENCE.value: [MotifCategory.VITAL, MotifCategory.RECURSIVE, MotifCategory.ASCENDANT]
+        }
+        
+        potential_categories = category_mapping.get(event_type, list(MotifCategory))
+        
+        # Select a category weighted by event importance
+        chosen_category = random.choice(potential_categories)
+        
+        # Generate a motif name and description
+        motif_name = self._generate_motif_name(chosen_category)
+        
+        # Create the motif
+        motif = {
+            "id": f"motif_{uuid.uuid4().hex}",
+            "name": motif_name,
+            "category": chosen_category.value,
+            "source_event": event["id"],
+            "entities": event["entities_involved"],
+            "strength": event.get("importance", 0.5),
+            "creation_tick": self.tick_count,
+            "resonance": random.uniform(0.3, 0.9),  # How strongly this motif resonates with the cosmic fabric
+            "description": f"A {chosen_category.value} motif generated from {event_type}"
+        }
+        
+        # Store the motif
+        self.motif_library[motif["id"]] = motif
+        
+        # Associate motif with entities
+        for entity_id in event["entities_involved"]:
+            if entity_id in self.entities:
+                self.entity_motifs[entity_id].add(motif["id"])
+                
+                # If entity has a motifs attribute, add it there too
+                entity = self.entities[entity_id]
+                if hasattr(entity, 'motifs') and isinstance(entity.motifs, list):
+                    entity.motifs.append(motif_name)
+        
+        # Add to feedback queue for external systems
+        self.motif_feedback_queue.append(motif)
+        
+        logger.debug(f"Motif generated: {motif['name']} ({motif['id']})")
+        return motif["id"]
+    
+    def _generate_motif_name(self, category: MotifCategory) -> str:
+        """Generate a thematic name for a motif based on its category"""
+        # Dictionary of prefix and suffix options for each category
+        name_components = {
+            MotifCategory.LUMINOUS: {
+                "prefixes": ["radiant", "glowing", "shining", "illuminated", "bright"],
+                "roots": ["light", "sun",
             cls._instance = super(DimensionalRealityManager, cls).__new__(cls)
             cls._instance._initialize()
         return cls._instance
