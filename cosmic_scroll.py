@@ -8831,9 +8831,3 @@ def apply_environmental_effects_to_civilization(civilization: Civilization, worl
                             importance=0.5,
                             motifs_added=["environmental_adaptation"]
                         )
-
-
-# Initialize imports needed for environment integration
-import types
-import math
-import random
