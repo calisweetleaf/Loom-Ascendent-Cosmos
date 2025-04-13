@@ -6,7 +6,8 @@
 #  Date: 04/11/2025
 #  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
 # ================================================================
-from typing import Dict, List, Tuple, Optional, Union, Callable
+from typing import Dict, List, Tuple, Optional, Union, Callable, Any
+from abc import ABC, abstractmethod
 from collections import deque
 import threading
 import numpy as np
@@ -383,8 +384,7 @@ class RealityKernel:
                 self._apply_ethical_adjustments(ethical_adjustments)
                 
                 # Monitor for ethical boundary violations
-                violations = self.ethical_manifold.detect_violations(current_state)
-                if violations:
+                if violations := self.ethical_manifold.detect_violations(current_state):
                     self._handle_ethical_violations(violations)
                 
                 # Synchronize with main thread
@@ -522,11 +522,7 @@ class RealityKernel:
 
     def _identify_affected_patterns(self, quantum_states):
         """Identify patterns affected by quantum decoherence"""
-        affected_patterns = []
-        for pattern_id, wave in quantum_states['pattern_waves'].items():
-            if wave.get_coherence() < 0.9:
-                affected_patterns.append(pattern_id)
-        return affected_patterns
+        return [pattern_id for pattern_id, wave in quantum_states['pattern_waves'].items() if wave.get_coherence() < 0.9]
 
     def _update_metrics(self):
         """Update reality metrics"""
@@ -626,8 +622,16 @@ class RealityKernel:
         """Get current states of all entities"""
         # This would gather states from the universe engine
         # Simplified implementation for example purposes
+        # Retrieve entity states from the universe engine
         entity_states = {}
-        # In a real implementation, iterate through universe entities
+        for entity in self.universe.get_all_entities():
+            entity_states[entity.id] = {
+            'entity': entity,
+            'state': entity.get_state(),
+            'position': entity.get_position(),
+            'velocity': entity.get_velocity(),
+            'attributes': entity.get_attributes()
+            }
         return entity_states
 
     def _process_observer_effects(self):
@@ -654,17 +658,9 @@ class RealityKernel:
         """Apply ethical adjustments to reality state"""
         if not self.ethical_manifold or not adjustments:
             return
-            
+
         if 'timeline_adjustments' in adjustments:
             self.timeline.apply_ethical_corrections(adjustments['timeline_adjustments'])
-            
-        if 'quantum_adjustments' in adjustments:
-            # Apply to quantum field
-            pass
-            
-        if 'entity_adjustments' in adjustments:
-            # Apply to entities
-            pass
 
     def _handle_ethical_violations(self, violations: List[Dict]):
         """Handle ethical boundary violations"""

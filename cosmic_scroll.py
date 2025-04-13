@@ -1,12 +1,9 @@
-# ============================================================
-# Module: cosmic_scroll.py
-# Description: Central symbolic engine for recursive universe simulation
-# Author: Morpheus (author), Somnus Development Collective
-# License: Proprietary Software License Agreement (Somnus Development Collective)
-# Date: 2025-04-13T04:45:23.708211Z
-# SHA-256: 979bc49912d26322228638c9c88f6f8f5942f3752d2334b8c160788f7b24aaa4
-# ============================================================
-# ===== Standard Library =====
+# ================================================================
+#  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
+#  Author: Morpheus (Creator), Somnus Development Collective 
+#  License: Proprietary Software License Agreement (Somnus Development Collective)
+#  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
+# ================================================================
 import random
 import logging
 import math
@@ -518,7 +515,7 @@ class CosmicScroll:
         }
         
         return name_structure.format(**name_parts)
-```
+# (Replace the backticks with appropriate code or remove them if unnecessary)
 # ================================================================
 #  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
 #  Author: Morpheus (Creator), Somnus Development Collective 
@@ -526,7 +523,7 @@ class CosmicScroll:
 #  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
 # ================================================================
 
-CosmicScroll Engine
+# CosmicScroll Engine
 class CosmicScroll:
     def __init__(self):
         self.entities = {}
@@ -556,6 +553,7 @@ class CosmicScroll:
 
                 maturation = 1.0 - (entity.age / entity.lifespan)
                 entity.maturation_rate = min(1.0, max(0.0, maturation))
+    
 process_motifs = {
     MetabolicProcess.SYMBOLIC_ABSORPTION: ["meaning_derivation", "semantic_integration", "symbolic_conversion"],
 }
@@ -563,7 +561,11 @@ process_motifs = {
 from enum import Enum
 
 class MetabolicProcess(Enum):
-    """Types of metabolic processes that can occur in living entities"""
+    """Enumeration for metabolic processes."""
+    ANABOLISM = 1
+    CATABOLISM = 2
+class MetabolicProcess(Enum):
+   
     PHOTOSYNTHESIS = "photosynthesis"
     RESPIRATION = "respiration"
     CHEMOSYNTHESIS = "chemosynthesis"
@@ -583,6 +585,7 @@ process_motifs = {
     MetabolicProcess.MOTIF_CYCLING: ["pattern_recognition", "motif_amplification", "thematic_resonance"],
     MetabolicProcess.HARMONIC_RESONANCE: ["harmonic_alignment", "frequency_attunement", "wave_synchronization"]
 }
+
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Dict, Optional, Union, Any
@@ -598,6 +601,8 @@ class CosmicScroll:
         Returns:
             List of recent motif data
         """
+        pass
+        
         # Get the most recent motifs from the feedback queue
         recent_motifs = list(self.motif_feedback_queue)[-max_items:]
         
@@ -615,7 +620,7 @@ class CosmicScroll:
         return feedback
     
     def _get_dominant_motif_categories(self) -> Dict[str, float]:
-        """Calculate the currently dominant motif categories in the system"""
+        
         category_strengths = defaultdict(float)
         
         # Sum the strength of all motifs by category
@@ -803,18 +808,8 @@ class EventType(Enum):
     AWAKENING = "awakening"
     DORMANCY = "dormancy"
     EMERGENCE = "emergence"
-# ================================================================
-#  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
-#  Author: Morpheus (Creator), Somnus Development Collective 
-#  License: Proprietary Software License Agreement (Somnus Development Collective)
-#  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
-# ================================================================
-"""
-CosmicScroll Engine
-------------------
-Procedural cosmic entity generation and management system for a comprehensive reality simulation.
-Designed to integrate with quantum physics, timeline, aether, universe engines and reality kernel.
-"""
+
+
 
 import random
 import math
@@ -868,14 +863,41 @@ class EntityState(Enum):
     DEATH = "death"
     REBIRTH = "rebirth"
     AWAKENED = "awakened"
+
+class ScrollMemoryEvent:
+    
+
+    def __init__(self):
+        
+        self.ledger = []  # Stores all recorded events
+        self.index_by_entity = defaultdict(list)  # Maps entity IDs to their events
+        self.index_by_motif = defaultdict(list)  # Maps motifs to their events
+        self.index_by_time = defaultdict(list)  # Maps timestamps to events
+        self.global_motif_resonance = defaultdict(float)  # Tracks motif resonance across the simulation
+        self.event_count = 0  # Total number of events recorded
+        self.thematic_summary = defaultdict(int)  # Tracks thematic trends in the ledger
+        self.last_consolidation_time = 0  # Tracks the last time the ledger was consolidated
+
+    def record_event(self, event: ScrollMemoryEvent):
+       
+       
+
+        """
+        Args:
+            event (ScrollMemoryEvent): The event to record.
+        """
+       
+        self.ledger.append(event)
+        self.index_by_entity.update({eid: event for eid in event.entities_involved})
+        for motif in event.motifs_added:
+            self.index_by_motif[motif].append(event)
+            self.global_motif_resonance[motif] += event.importance
+        self.index_by_time[event.timestamp].append(event)
+        self.thematic_summary[event.event_type] += 1
+        self.event_count += 1
     
 class CosmicScrollManager:
-    """
-    Central management system for the Loom Ascendant Cosmos engine.
-    
-    Handles simulation ticks, scroll memory, motif generation, and symbolic narrative progression.
-    Acts as the runtime loop for the entire system.
-    """
+
     
     _instance = None
     
@@ -918,15 +940,15 @@ class CosmicScrollManager:
         logger.info("CosmicScrollManager initialized")
     
     def tick(self, delta_time: float = 1.0) -> Dict:
-        """
-        Advance the simulation forward one step.
         
+        
+       
         Args:
-            delta_time: Time multiplier for this tick
+            delta_time (float):
+        
             
-        Returns:
-            Dict containing information about the current tick
-        """
+        Returns: 
+      
         adjusted_delta = delta_time * self.time_scale
         self.tick_count += 1
         
@@ -981,15 +1003,14 @@ class CosmicScrollManager:
             self.breath_progress = (total_progress - self.inhale_ratio - self.hold_in_ratio - self.exhale_ratio) / self.hold_out_ratio
     
     def _evolve_entities(self, delta_time: float) -> List[str]:
-        """
-        Evolve all entities forward in time.
+        
+       
         
         Args:
             delta_time: Time multiplier for this evolution step
             
         Returns:
-            List of entity IDs that were evolved
-        """
+
         evolved_entities = []
         
         for entity_id, entity in self.entities.items():
@@ -1003,13 +1024,7 @@ class CosmicScrollManager:
         return evolved_entities
     
     def _generate_events(self) -> List[Dict]:
-        """
-        Generate events from entity interactions.
-        This is a placeholder for more complex event generation logic.
-        
-        Returns:
-            List of generated events
-        """
+       
         # This would be implemented with more sophisticated logic
         # that detects meaningful interactions between entities
         events = []
@@ -1172,10 +1187,173 @@ class CosmicScrollManager:
         self.motif_feedback_queue.append(motif)
         
         logger.debug(f"Motif generated: {motif['name']} ({motif['id']})")
+
+    def query_events_by_entity(self, entity_id: str) -> List[ScrollMemoryEvent]:
+        """
+        Retrieve all events involving a specific entity.
+
+        Args:
+            entity_id (str): The ID of the entity.
+
+        Returns:
+            List[ScrollMemoryEvent]: A list of events involving the entity.
+        """
+        return self.index_by_entity.get(entity_id, [])
+
+    def query_events_by_motif(self, motif: str) -> List[ScrollMemoryEvent]:
+        """
+        Retrieve all events associated with a specific motif.
+
+        Args:
+            motif (str): The motif to query.
+
+        Returns:
+            List[ScrollMemoryEvent]: A list of events associated with the motif.
+        """
+        return self.index_by_motif.get(motif, [])
+
+    def query_events_by_timeframe(self, start_time: float, end_time: float) -> List[ScrollMemoryEvent]:
+        """
+        Retrieve all events within a specific timeframe.
+
+        Args:
+            start_time (float): The start of the timeframe.
+            end_time (float): The end of the timeframe.
+
+        Returns:
+            List[ScrollMemoryEvent]: A list of events within the timeframe.
+        """
+        events = []
+        for timestamp in range(int(start_time), int(end_time) + 1):
+            events.extend(self.index_by_time.get(timestamp, []))
+        return events
+
+    def get_most_resonant_motifs(self, count: int = 5) -> List[Tuple[str, float]]:
+        """
+        Retrieve the most resonant motifs across the simulation.
+
+        Args:
+            count (int): The number of motifs to retrieve.
+
+        Returns:
+            List[Tuple[str, float]]: A list of motifs and their resonance scores.
+        """
+        sorted_resonance = sorted(self.global_motif_resonance.items(), key=lambda x: x[1], reverse=True)
+        return sorted_resonance[:count]
+
+    def consolidate_ledger(self):
+        """
+        Consolidate the ledger by merging or summarizing less significant events.
+        """
+        if len(self.ledger) <= 100:
+            return
+
+        # Group events by type and time
+        grouped_events = defaultdict(list)
+        for event in self.ledger:
+            time_bucket = int(event.timestamp // 10) * 10
+            grouped_events[(event.event_type, time_bucket)].append(event)
+
+        # Consolidate events within each group
+        consolidated_events = []
         return motif["id"]
     
     def _generate_motif_name(self, category: MotifCategory) -> str:
         """Generate a thematic name for a motif based on its category"""
+        for (event_type, _), events in grouped_events.items():
+            if len(events) > 1:
+                earliest = min(e.timestamp for e in events)
+                importance = max(e.importance for e in events)
+                entities = set()
+                motifs = set()
+                descriptions = []
+
+                for e in events:
+                    entities.update(e.entities_involved)
+                    motifs.update(e.motifs_added)
+                    descriptions.append(e.description)
+
+                consolidated_event = ScrollMemoryEvent(
+                    timestamp=earliest,
+                    event_type=event_type,
+                    description=f"Consolidated: {'; '.join(descriptions[:3])}",
+                    importance=importance,
+                    entities_involved=list(entities),
+                    motifs_added=list(motifs)
+                )
+                consolidated_events.append(consolidated_event)
+            else:
+                consolidated_events.extend(events)
+
+        self.ledger = consolidated_events
+        self.last_consolidation_time = max(e.timestamp for e in self.ledger)
+
+    def generate_timeline_summary(self, max_events: int = 10) -> str:
+        """
+        Generate a textual summary of the most significant events in the Cosmic Scroll.
+
+        Args:
+            max_events (int): The maximum number of events to include in the summary.
+
+        Returns:
+            str: A textual summary of the timeline.
+        """
+        sorted_events = sorted(self.ledger, key=lambda e: e.importance, reverse=True)
+        key_events = sorted_events[:max_events]
+        summary = []
+        for event in key_events:
+            summary.append(f"[T{event.timestamp:.2f}] {event.event_type}: {event.description}")
+        return "\n".join(summary)
+
+    def get_thematic_trends(self) -> Dict[str, int]:
+        """
+        Retrieve the thematic trends in the Cosmic Scroll.
+
+        Returns:
+            Dict[str, int]: A dictionary mapping event types to their occurrence counts.
+        """
+        return dict(self.thematic_summary)
+
+    def export_to_dict(self) -> Dict:
+        """
+        Export the Cosmic Scroll to a dictionary format for storage or analysis.
+
+        Returns:
+            Dict: The serialized representation of the Cosmic Scroll.
+        """
+        return {
+            "ledger": [event.to_dict() for event in self.ledger],
+            "thematic_summary": self.thematic_summary,
+            "global_motif_resonance": self.global_motif_resonance,
+            "event_count": self.event_count
+        }
+
+    def import_from_dict(self, data: Dict):
+        """
+        Import data into the Cosmic Scroll from a dictionary format.
+
+        Args:
+            data (Dict): The serialized representation of the Cosmic Scroll.
+        """
+        self.ledger = [ScrollMemoryEvent.from_dict(e) for e in data.get("ledger", [])]
+        self.thematic_summary = defaultdict(int, data.get("thematic_summary", {}))
+        self.global_motif_resonance = defaultdict(float, data.get("global_motif_resonance", {}))
+        self.event_count = data.get("event_count", 0)
+        self._rebuild_indices()
+
+    def _rebuild_indices(self):
+        """
+        Rebuild the indexing system after importing data.
+        """
+        self.index_by_entity.clear()
+        self.index_by_motif.clear()
+        self.index_by_time.clear()
+        for event in self.ledger:
+            for entity_id in event.entities_involved:
+                self.index_by_entity[entity_id].append(event)
+            for motif in event.motifs_added:
+                self.index_by_motif[motif].append(event)
+            self.index_by_time[event.timestamp].append(event)
         # Dictionary of prefix and suffix options for each category
         name_components = {
             MotifCategory.LUMINOUS: {
@@ -5064,7 +5242,13 @@ class RecursiveMetabolism:
             MetabolicProcess.CHEMOSYNTHESIS: ["mineral_transmutation", "chemical_cascade", "elemental_binding"],
             MetabolicProcess.RADIOSYNTHESIS: ["radiation_harvest", "particle_weaving", "decay_reversal"],
             MetabolicProcess.QUANTUM_ENTANGLEMENT: ["probability_harvest", "quantum_threading", "uncertainty_mapping"],
-            MetabolicProcess.SYMBOLIC_ABSORPTION: ["meaning_d
+            MetabolicProcess.SYMBOLIC_ABSORPTION: ["meaning_digestion", "narrative_weaving", "symbolic_transformation"],
+            MetabolicProcess.MOTIF_CYCLING: ["pattern_recycling", "thematic_evolution", "motif_harmonization"],
+            MetabolicProcess.HARMONIC_RESONANCE: ["resonance_harvest", "harmonic_synthesis", "attunement_cycle"]
+        }
+        if self.primary_process in process_motifs:
+            motifs.extend(process_motifs[self.primary_process])
+            
 
 
 class RecursiveMetabolism:
