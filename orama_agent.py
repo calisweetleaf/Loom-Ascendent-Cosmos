@@ -11,10 +11,25 @@ import logging
 import datetime
 import hashlib
 import subprocess
+import time
+import argparse
+import threading
+import asyncio
+import signal
 from typing import Dict, Any, List, Union, Optional, Tuple, Callable
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from dataclasses import dataclass, field, asdict
+
+# Import core engine components
+from timeline_engine import TimelineEngine, TemporalEvent, TimelineMetrics
+from quantum_physics import QuantumField, PhysicsConstants, EthicalGravityManifold
+from aether_engine import AetherEngine, AetherPattern, AetherSpace
+from reality_kernel import RealityKernel, RealityAnchor
+from universe_engine import UniverseEngine
+from paradox_engine import ParadoxEngine
+from mind_seed import MemoryEcho, IdentityMatrix, BreathCycle, NarrativeManifold
+from cosmic_scroll import DimensionalRealityManager
 
 # ================================================================
 #  Configuration and Logging
@@ -111,7 +126,7 @@ class QueryContext:
     timestamp: str = field(default_factory=lambda: datetime.datetime.now().isoformat())
     relevant_memories: List[MemoryEvent] = field(default_factory=list)
     relevant_knowledge: List[KnowledgeEntity] = field(default_factory=list)
-    recent_perceptions: List[SimulationPerception] = field(default_factory=list)
+    recent_perceptions: List<SimulationPerception] = field(default_factory=list)
 
 @dataclass
 class OramaState:
@@ -374,7 +389,7 @@ class PerceptionParser:
         
         return perception
     
-    def get_recent_perceptions(self, count: int = 10) -> List[SimulationPerception]:
+    def get_recent_perceptions(self, count: int = 10) -> List<SimulationPerception]:
         """Get the most recent perceptions"""
         return self.perception_buffer[-count:][::-1]
 
