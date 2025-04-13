@@ -11,6 +11,7 @@
 
 ## ================================================================
 
+```
 ┣ 📂Documentation
 ┃ ┣ 📜CosmosEngine.mermaid
 ┃ ┣ 📜Genesis_Framework.md
@@ -34,3 +35,4 @@
 ┣ 📜timeline_engine.py
 ┣ 📜universe_engine.py
 ┗ 📜universe_evolution.log
+```
