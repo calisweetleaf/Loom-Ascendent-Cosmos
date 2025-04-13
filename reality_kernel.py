@@ -6,7 +6,7 @@
 #  Date: 04/11/2025
 #  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
 # ================================================================
-from typing import Dict, List, Tuple, Optional, Union, Callable
+from typing import Dict, List, Tuple, Optional, Union, Callable, Any
 from collections import deque
 import threading
 import numpy as np
@@ -1139,7 +1139,7 @@ class VolitionInterface:
         """Handle timeline branching command"""
         branch_params = command.get('parameters', {})
         new_branch = self.kernel.timeline.create_branch(
-            branch_params.get('source_point', None),
+            branch_params.get('source_point'),
             branch_params.get('attributes', {})
         )
         

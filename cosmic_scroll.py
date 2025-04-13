@@ -1,3 +1,226 @@
+# ====== Core Python Standard Library ======
+import random
+import logging
+import math
+import uuid
+import time
+from enum import Enum
+from collections import defaultdict
+from datetime import datetime
+from typing import List, Dict, Optional, Union, Any
+
+# ====== Optional Dependencies ======
+try:
+    import numpy as np
+except ImportError:
+    np = None  # Graceful fallback if numpy is not installed
+
+# ====== Genesis Cosmos Engine Modules ======
+from aether_engine import AetherEngine
+from quantum_physics import QuantumPhysics
+from quantum_bridge import QuantumBridge
+from quantum_and_physics import QuantumAndPhysics
+from perception_module import PerceptionModule
+from paradox_engine import ParadoxEngine
+from harmonic_engine import HarmonicEngine
+from main import CoreDispatcher  # Optional if bootstrapping core logic
+
+class CosmicEntity:
+    def tick(self):
+        """Simulates a single tick in the cosmic scroll."""
+        if random.random() < 0.1:  # 10% chance per tick
+            # Get random entities for interaction
+            entity_a, entity_b = random.sample(self.entities, 2)
+            contact_type = 'alien_contact' if self.known_civilizations else 'first_contact'
+            self._handle_interaction(entity_a, entity_b, contact_type)
+
+    def _handle_interaction(self, entity_a, entity_b, contact_type):
+        """Handles interaction between two entities."""
+        print(f"Interaction: {entity_a} and {entity_b} ({contact_type})")
+
+# Fixing nested conditions
+class Entity:
+    def __init__(self, entity_type):
+        self.entity_type = entity_type
+        self.motifs = []
+
+    def apply_effect(self, effect_strength):
+        if random.random() < 0.1 * effect_strength and 'quantum_affected' not in self.motifs:
+            self.motifs.append('quantum_affected')
+
+# Fixing unresolved imports
+try:
+    import numpy as np
+except ImportError:
+    print("Warning: numpy is not installed. Some features may not work.")
+from typing import List, Union
+
+class EntityType(Enum):
+    """Defines types of entities in the simulation"""
+    CIVILIZATION = "civilization"
+    PLANET = "planet"
+    STAR = "star"
+    GALAXY = "galaxy"
+
+class MotifCategory(Enum):
+    """Categories of motifs in the simulation"""
+    LUMINOUS = "luminous"
+    DARK = "dark"
+    CHAOTIC = "chaotic"
+    HARMONIC = "harmonic"
+
+# Fixing unclosed brackets and unsupported backticks
+name_components = {
+    MotifCategory.LUMINOUS: {
+        "prefixes": ["radiant", "glowing", "shining", "illuminated", "bright"],
+        "roots": ["light", "sun", "star", "dawn", "glow"],
+        "suffixes": ["beam", "ray", "flare", "spark", "corona"]
+    },
+    MotifCategory.ABYSSAL: {
+        "prefixes": ["deep", "dark", "void", "hollow", "endless"],
+        "roots": ["abyss", "depth", "void", "darkness", "shadow"],
+        "suffixes": ["pit", "chasm", "well", "trench", "gulf"]
+    },
+    MotifCategory.VITAL: {
+        "prefixes": ["living", "growing", "thriving", "flourishing", "verdant"],
+        "roots": ["life", "growth", "bloom", "pulse", "breath"],
+        "suffixes": ["seed", "root", "heart", "core", "essence"]
+    },
+    MotifCategory.ENTROPIC: {
+        "prefixes": ["decaying", "fading", "eroding", "dissolving", "withering"],
+        "roots": ["entropy", "decay", "dust", "ash", "rust"],
+        "suffixes": ["dissolution", "erosion", "fall", "decline", "end"]
+    },
+    MotifCategory.CRYSTALLINE: {
+        "prefixes": ["ordered", "structured", "patterned", "aligned", "latticed"],
+        "roots": ["crystal", "pattern", "form", "structure", "symmetry"],
+        "suffixes": ["lattice", "matrix", "grid", "array", "framework"]
+    },
+    MotifCategory.CHAOTIC: {
+        "prefixes": ["wild", "turbulent", "swirling", "disordered", "random"],
+        "roots": ["chaos", "storm", "maelstrom", "tempest", "turmoil"],
+        "suffixes": ["vortex", "whirl", "tumult", "frenzy", "disorder"]
+    },
+    MotifCategory.ELEMENTAL: {
+        "prefixes": ["primal", "raw", "fundamental", "essential", "primordial"],
+        "roots": ["element", "earth", "water", "fire", "air"],
+        "suffixes": ["essence", "force", "power", "current", "flow"]
+    },
+    MotifCategory.HARMONIC: {
+        "prefixes": ["resonant", "balanced", "harmonious", "attuned", "aligned"],
+        "roots": ["harmony", "resonance", "balance", "chord", "rhythm"],
+        "suffixes": ["wave", "pulse", "oscillation", "cycle", "frequency"]
+    },
+    MotifCategory.RECURSIVE: {
+        "prefixes": ["nested", "iterative", "folded", "layered", "self-similar"],
+        "roots": ["recursion", "fractal", "loop", "cycle", "pattern"],
+        "suffixes": ["iteration", "reflection", "echo", "mirror", "spiral"]
+    },
+    MotifCategory.TEMPORAL: {
+        "prefixes": ["flowing", "passing", "changing", "cycling", "eternal"],
+        "roots": ["time", "moment", "epoch", "era", "age"],
+        "suffixes": ["flow", "stream", "cycle", "continuity", "progression"]
+    },
+    MotifCategory.DIMENSIONAL: {
+        "prefixes": ["spatial", "volumetric", "expansive", "containing", "vast"],
+        "roots": ["space", "dimension", "realm", "domain", "field"],
+        "suffixes": ["expanse", "extent", "boundary", "horizon", "frontier"]
+    },
+    MotifCategory.CONNECTIVE: {
+        "prefixes": ["linking", "binding", "joining", "weaving", "connecting"],
+        "roots": ["connection", "network", "web", "link", "bond"],
+        "suffixes": ["thread", "bridge", "nexus", "junction", "pathway"]
+    },
+    MotifCategory.SHADOW: {
+        "prefixes": ["hidden", "veiled", "obscured", "occluded", "shrouded"],
+        "roots": ["shadow", "veil", "mask", "secret", "mystery"],
+        "suffixes": ["cloak", "curtain", "shroud", "cover", "fog"]
+    },
+    MotifCategory.ASCENDANT: {
+        "prefixes": ["rising", "ascending", "elevating", "transcending", "surpassing"],
+        "roots": ["ascension", "peak", "summit", "zenith", "pinnacle"],
+        "suffixes": ["flight", "climb", "journey", "transformation", "evolution"]
+    }
+}
+MotifCategory.LUMINOUS, {
+    "roots": ["light", "sun", "star"],
+    "suffixes": ["beam", "flare", "glow"]
+},
+MotifCategory.DARK = {
+    "roots": ["shadow", "void", "abyss"],
+    "suffixes": ["shroud", "veil", "gloom"]
+}
+MotifCategory.CHAOTIC, {
+    "roots": ["storm", "whirl", "chaos"],
+    "suffixes": ["tempest", "maelstrom", "vortex"]
+},
+{MotifCategory.HARMONIC: 
+    {
+        "roots": ["melody", "harmony", "chord"],
+        "suffixes": ["symphony", "resonance", "tune"]
+    }
+}
+import logging
+from enum import Enum
+from typing import Dict, Any
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("CosmicScroll")
+
+class CosmicScroll:
+    def __init__(self):
+        self.entities = {}
+        self.world_state = None
+
+    def tick(self):
+        """
+        Update lifecycle for entities with 'civilization' in their name.
+        """
+        for entity in self.entities.values():
+            try:
+                if "civilization" in entity.name.lower() and hasattr(entity, 'birth_time'):
+                    entity.last_update_time = max(
+                        getattr(entity, 'last_update_time', 0.0),
+                        getattr(self.world_state, 'current_time', 0.0)
+                    )
+
+                    entity.age = max(
+                        getattr(entity, 'age', 0.0),
+                        entity.last_update_time - entity.birth_time
+                    )
+
+                    entity.growth_cycles_completed = max(
+                        getattr(entity, 'growth_cycles_completed', 0),
+                        entity.age // entity.growth_cycle_duration
+                    )
+
+                    entity.growth_factor = min(1.0, entity.age / entity.growth_cycle_duration)
+                    entity.health = max(0.0, 1.0 - (entity.age / entity.lifespan))
+
+                    maturation = 1.0 - (entity.age / entity.lifespan)
+                    entity.maturation_rate = min(1.0, max(0.0, maturation))
+            except AttributeError as e:
+                logger.error(f"Error updating entity {entity}: {e}")
+
+class MetabolicProcess(Enum):
+    """Types of metabolic processes that can occur in living entities"""
+    PHOTOSYNTHESIS = "photosynthesis"
+    RESPIRATION = "respiration"
+    CHEMOSYNTHESIS = "chemosynthesis"
+    RADIOSYNTHESIS = "radiosynthesis"
+    QUANTUM_ENTANGLEMENT = "quantum_entanglement"
+    SYMBOLIC_ABSORPTION = "symbolic_absorption"
+    MOTIF_CYCLING = "motif_cycling"
+    HARMONIC_RESONANCE = "harmonic_resonance"
+
+process_motifs = {
+    MetabolicProcess.PHOTOSYNTHESIS: ["light_harvesting", "solar_alchemy", "growth_cycle"],
+    MetabolicProcess.RESPIRATION: ["oxidation_rhythm", "energy_extraction", "cellular_breath"],
+    MetabolicProcess.CHEMOSYNTHESIS: ["mineral_transmutation", "chemical_cascade", "elemental_binding"],
+    MetabolicProcess.RADIOSYNTHESIS: ["radiation_harvest", "particle_weaving", "decay_reversal"],
+    MetabolicProcess.SYMBOLIC_ABSORPTION: ["meaning_derivation", "semantic_integration", "symbolic_conversion"],
+}
 class CosmicScroll:
     def __init__(self):
         self.entities = {}
@@ -634,10 +857,18 @@ class CosmicScrollManager:
         name_components = {
             MotifCategory.LUMINOUS: {
                 "prefixes": ["radiant", "glowing", "shining", "illuminated", "bright"],
-                "roots": ["light", "sun",
+                "roots": ["light", "sun", "star", "dawn", "glow"],
+                "suffixes": ["beam", "ray", "flare", "spark", "corona"]
             cls._instance = super(DimensionalRealityManager, cls).__new__(cls)
             cls._instance._initialize()
         return cls._instance
+            "star", "dawn", "glow"],
+                "suffixes": ["beam", "ray", "flare", "spark", "corona"]
+            },
+
+        }
+        pass  # Replace with appropriate logic or remove if unnecessary
+        
     
     def _initialize(self):
         """Initialize the DRM singleton"""
@@ -1471,7 +1702,7 @@ class Civilization(CosmicEntity):
                 civ.known_civilizations.append(self.entity_id)
                 
                 # Add motif
-                contact_type = 'first_contact' if not self.known_civilizations else 'alien_contact'
+                contact_type = 'alien_contact' if self.known_civilizations else 'first_contact'
                 self.motifs.append(contact_type)
                 civ.motifs.append(contact_type)
 
@@ -1605,20 +1836,17 @@ class Anomaly(CosmicEntity):
                 
         elif self.anomaly_type == AnomalyType.QUANTUM_FLUCTUATION:
             # Can cause unpredictable behavior or even mutations
-            if random.random() < 0.1 * effect_strength:
-                if 'quantum_affected' not in entity.motifs:
-                    entity.motifs.append('quantum_affected')
-                    
-                    # Special effect on civilizations: boost quantum understanding
-                    if entity.entity_type == EntityType.CIVILIZATION:
-                        if hasattr(entity, 'quantum_understanding'):
-                            entity.quantum_understanding = min(1.0, entity.quantum_understanding + 0.1)
+            if random.random() < 0.1 * effect_strength and 'quantum_affected' not in entity.motifs:
+                entity.motifs.append('quantum_affected')
+                
+                # Special effect on civilizations: boost quantum understanding
+                if entity.entity_type == EntityType.CIVILIZATION and hasattr(entity, 'quantum_understanding'):
+                    entity.quantum_understanding = min(1.0, entity.quantum_understanding + 0.1)
                 
         elif self.anomaly_type == AnomalyType.DIMENSIONAL_RIFT:
             # Can connect to other parts of space or even realities
-            if random.random() < 0.05 * effect_strength:
-                if 'dimensional_exposure' not in entity.motifs:
-                    entity.motifs.append('dimensional_exposure')
+            if random.random() < 0.05 * effect_strength and 'dimensional_exposure' not in entity.motifs:
+                entity.motifs.append('dimensional_exposure')
 
 
 class Universe(CosmicEntity):
@@ -2229,13 +2457,10 @@ class MotifSeeder:
         random.seed(seed_value)
         
         # Get motif pool for this entity type
-        entity_pools = cls._motif_pools.get(entity.entity_type, {})
-        if not entity_pools:
-            # Use generic pool if no specific one exists
-            entity_pools = {
-                MotifCategory.ELEMENTAL: ["generic_pattern", "basic_form", "standard_structure"],
-                MotifCategory.CHAOTIC: ["random_element", "unpredictable_aspect", "complex_behavior"],
-            }
+        entity_pools = cls._motif_pools.get(entity.entity_type, {}) or {
+                        MotifCategory.ELEMENTAL: ["generic_pattern", "basic_form", "standard_structure"],
+                        MotifCategory.CHAOTIC: ["random_element", "unpredictable_aspect", "complex_behavior"],
+                    }
         
         # Select 2-5 categories based on seed
         available_categories = list(entity_pools.keys())
@@ -3813,12 +4038,10 @@ class CivilizationInteraction:
             # Technology transfer (one-way)
             for area in DevelopmentArea:
                 if (hasattr(dominant.tech_levels, area) and 
-                    hasattr(subjugated.tech_levels, area)):
-                    if dominant.tech_levels[area] > subjugated.tech_levels[area]:
-                        # Slow tech transfer to subjugated
-                        boost = (dominant.tech_levels[area] - subjugated.tech_levels[area]) * 0.05 * time_delta
-                        subjugated.tech_levels[area] = min(dominant.tech_levels[area] * 0.8, 
-                                                         subjugated.tech_levels[area] + boost)
+                                    hasattr(subjugated.tech_levels, area)) and dominant.tech_levels[area] > subjugated.tech_levels[area]:
+                    boost = (dominant.tech_levels[area] - subjugated.tech_levels[area]) * 0.05 * time_delta
+                    subjugated.tech_levels[area] = min(dominant.tech_levels[area] * 0.8, 
+                                                     subjugated.tech_levels[area] + boost)
     
     def _resolve_conflict(self):
         """Resolve an ongoing conflict between civilizations"""
@@ -4109,6 +4332,282 @@ DIPLOMATIC_REGISTRY = DiplomaticRegistry()
 # Source: scroll_modules.py
 # This module contains the integrated environmental scroll modules for the Cosmic Scroll system.
 # === World & Environmental Systems ===
+
+"""
+Cosmic Scroll: Recursive Symbolic Simulation Framework
+
+This module contains the class definitions for the Cosmic Scroll simulation. Each class is designed to reflect the principles of motif pressure, scroll memory, recursion depth, anomaly propagation, culture drift, time-forking, and emotional weather.
+"""
+
+# === Life & Biology ===
+class RecursiveMetabolism:
+    """
+    Simulates recursive metabolic processes in symbolic life forms.
+    """
+    def __init__(self, energy_cycle, recursion_depth):
+        self.energy_cycle = energy_cycle
+        self.recursion_depth = recursion_depth
+
+    def simulate(self):
+        """Simulates the metabolic recursion."""
+        pass
+
+class EmotionalResonanceBody:
+    """
+    Represents a symbolic body that resonates with emotional states.
+    """
+    def __init__(self, emotional_state, resonance_frequency):
+        self.emotional_state = emotional_state
+        self.resonance_frequency = resonance_frequency
+
+    def amplify_resonance(self):
+        """Amplifies the emotional resonance."""
+        pass
+
+class RecursiveFaunaPattern:
+    """
+    Models recursive patterns in symbolic fauna.
+    """
+    def __init__(self, pattern_type, recursion_rules):
+        self.pattern_type = pattern_type
+        self.recursion_rules = recursion_rules
+
+    def evolve(self):
+        """Evolves the fauna pattern based on recursion rules."""
+        pass
+
+# === Civilization & Culture ===
+class FreeWillCognitiveLayer:
+    """
+    Simulates a cognitive layer that enables free will in symbolic agents.
+    """
+    def __init__(self, decision_matrix, adaptability):
+        self.decision_matrix = decision_matrix
+        self.adaptability = adaptability
+
+    def make_decision(self):
+        """Processes decisions based on the cognitive layer."""
+        pass
+
+class RitualArchitectureEngine:
+    """
+    Constructs and manages symbolic rituals and their architectures.
+    """
+    def __init__(self, ritual_blueprints, cultural_context):
+        self.ritual_blueprints = ritual_blueprints
+        self.cultural_context = cultural_context
+
+    def execute_ritual(self):
+        """Executes a ritual based on its blueprint."""
+        pass
+
+class CulturalMemoryWeaver:
+    """
+    Weaves cultural memories into the simulation.
+    """
+    def __init__(self, memory_fragments, drift_rate):
+        self.memory_fragments = memory_fragments
+        self.drift_rate = drift_rate
+
+    def weave_memory(self):
+        """Integrates memory fragments into the cultural fabric."""
+        pass
+
+class DynamicLanguageModeler:
+    """
+    Models the evolution of symbolic languages.
+    """
+    def __init__(self, language_rules, mutation_rate):
+        self.language_rules = language_rules
+        self.mutation_rate = mutation_rate
+
+    def evolve_language(self):
+        """Evolves the language based on mutation rates."""
+        pass
+
+class DreamContagionField:
+    """
+    Simulates the spread of dreams and their symbolic impact.
+    """
+    def __init__(self, dream_patterns, contagion_rate):
+        self.dream_patterns = dream_patterns
+        self.contagion_rate = contagion_rate
+
+    def propagate_dreams(self):
+        """Propagates dreams through the contagion field."""
+        pass
+
+# === Warfare & Myth Conflict ===
+class MotifWeaponSystem:
+    """
+    Represents a weapon system based on symbolic motifs.
+    """
+    def __init__(self, motif_type, power_level):
+        self.motif_type = motif_type
+        self.power_level = power_level
+
+    def activate(self):
+        """Activates the motif weapon."""
+        pass
+
+class ScrollArmorEngine:
+    """
+    Provides symbolic armor for scroll-based entities.
+    """
+    def __init__(self, armor_type, durability):
+        self.armor_type = armor_type
+        self.durability = durability
+
+    def reinforce(self):
+        """Reinforces the armor."""
+        pass
+
+# === Divine Ecology ===
+class IdeologicalConflictResolver:
+    """
+    Resolves conflicts between competing ideologies.
+    """
+    def __init__(self, ideologies, resolution_strategy):
+        self.ideologies = ideologies
+        self.resolution_strategy = resolution_strategy
+
+    def resolve(self):
+        """Resolves the ideological conflict."""
+        pass
+
+# === Narrative & Symbol Mechanics ===
+class WorshipFieldConductor:
+    """
+    Conducts worship energy within the simulation.
+    """
+    def __init__(self, worship_patterns, amplification_rate):
+        self.worship_patterns = worship_patterns
+        self.amplification_rate = amplification_rate
+
+    def amplify_worship(self):
+        """Amplifies the worship energy."""
+        pass
+
+class BeliefSymbioteProcessor:
+    """
+    Processes symbiotic relationships between beliefs.
+    """
+    def __init__(self, belief_systems, symbiosis_rate):
+        self.belief_systems = belief_systems
+        self.symbiosis_rate = symbiosis_rate
+
+    def process_beliefs(self):
+        """Processes the symbiotic belief systems."""
+        pass
+
+class DeificAnomalyBurstManager:
+    """
+    Manages bursts of anomalies in deific systems.
+    """
+    def __init__(self, anomaly_patterns, burst_intensity):
+        self.anomaly_patterns = anomaly_patterns
+        self.burst_intensity = burst_intensity
+
+    def manage_burst(self):
+        """Manages the anomaly burst."""
+        pass
+
+# === Advanced Simulation Control ===
+class SymbolicLinguisticsCore:
+    """
+    Core system for symbolic linguistics processing.
+    """
+    def __init__(self, linguistic_rules, processing_power):
+        self.linguistic_rules = linguistic_rules
+        self.processing_power = processing_power
+
+    def process_language(self):
+        """Processes symbolic language data."""
+        pass
+
+class RecursiveNarrativeBuilder:
+    """
+    Builds recursive narratives within the simulation.
+    """
+    def __init__(self, narrative_elements, recursion_depth):
+        self.narrative_elements = narrative_elements
+        self.recursion_depth = recursion_depth
+
+    def build_narrative(self):
+        """Builds a recursive narrative."""
+        pass
+
+class ScrollGlyphEncoder:
+    """
+    Encodes glyphs for the cosmic scroll.
+    """
+    def __init__(self, glyph_set, encoding_rules):
+        self.glyph_set = glyph_set
+        self.encoding_rules = encoding_rules
+
+    def encode_glyphs(self):
+        """Encodes glyphs based on the rules."""
+        pass
+
+class EmotionalClimateMap:
+    """
+    Maps the emotional climate of the simulation.
+    """
+    def __init__(self, climate_data, mapping_resolution):
+        self.climate_data = climate_data
+        self.mapping_resolution = mapping_resolution
+
+    def generate_map(self):
+        """Generates the emotional climate map."""
+        pass
+
+class ScrollReplayManager:
+    """
+    Manages replaying of scroll events.
+    """
+    def __init__(self, replay_data, replay_speed):
+        self.replay_data = replay_data
+        self.replay_speed = replay_speed
+
+    def replay(self):
+        """Replays scroll events."""
+        pass
+
+class TimelineForkDetector:
+    """
+    Detects forks in the simulation timeline.
+    """
+    def __init__(self, timeline_data, detection_sensitivity):
+        self.timeline_data = timeline_data
+        self.detection_sensitivity = detection_sensitivity
+
+    def detect_fork(self):
+        """Detects a timeline fork."""
+        pass
+
+class MetaScrollConvergenceEngine:
+    """
+    Ensures convergence of meta-scrolls in the simulation.
+    """
+    def __init__(self, scroll_data, convergence_rules):
+        self.scroll_data = scroll_data
+        self.convergence_rules = convergence_rules
+
+    def converge_scrolls(self):
+        """Converges meta-scrolls."""
+        pass
+
+class RealityObserverWeightIndex:
+    """
+    Indexes the weight of reality observers in the simulation.
+    """
+    def __init__(self, observer_data, weight_calculation_rules):
+        self.observer_data = observer_data
+        self.weight_calculation_rules = weight_calculation_rules
+
+    def calculate_weight(self):
+        """Calculates the weight of reality observers."""
+        pass
 
 ```
 # -------------------------------------------------------------------------
@@ -4518,7 +5017,10 @@ class RecursiveMetabolism:
             MetabolicProcess.CHEMOSYNTHESIS: ["mineral_transmutation", "chemical_cascade", "elemental_binding"],
             MetabolicProcess.RADIOSYNTHESIS: ["radiation_harvest", "particle_weaving", "decay_reversal"],
             MetabolicProcess.QUANTUM_ENTANGLEMENT: ["probability_harvest", "quantum_threading", "uncertainty_mapping"],
-            MetabolicProcess.SYMBOLIC_ABSORPTION: ["meaning_d
+            MetabolicProcess.SYMBOLIC_ABSORPTION: ["meaning_digestion", "narrative_weaving", "symbolic_transformation"],
+            MetabolicProcess.MOTIF_CYCLING: ["pattern_recycling", "motif_evolution", "thematic_transformation"],
+            MetabolicProcess.HARMONIC_RESONANCE: ["resonance_harvest", "harmonic_weaving", "attunement_cycle"]
+        
 
 
 class RecursiveMetabolism:
@@ -4556,12 +5058,15 @@ class RecursiveMetabolism:
             recursion_depth: How many levels of recursive processing to maintain
             symbolic_affinity: Affinity for different symbolic energies
         """
+        # Initialize core attributes
+        self.complexity = 0.5  # Complexity of the metabolic network (0.0-1.0)
         self.owner = owner_entity
-        self.base_efficiency = base_efficiency
+        self.base_efficiency = max(0.1, min(0.95, base_efficiency))
         self.primary_process = primary_process or self._select_default_process()
-        self.secondary_processes = secondary_processes or []
-        self.recursion_depth = recursion_depth
+        self.secondary_processes = secondary_processes or [self._select_default_process()]
+        self.recursion_depth = max(1, min(5, recursion_depth))
         self.symbolic_affinity = symbolic_affinity or self._generate_symbolic_affinity()
+
         
         # Energy storage at different recursion levels
         self.energy_pools = {
@@ -7963,26 +8468,23 @@ def integrate_environment_with_planet(planet: Planet, world_state: WorldState = 
                 height = world_state.terrain_height_map[x, y]
                 
                 # Increase height for mountainous regions
-                if 'mountains' in planet.surface:
-                    if random.random() < planet.surface['mountains']:
-                        height += random.random() * 0.5
+                if 'mountains' in planet.surface and random.random() < planet.surface['mountains']:
+                    height += random.random() * 0.5
                 
                 # Lower height for water regions
-                if 'water' in planet.surface:
-                    if random.random() < planet.surface['water']:
-                        height -= random.random() * 0.3
+                if 'water' in planet.surface and random.random() < planet.surface['water']:
+                    height -= random.random() * 0.3
                 
                 # Create crater depressions
-                if 'craters' in planet.surface:
-                    if random.random() < planet.surface['craters'] * 0.3:
-                        crater_radius = random.randint(5, 20)
-                        crater_x = random.randint(0, world_state.width - 1)
-                        crater_y = random.randint(0, world_state.height - 1)
-                        
-                        dist = math.sqrt((x - crater_x)**2 + (y - crater_y)**2)
-                        if dist < crater_radius:
-                            depth = (1 - (dist / crater_radius)) * 0.3
-                            height -= depth
+                if 'craters' in planet.surface and random.random() < planet.surface['craters'] * 0.3:
+                    crater_radius = random.randint(5, 20)
+                    crater_x = random.randint(0, world_state.width - 1)
+                    crater_y = random.randint(0, world_state.height - 1)
+                    
+                    dist = math.sqrt((x - crater_x)**2 + (y - crater_y)**2)
+                    if dist < crater_radius:
+                        depth = (1 - (dist / crater_radius)) * 0.3
+                        height -= depth
                 
                 # Update height with constraints
                 world_state.terrain_height_map[x, y] = max(0, min(1, height))
@@ -8159,9 +8661,9 @@ def apply_environmental_effects_to_civilization(civilization: Civilization, worl
                 
             # 3. Storm effects
             for effect in climate_data.get('active_effects', []):
-                if effect.get('type') == 'storm' and effect.get('intensity', 0) > 0.7:
+                if effect.ge                if effect.get('type') == 'storm' and effect.get('intensity', 0) > 0.7 and random.random() < effect.get('intensity', 0) * 0.2:
                     # Strong storms temporarily disrupt civilization
-                    if random.random() < effect.get('intensity', 0) * 0.2:
+m.random() < effect.get('intensity', 0) * 0.2:
                         # Slow development slightly
                         civilization.development_level = max(0, civilization.development_level - 0.01)
                         
