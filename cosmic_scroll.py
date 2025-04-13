@@ -1,3 +1,488 @@
+class CosmicScrollManager:
+    """
+    Central management system for the Loom Ascendant Cosmos engine.
+    
+    Handles simulation ticks, scroll memory, motif generation, and symbolic narrative progression.
+    Acts as the runtime loop for the entire system.
+    """
+    
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(CosmicScrollManager, cls).__new__(cls)
+            cls._instance._initialize()
+        return cls._instance
+    
+    def _initialize(self):
+        """Initialize the Cosmic Scroll Manager"""
+        self.entities = {}  # entity_id -> entity object
+        self.entity_types = defaultdict(set)  # entity_type -> set of entity_ids
+        
+        self.motif_library = {}  # motif_id -> motif data
+        self.entity_motifs = defaultdict(set)  # entity_id -> set of motif_ids
+        
+        self.event_history = []  # List of all events
+        self.recent_events = deque(maxlen=100)  # Recent events for quick access
+        
+        self.tick_count = 0
+        self.time_scale = 1.0  # Time dilation factor
+        self.breath_cycle_length = 12  # Ticks per complete breath cycle
+        self.breath_phase = BreathPhase.INHALE
+        self.breath_progress = 0.0  # 0.0 to 1.0 within current phase
+        
+        self.inhale_ratio = 0.3    # Proportion of cycle spent inhaling
+        self.hold_in_ratio = 0.2   # Proportion of cycle spent holding in
+        self.exhale_ratio = 0.3    # Proportion of cycle spent exhaling
+        self.hold_out_ratio = 0.2  # Proportion of cycle spent holding out
+        
+        self.history = {
+            "creation_time": datetime.now(),
+            "tick_history": [],
+            "significant_events": []
+        }
+        
+        self.motif_feedback_queue = deque(maxlen=50)  # Recent motif data for external systems
+        
+        logger.info("CosmicScrollManager initialized")
+    
+    def tick(self, delta_time: float = 1.0) -> Dict:
+        """
+        Advance the simulation forward one step.
+        
+        Args:
+            delta_time: Time multiplier for this tick
+            
+        Returns:
+            Dict containing information about the current tick
+        """
+        adjusted_delta = delta_time * self.time_scale
+        self.tick_count += 1
+        
+        # Update breath cycle
+        self._update_breath_cycle()
+        
+        # Process entity evolution
+        evolved_entities = self._evolve_entities(adjusted_delta)
+        
+        # Generate events from entity interactions
+        generated_events = self._generate_events()
+        
+        # Process any pending events
+        for event in generated_events:
+            self.log_event(event)
+        
+        # Record tick information
+        tick_info = {
+            "tick_id": self.tick_count,
+            "timestamp": datetime.now(),
+            "delta_time": adjusted_delta,
+            "breath_phase": self.breath_phase.value,
+            "breath_progress": self.breath_progress,
+            "entities_evolved": len(evolved_entities),
+            "events_generated": len(generated_events)
+        }
+        
+        # Store tick history (limiting to last 100 ticks)
+        self.history["tick_history"].append(tick_info)
+        if len(self.history["tick_history"]) > 100:
+            self.history["tick_history"] = self.history["tick_history"][-100:]
+            
+        logger.debug(f"Tick {self.tick_count} completed")
+        return tick_info
+    
+    def _update_breath_cycle(self):
+        """Update the breath cycle phase and progress"""
+        total_progress = (self.tick_count % self.breath_cycle_length) / self.breath_cycle_length
+        
+        # Determine current phase
+        if total_progress < self.inhale_ratio:
+            self.breath_phase = BreathPhase.INHALE
+            self.breath_progress = total_progress / self.inhale_ratio
+        elif total_progress < (self.inhale_ratio + self.hold_in_ratio):
+            self.breath_phase = BreathPhase.HOLD_IN
+            self.breath_progress = (total_progress - self.inhale_ratio) / self.hold_in_ratio
+        elif total_progress < (self.inhale_ratio + self.hold_in_ratio + self.exhale_ratio):
+            self.breath_phase = BreathPhase.EXHALE
+            self.breath_progress = (total_progress - self.inhale_ratio - self.hold_in_ratio) / self.exhale_ratio
+        else:
+            self.breath_phase = BreathPhase.HOLD_OUT
+            self.breath_progress = (total_progress - self.inhale_ratio - self.hold_in_ratio - self.exhale_ratio) / self.hold_out_ratio
+    
+    def _evolve_entities(self, delta_time: float) -> List[str]:
+        """
+        Evolve all entities forward in time.
+        
+        Args:
+            delta_time: Time multiplier for this evolution step
+            
+        Returns:
+            List of entity IDs that were evolved
+        """
+        evolved_entities = []
+        
+        for entity_id, entity in self.entities.items():
+            if hasattr(entity, 'evolve'):
+                try:
+                    entity.evolve(delta_time)
+                    evolved_entities.append(entity_id)
+                except Exception as e:
+                    logger.error(f"Error evolving entity {entity_id}: {str(e)}")
+        
+        return evolved_entities
+    
+    def _generate_events(self) -> List[Dict]:
+        """
+        Generate events from entity interactions.
+        This is a placeholder for more complex event generation logic.
+        
+        Returns:
+            List of generated events
+        """
+        # This would be implemented with more sophisticated logic
+        # that detects meaningful interactions between entities
+        events = []
+        
+        # Simple example: random events for demonstration
+        if random.random() < 0.1:  # 10% chance per tick
+            # Get random entities for interaction
+            if len(self.entities) >= 2:
+                entities = random.sample(list(self.entities.keys()), 2)
+                
+                event = {
+                    "type": random.choice(list(EventType)).value,
+                    "timestamp": self.tick_count,
+                    "entities_involved": entities,
+                    "description": f"Random interaction between {entities[0]} and {entities[1]}",
+                    "importance": random.uniform(0.1, 1.0)
+                }
+                
+                events.append(event)
+        
+        return events
+    
+    def register_entity(self, entity) -> str:
+        """
+        Register an entity with the Cosmic Scroll system.
+        
+        Args:
+            entity: The entity object to register
+            
+        Returns:
+            The entity ID
+        """
+        # Ensure entity has an ID
+        if not hasattr(entity, 'entity_id'):
+            entity.entity_id = f"{entity.__class__.__name__.lower()}_{uuid.uuid4().hex}"
+        
+        entity_id = entity.entity_id
+        
+        # Register the entity
+        self.entities[entity_id] = entity
+        
+        # Register entity type if available
+        if hasattr(entity, 'entity_type'):
+            entity_type = entity.entity_type
+            if isinstance(entity_type, EntityType):
+                entity_type = entity_type.value
+            self.entity_types[entity_type].add(entity_id)
+        
+        logger.debug(f"Entity {entity_id} registered")
+        return entity_id
+    
+    def log_event(self, event: Dict):
+        """
+        Log an event in the cosmic scroll history.
+        
+        Args:
+            event: The event data to log
+        """
+        # Add timestamp if not present
+        if "timestamp" not in event:
+            event["timestamp"] = self.tick_count
+            
+        # Add a unique ID for the event
+        event["event_id"] = f"event_{uuid.uuid4().hex}"
+        
+        # Log the event
+        self.event_history.append(event)
+        self.recent_events.append(event)
+        
+        # If it's a significant event, add to significant events history
+        if event.get("importance", 0.0) > 0.7:
+            self.history["significant_events"].append(event)
+            logger.info(f"Significant event: {event['description']}")
+        else:
+            logger.debug(f"Event logged: {event['description']}")
+    
+    def get_motif_feedback(self, max_items: int = 10) -> List[Dict]:
+        """
+        Retrieve motif data for external systems.
+        
+        Args:
+            max_items: Maximum number of motif items to return
+            
+        Returns:
+            List of recent motif data
+        """
+        # Get the most recent motifs from the feedback queue
+        recent_motifs = list(self.motif_feedback_queue)[-max_items:]
+        
+        # Create a feedback packet
+        feedback = {
+            "tick_count": self.tick_count,
+            "breath_phase": self.breath_phase.value,
+            "breath_progress": self.breath_progress,
+            "motifs": recent_motifs,
+            "motif_count": len(self.motif_library),
+            "entity_count": len(self.entities),
+            "dominant_categories": self._get_dominant_motif_categories()
+        }
+        
+        return feedback
+        
+    def _get_dominant_motif_categories(self) -> Dict[str, float]:
+        """Calculate the currently dominant motif categories in the system"""
+        category_strengths = defaultdict(float)
+        
+        # Sum the strength of all motifs by category
+        for motif in self.motif_library.values():
+            category = motif["category"]
+            strength = motif["strength"] * motif["resonance"]
+            category_strengths[category] += strength
+        
+        # Normalize to get relative strengths
+        total_strength = sum(category_strengths.values()) or 1.0
+        return {category: strength/total_strength for category, strength in category_strengths.items()}
+class CosmicScroll:
+    def __init__(self):
+        self.entities = {}
+        self.world_state = None
+        self.motif_library = {}
+        self.motif_feedback_queue = deque(maxlen=50)
+        self.entity_motifs = defaultdict(set)
+        self.entity_types = defaultdict(set)
+        self.event_history = []
+        self.tick_count = 0
+        self.breath_phase = BreathPhase.INHALE
+        self.breath_progress = 0.0
+        self.history = {
+            "creation_time": datetime.now(),
+            "tick_history": [],
+            "significant_events": []
+        }
+
+    def tick(self):
+        # Update lifecycle for entities with 'civilization' in their name
+        for entity in self.entities.values():
+            if "civilization" in entity.name.lower() and hasattr(entity, 'birth_time'):
+                entity.last_update_time = max(
+                    getattr(entity, 'last_update_time', 0.0),
+                    getattr(self.world_state, 'current_time', 0.0)
+                )
+
+                entity.age = max(
+                    getattr(entity, 'age', 0.0),
+                    entity.last_update_time - entity.birth_time
+                )
+
+                entity.growth_cycles_completed = max(
+                    getattr(entity, 'growth_cycles_completed', 0),
+                    entity.age // entity.growth_cycle_duration
+                )
+
+                entity.growth_factor = min(1.0, entity.age / entity.growth_cycle_duration)
+                entity.health = max(0.0, 1.0 - (entity.age / entity.lifespan))
+
+                maturation = 1.0 - (entity.age / entity.lifespan)
+                entity.maturation_rate = min(1.0, max(0.0, maturation))
+
+    def get_motif_feedback(self, max_items: int = 10) -> List[Dict]:
+        """
+        Retrieve motif data for external systems.
+        
+        Args:
+            max_items: Maximum number of motif items to return
+            
+        Returns:
+            List of recent motif data
+        """
+        # Get the most recent motifs from the feedback queue
+        recent_motifs = list(self.motif_feedback_queue)[-max_items:]
+        
+        # Create a feedback packet
+        feedback = {
+            "tick_count": self.tick_count,
+            "breath_phase": self.breath_phase.value,
+            "breath_progress": self.breath_progress,
+            "motifs": recent_motifs,
+            "motif_count": len(self.motif_library),
+            "entity_count": len(self.entities),
+            "dominant_categories": self._get_dominant_motif_categories()
+        }
+        
+        return feedback
+    
+    def _get_dominant_motif_categories(self) -> Dict[str, float]:
+        """Calculate the currently dominant motif categories in the system"""
+        category_strengths = defaultdict(float)
+        
+        # Sum the strength of all motifs by category
+        for motif in self.motif_library.values():
+            category = motif["category"]
+            strength = motif["strength"] * motif["resonance"]
+            category_strengths[category] += strength
+        
+        # Normalize to get relative strengths
+        total_strength = sum(category_strengths.values()) or 1.0
+        return {category: strength/total_strength for category, strength in category_strengths.items()}
+    
+    def get_entity_by_id(self, entity_id: str) -> Optional[Any]:
+        """Retrieve an entity by its ID"""
+        return self.entities.get(entity_id)
+    
+    def get_entities_by_type(self, entity_type: Union[str, EntityType]) -> List[Any]:
+        """Retrieve all entities of a specific type"""
+        if isinstance(entity_type, EntityType):
+            entity_type = entity_type.value
+            
+        entity_ids = self.entity_types.get(entity_type, set())
+        return [self.entities[eid] for eid in entity_ids if eid in self.entities]
+    
+    def get_entity_motifs(self, entity_id: str) -> List[Dict]:
+        """Get all motifs associated with an entity"""
+        motif_ids = self.entity_motifs.get(entity_id, set())
+        return [self.motif_library[mid] for mid in motif_ids if mid in self.motif_library]
+    
+    def get_events_by_entity(self, entity_id: str, max_events: int = 10) -> List[Dict]:
+        """Get events involving a specific entity"""
+        events = [
+            event for event in self.event_history 
+            if entity_id in event.get("entities_involved", [])
+        ]
+        return sorted(events, key=lambda e: e.get("timestamp", 0), reverse=True)[:max_events]
+    
+    def get_simulation_stats(self) -> Dict:
+        """Get current statistics about the simulation"""
+        entity_type_counts = {etype: len(eids) for etype, eids in self.entity_types.items()}
+        
+        return {
+            "tick_count": self.tick_count,
+            "entity_count": len(self.entities),
+            "entity_types": entity_type_counts,
+            "event_count": len(self.event_history),
+            "motif_count": len(self.motif_library),
+            "breath_phase": self.breath_phase.value,
+            "creation_time": self.history["creation_time"],
+            "runtime": (datetime.now() - self.history["creation_time"]).total_seconds(),
+            "significant_events": len(self.history["significant_events"])
+        }
+        
+    def _generate_motif_name(self, category: MotifCategory) -> str:
+        """Generate a thematic name for a motif based on its category"""
+        # Dictionary of prefix and suffix options for each category
+        name_components = {
+            MotifCategory.LUMINOUS: {
+                "prefixes": ["radiant", "glowing", "shining", "illuminated", "bright"],
+                "roots": ["light", "sun", "star", "dawn", "glow"],
+                "suffixes": ["beam", "ray", "flare", "spark", "corona"]
+            },
+            MotifCategory.ABYSSAL: {
+                "prefixes": ["deep", "dark", "void", "hollow", "endless"],
+                "roots": ["abyss", "depth", "void", "darkness", "shadow"],
+                "suffixes": ["pit", "chasm", "well", "trench", "gulf"]
+            },
+            MotifCategory.VITAL: {
+                "prefixes": ["living", "growing", "thriving", "flourishing", "verdant"],
+                "roots": ["life", "growth", "bloom", "pulse", "breath"],
+                "suffixes": ["seed", "root", "heart", "core", "essence"]
+            },
+            MotifCategory.ENTROPIC: {
+                "prefixes": ["decaying", "fading", "eroding", "dissolving", "withering"],
+                "roots": ["entropy", "decay", "dust", "ash", "rust"],
+                "suffixes": ["dissolution", "erosion", "fall", "decline", "end"]
+            },
+            MotifCategory.CRYSTALLINE: {
+                "prefixes": ["ordered", "structured", "patterned", "aligned", "latticed"],
+                "roots": ["crystal", "pattern", "form", "structure", "symmetry"],
+                "suffixes": ["lattice", "matrix", "grid", "array", "framework"]
+            },
+            MotifCategory.CHAOTIC: {
+                "prefixes": ["wild", "turbulent", "swirling", "disordered", "random"],
+                "roots": ["chaos", "storm", "maelstrom", "tempest", "turmoil"],
+                "suffixes": ["vortex", "whirl", "tumult", "frenzy", "disorder"]
+            },
+            MotifCategory.ELEMENTAL: {
+                "prefixes": ["primal", "raw", "fundamental", "essential", "primordial"],
+                "roots": ["element", "earth", "water", "fire", "air"],
+                "suffixes": ["essence", "force", "power", "current", "flow"]
+            },
+            MotifCategory.HARMONIC: {
+                "prefixes": ["resonant", "balanced", "harmonious", "attuned", "aligned"],
+                "roots": ["harmony", "resonance", "balance", "chord", "rhythm"],
+                "suffixes": ["wave", "pulse", "oscillation", "cycle", "frequency"]
+            },
+            MotifCategory.RECURSIVE: {
+                "prefixes": ["nested", "iterative", "folded", "layered", "self-similar"],
+                "roots": ["recursion", "fractal", "loop", "cycle", "pattern"],
+                "suffixes": ["iteration", "reflection", "echo", "mirror", "spiral"]
+            },
+            MotifCategory.TEMPORAL: {
+                "prefixes": ["flowing", "passing", "changing", "cycling", "eternal"],
+                "roots": ["time", "moment", "epoch", "era", "age"],
+                "suffixes": ["flow", "stream", "cycle", "continuity", "progression"]
+            },
+            MotifCategory.DIMENSIONAL: {
+                "prefixes": ["spatial", "volumetric", "expansive", "containing", "vast"],
+                "roots": ["space", "dimension", "realm", "domain", "field"],
+                "suffixes": ["expanse", "extent", "boundary", "horizon", "frontier"]
+            },
+            MotifCategory.CONNECTIVE: {
+                "prefixes": ["linking", "binding", "joining", "weaving", "connecting"],
+                "roots": ["connection", "network", "web", "link", "bond"],
+                "suffixes": ["thread", "bridge", "nexus", "junction", "pathway"]
+            },
+            MotifCategory.SHADOW: {
+                "prefixes": ["hidden", "veiled", "obscured", "occluded", "shrouded"],
+                "roots": ["shadow", "veil", "mask", "secret", "mystery"],
+                "suffixes": ["cloak", "curtain", "shroud", "cover", "fog"]
+            },
+            MotifCategory.ASCENDANT: {
+                "prefixes": ["rising", "ascending", "elevating", "transcending", "surpassing"],
+                "roots": ["ascension", "peak", "summit", "zenith", "pinnacle"],
+                "suffixes": ["flight", "climb", "journey", "transformation", "evolution"]
+            }
+        }
+        
+        components = name_components.get(category, {
+            "prefixes": ["mysterious", "unknown", "undefined"],
+            "roots": ["pattern", "form", "essence"],
+            "suffixes": ["manifestation", "presence", "aspect"]
+        })
+        
+        # Generate a name using the components
+        name_structure = random.choice([
+            "{prefix}_{root}",
+            "{root}_{suffix}",
+            "{prefix}_{root}_{suffix}"
+        ])
+        
+        name_parts = {
+            "prefix": random.choice(components["prefixes"]),
+            "root": random.choice(components["roots"]),
+            "suffix": random.choice(components["suffixes"])
+        }
+        
+        return name_structure.format(**name_parts)
+```
+# ================================================================
+#  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
+#  Author: Morpheus (Creator), Somnus Development Collective 
+#  License: Proprietary Software License Agreement (Somnus Development Collective)
+#  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
+# ================================================================
+
+CosmicScroll Engine
 class CosmicScroll:
     def __init__(self):
         self.entities = {}
