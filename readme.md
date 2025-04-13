@@ -23,7 +23,7 @@ The Genesis Cosmos Engine implements a formal architectural theorem composed of 
 ```
 
 Timeline Engine → Quantum & Physics Base Engine → Aether Layer →
-Universe Engine → AetherWorld Layer → World Renderer → Simulation Engine
+Universe Engine → AetherWorld Layer → World Renderer → Simulation Engine--
 
 ```
 

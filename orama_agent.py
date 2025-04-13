@@ -563,6 +563,131 @@ class KnowledgeSynthesizer:
             knowledge_logger.info(f"Saved {len(self.entities)} knowledge entities to {self.knowledge_file}")
         except Exception as e:
             knowledge_logger.error(f"Error saving knowledge: {e}")
+    
+    def add_entity(self, entity: Union[KnowledgeEntity, Dict]) -> str:
+        """Add a new knowledge entity to the knowledge base"""
+        # Convert dict to KnowledgeEntity if needed
+        if isinstance(entity, dict):
+            entity = KnowledgeEntity(**entity)
+        
+        # Add to entities dictionary
+        self.entities[entity.entity_id] = entity
+        knowledge_logger.info(f"Added knowledge entity: {entity.entity_type} - {entity.name}")
+        
+        # Save to disk periodically (can be optimized to batch saves)
+        self.save_knowledge()
+        
+        return entity.entity_id
+    
+    def get_entity(self, entity_id: str) -> Optional[KnowledgeEntity]:
+        """Get an entity by its ID"""
+        return self.entities.get(entity_id)
+    
+    def search_entities(self, query: str, entity_type: Optional[str] = None, limit: int = 10) -> List[KnowledgeEntity]:
+        """Search for entities by name or attributes"""
+        results = []
+        query = query.lower()
+        
+        for entity in self.entities.values():
+            # Filter by type if specified
+            if entity_type and entity.entity_type != entity_type:
+                continue
+                
+            # Match by name
+            if query in entity.name.lower():
+                results.append(entity)
+                if len(results) >= limit:
+                    break
+                
+            # Match by attribute values
+            for attr_value in str(entity.attributes).lower():
+                if query in attr_value:
+                    if entity not in results:
+                        results.append(entity)
+                    if len(results) >= limit:
+                        break
+        
+        return results
+    
+    def generate_knowledge_from_perceptions(self, recent_perceptions: List[SimulationPerception], count: int = 5) -> List[str]:
+        """Generate new knowledge entities from recent perceptions"""
+        generated_entity_ids = []
+        
+        # Get a set of relevant perceptions to analyze
+        perceptions_to_analyze = recent_perceptions[:count]
+        if not perceptions_to_analyze:
+            return generated_entity_ids
+            
+        knowledge_logger.info(f"Analyzing {len(perceptions_to_analyze)} perceptions to generate knowledge")
+        
+        for perception in perceptions_to_analyze:
+            # Extract entities from perception content using patterns
+            entity_matches = re.findall(r'Entity:\s+(\w+)', perception.content)
+            event_matches = re.findall(r'Event:\s+(.+?)(?:\.|$)', perception.content)
+            
+            # Create entities for recognized patterns
+            for entity_name in entity_matches:
+                # Check if we already know about this entity
+                existing_entities = self.search_entities(entity_name)
+                if not existing_entities:
+                    # Create new entity
+                    entity_id = hashlib.sha256(f"entity:{entity_name}".encode()).hexdigest()[:16]
+                    
+                    new_entity = KnowledgeEntity(
+                        entity_id=entity_id,
+                        entity_type="SIMULATION_ENTITY",
+                        name=entity_name,
+                        attributes={
+                            "first_observed": perception.timestamp,
+                            "observation_count": 1
+                        },
+                        source_memories=[perception.to_memory_event().hash_id]
+                    )
+                    
+                    self.add_entity(new_entity)
+                    generated_entity_ids.append(entity_id)
+                    knowledge_logger.info(f"Generated new entity: {entity_name}")
+                else:
+                    # Update existing entity
+                    for existing in existing_entities:
+                        # Update observation count
+                        if "observation_count" in existing.attributes:
+                            existing.attributes["observation_count"] += 1
+                        else:
+                            existing.attributes["observation_count"] = 1
+                            
+                        # Add source memory if not already there
+                        memory_id = perception.to_memory_event().hash_id
+                        if memory_id not in existing.source_memories:
+                            existing.source_memories.append(memory_id)
+                            
+                        # Update timestamp
+                        existing.updated_at = datetime.datetime.now().isoformat()
+                        knowledge_logger.debug(f"Updated entity: {existing.name}")
+            
+            # Create event entities
+            for event_desc in event_matches:
+                event_id = hashlib.sha256(f"event:{event_desc}".encode()).hexdigest()[:16]
+                
+                # Only create if this is a new event
+                if not self.get_entity(event_id):
+                    new_event = KnowledgeEntity(
+                        entity_id=event_id,
+                        entity_type="EVENT",
+                        name=f"Event: {event_desc[:50]}...",
+                        attributes={
+                            "description": event_desc,
+                            "timestamp": perception.timestamp
+                        },
+                        source_memories=[perception.to_memory_event().hash_id]
+                    )
+                    
+                    self.add_entity(new_event)
+                    generated_entity_ids.append(event_id)
+                    knowledge_logger.info(f"Generated new event entity: {event_desc[:50]}...")
+        
+        knowledge_logger.info(f"Generated {len(generated_entity_ids)} new knowledge entities")
+        return generated_entity_ids
 
 # ================================================================
 #  ORAMA System - Main Class
@@ -669,6 +794,8 @@ class OramaSystem:
 def main():
     """Main entry point for the ORAMA system"""
     import argparse
+    import time
+    import random
     
     parser = argparse.ArgumentParser(description="ORAMA - Observation, Reasoning, And Memory Agent")
     parser.add_argument('--interactive', action='store_true', help='Run in interactive mode')
@@ -677,6 +804,9 @@ def main():
     parser.add_argument('--knowledge-file', type=str, default=KNOWLEDGE_FILE, help=f'Knowledge storage file (default: {KNOWLEDGE_FILE})')
     parser.add_argument('--log-dir', type=str, default=LOG_DIR, help=f'Log directory (default: {LOG_DIR})')
     parser.add_argument('--max-memories', type=int, default=10000, help='Maximum number of memories to keep')
+    parser.add_argument('--continuous', action='store_true', help='Run in continuous mode, generating and processing data')
+    parser.add_argument('--interval', type=float, default=5.0, help='Interval between perception generation in seconds (default: 5.0)')
+    parser.add_argument('--runtime', type=int, default=0, help='How long to run in continuous mode in seconds (0 for indefinite)')
     
     args = parser.parse_args()
     
@@ -704,9 +834,123 @@ def main():
     # Run interactive mode if specified
     if args.interactive:
         interactive_mode(orama)
+    # Run in continuous mode if specified
+    elif args.continuous:
+        continuous_mode(orama, interval=args.interval, runtime=args.runtime)
+    # If no mode is specified, run in continuous mode by default
+    else:
+        print("No operation mode specified. Running in continuous mode by default.")
+        continuous_mode(orama, interval=args.interval, runtime=args.runtime)
     
     # Shutdown properly
     orama.shutdown()
+
+def continuous_mode(orama: OramaSystem, interval: float = 5.0, runtime: int = 0) -> None:
+    """
+    Run ORAMA in continuous mode, automatically generating perceptions and knowledge
+    
+    Args:
+        orama: The OramaSystem instance
+        interval: Time between perception generation in seconds
+        runtime: How long to run in seconds (0 for indefinite)
+    """
+    import time
+    import random
+    
+    system_logger.info(f"Starting continuous mode (interval={interval}s, runtime={runtime if runtime > 0 else 'indefinite'}s)")
+    print(f"ORAMA Continuous Mode (Press Ctrl+C to stop)")
+    
+    # Sample perception templates for simulation
+    perception_templates = [
+        "Entity: {entity} observed in {location} with state {state}",
+        "Event: {entity} changed from {old_state} to {new_state}",
+        "INFO: System is analyzing {entity} with metric {metric}: {value}",
+        "Entity: {entity} interacting with {other_entity} in {context}",
+        "Event: New pattern detected in {entity} behavior: {pattern}"
+    ]
+    
+    # Sample data for templates
+    entities = ["Particle", "Wave", "Field", "Anomaly", "Structure", "Dimension", "Recursion", "Pattern", "Cycle", "Nexus"]
+    locations = ["Quadrant1", "MainLoop", "CoreMemory", "PerceptionField", "DataStream", "VoidSpace", "BoundaryLayer"]
+    states = ["Stable", "Unstable", "Expanding", "Contracting", "Resonating", "Diverging", "Converging", "Fluctuating"]
+    metrics = ["Coherence", "Stability", "Symmetry", "Complexity", "Entropy", "Recursion", "Amplitude", "Frequency"]
+    patterns = ["Recursive", "Symmetric", "Oscillating", "Divergent", "Convergent", "Self-similar", "Fractal", "Chaotic"]
+    contexts = ["Information exchange", "Energy transfer", "Structure formation", "Pattern recognition", "Memory encoding"]
+    
+    start_time = time.time()
+    cycle_count = 0
+    last_knowledge_gen_time = start_time
+    
+    try:
+        while True:
+            current_time = time.time()
+            elapsed = current_time - start_time
+            
+            # Check if runtime has been exceeded
+            if runtime > 0 and elapsed > runtime:
+                system_logger.info(f"Runtime of {runtime}s reached, exiting continuous mode")
+                break
+            
+            # Generate a random perception
+            template = random.choice(perception_templates)
+            
+            if "Entity:" in template:
+                entity = random.choice(entities)
+                location = random.choice(locations)
+                state = random.choice(states)
+                perception_text = template.format(entity=entity, location=location, state=state)
+            elif "Event:" in template and "pattern" in template:
+                entity = random.choice(entities)
+                pattern = random.choice(patterns)
+                perception_text = template.format(entity=entity, pattern=pattern)
+            elif "Event:" in template:
+                entity = random.choice(entities)
+                old_state = random.choice(states)
+                # Ensure new state is different from old state
+                new_state = random.choice([s for s in states if s != old_state])
+                perception_text = template.format(entity=entity, old_state=old_state, new_state=new_state)
+            elif "INFO:" in template:
+                entity = random.choice(entities)
+                metric = random.choice(metrics)
+                value = round(random.uniform(0, 100), 2)
+                perception_text = template.format(entity=entity, metric=metric, value=value)
+            elif "interacting" in template:
+                entity = random.choice(entities)
+                other_entity = random.choice([e for e in entities if e != entity])
+                context = random.choice(contexts)
+                perception_text = template.format(entity=entity, other_entity=other_entity, context=context)
+            else:
+                # Fallback
+                perception_text = f"Event: Generic observation cycle {cycle_count}"
+            
+            # Process the generated perception
+            perception = orama.process_perception(perception_text)
+            print(f"[{perception.timestamp}] Generated perception: {perception_text}")
+            
+            # Every 5 cycles, generate knowledge from recent perceptions
+            if cycle_count % 5 == 0 and cycle_count > 0:
+                recent_perceptions = orama.perception_parser.get_recent_perceptions(count=10)
+                generated_entities = orama.knowledge_synthesizer.generate_knowledge_from_perceptions(recent_perceptions)
+                
+                if generated_entities:
+                    print(f"Generated {len(generated_entities)} new knowledge entities")
+                    # Add entities to known entities list in state
+                    orama.state.known_entities.extend(generated_entities)
+                
+                # Save current state periodically
+                orama.memory_manager.save_memories()
+                orama.knowledge_synthesizer.save_knowledge()
+                last_knowledge_gen_time = current_time
+            
+            # Increment cycle and wait for next interval
+            cycle_count += 1
+            time_to_wait = interval - (time.time() - current_time)
+            if time_to_wait > 0:
+                time.sleep(time_to_wait)
+                
+    except KeyboardInterrupt:
+        system_logger.info("Received interrupt, exiting continuous mode")
+        print("\nExiting continuous mode")
 
 def interactive_mode(orama: OramaSystem) -> None:
     """Run ORAMA in interactive CLI mode"""
