@@ -12,6 +12,9 @@ import logging
 import math
 import uuid
 import time
+import os
+import json
+import logger
 from enum import Enum
 from collections import defaultdict, deque
 from datetime import datetime
@@ -844,7 +847,28 @@ class EntityType(Enum):
     ANOMALY = "anomaly"
 
 
-```
+class EntityState(Enum):
+    """States of cosmic entities in the simulation"""
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    DORMANT = "dormant"
+    DESTROYED = "destroyed"
+    TRANSFORMED = "transformed"
+    
+    EMERGING = "emerging"
+    EVOLVING = "evolving"
+    ASCENDING = "ascending"
+    DESCENDING = "descending"
+    CONVERGING = "converging"
+    DIVERGING = "diverging"
+    AWAKENING = "awakening"
+    SLEEPING = "sleeping"
+    FADING = "fading"
+    BIRTH = "birth"
+    DEATH = "death"
+    REBIRTH = "rebirth"
+    AWAKENED = "awakened"
+    
 class CosmicScrollManager:
     """
     Central management system for the Loom Ascendant Cosmos engine.
@@ -991,22 +1015,18 @@ class CosmicScrollManager:
         events = []
         
         # Simple example: random events for demonstration
-        if random.random() < 0.1:  # 10% chance per tick
-            # Get random entities for interaction
-            if len(self.entities) >= 2:
-                entities = random.sample(list(self.entities.keys()), 2)
-                
-                event = {
-                    "type": random.choice(list(EventType)).value,
-                    "timestamp": self.tick_count,
-                    "entities_involved": entities,
-                    "description": f"Random interaction between {entities[0]} and {entities[1]}",
-                    "importance": random.uniform(0.1, 1.0)
-                }
-                
-                events.append(event)
-        
-        return events
+        if random.random() < 0.1 and len(self.entities) >= 2:
+            entities = random.sample(list(self.entities.keys()), 2)
+            
+            event = {
+                "type": random.choice(list(EventType)).value,
+                "timestamp": self.tick_count,
+                "entities_involved": entities,
+                "description": f"Random interaction between {entities[0]} and {entities[1]}",
+                "importance": random.uniform(0.1, 1.0)
+            }
+            
+            events.append(event)
     
     def register_entity(self, entity) -> str:
         """
