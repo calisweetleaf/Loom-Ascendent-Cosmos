@@ -8817,8 +8817,9 @@ def apply_environmental_effects_to_civilization(civilization: Civilization, worl
             
             # 4. Precipitation affects technology focus
             precipitation = climate_data.get('precipitation', 0.5)
-            if precipitation            if precipitation > 0.7 and hasattr(civilization, 'tech_focus') and civilization.tech_focus != DevelopmentArea.MATERIALS:
-                # Wet environments might encourage water management technologyndom() < 0.05 and civilization.tech_focus != DevelopmentArea.MATERIALS:
+            if precipitation > 0.7 and hasattr(civilization, 'tech_focus'):
+                # Wet environments might encourage water management technology
+                if random.random() < 0.05 and civilization.tech_focus != DevelopmentArea.MATERIALS:
                     old_focus = civilization.tech_focus
                     civilization.tech_focus = DevelopmentArea.MATERIALS
                     
