@@ -13,6 +13,8 @@
 
 ## Overview
 
+STILL A WORK IN PROGRESS. CODE MAY BE BE DOWN BUT I AM FIXING DAILY.
+
 The Genesis Cosmos Engine is a revolutionary framework for simulating emergent realities through a sophisticated multi-layered architecture. Unlike conventional physics engines or game engines, it operates as a reality calculus system designed to generate symbolic patterns that give rise to self-organizing consciousness and meaning.
 
 ## Core Architecture
