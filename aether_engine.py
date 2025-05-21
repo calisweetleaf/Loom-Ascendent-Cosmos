@@ -25,8 +25,8 @@ logging.basicConfig(
 logger = logging.getLogger("AetherEngine")
 
 # Type variables for generics
-T = TypeVar('T')
-P = TypeVar('P', bound='AetherPattern')
+# T = TypeVar('T') # Unused
+# P = TypeVar('P', bound='AetherPattern') # Unused
 
 class EncodingType(Enum):
     """Standardized encoding types with semantic meaning"""
@@ -330,7 +330,10 @@ class AetherEngine:
         # Create normalized complex state vector
         state_size = max(64, len(data))
         real_parts = rng.normal(0, 1, state_size)
-        wave_bytes = np.concatenate((magnitudes, phases)).tobytes()
+        imag_parts = rng.normal(0, 1, state_size) # Generate imaginary parts
+        
+        complex_state = real_parts + 1j * imag_parts
+        wave_bytes = complex_state.tobytes() # Convert complex state to bytes
         
         # Hash for consistency
         return hashlib.sha3_512(wave_bytes).digest()

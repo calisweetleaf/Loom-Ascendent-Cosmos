@@ -98,9 +98,10 @@ class OntologicalField:
                 fibonacci_positions = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89]
                 valid_positions = [p for p in fibonacci_positions if p < len(self.memory)]
                 
-                if valid_positions:
+                if valid_positions: # Check if valid_positions is not empty
                     recursive_component = sum(self.memory[-p].get(key, 0) for p in valid_positions) / len(valid_positions)
                     recursive_component *= self.field_dynamics["recursion"]
+                # If valid_positions is empty, recursive_component remains 0
             
             # Current stability component
             stability_component = self.state[key] * self.field_dynamics["stability"]
@@ -652,15 +653,21 @@ class HarmonicEngine:
             emergence_factor = self.resonance_patterns["emergence"].harmonic_memory[-1] if self.resonance_patterns["emergence"].harmonic_memory else 0.5
             heat_flux = 0.99 + (thermal_flux * 0.01) + (emergence_factor * 0.01)
             
-            # Apply modifiers
-            body["orbital_velocity"] *= velocity_modifier
-            body["thermal_output"] *= heat_flux
+            # Apply modifiers safely
+            orbital_velocity = body.get("orbital_velocity")
+            if orbital_velocity is not None:
+                body["orbital_velocity"] = orbital_velocity * velocity_modifier
+            
+            thermal_output = body.get("thermal_output")
+            if thermal_output is not None:
+                body["thermal_output"] = thermal_output * heat_flux
             
             # Update stellar life cycle based on thermal and entropy
             entropy_rate = self.fields["entropy_vector"].state.get("rate", 0.2)
-            if "life_cycle_stage" in body and "age" in body:
+            current_age = body.get("age")
+            if body.get("life_cycle_stage") is not None and current_age is not None:
                 # Stellar aging is affected by entropy
-                body["age"] += 1.0 * entropy_rate
+                body["age"] = current_age + (1.0 * entropy_rate)
                 
                 # Check for life cycle transitions
                 if body["life_cycle_stage"] == "main_sequence" and body["age"] > body.get("main_sequence_duration", 1000):
@@ -1365,4 +1372,5 @@ class HarmonicEngine:
             phi_harmonic2 = 0.5 + 0.5 * math.sin(phase * 2 * math.pi * phi)
             phi_harmonic3 = 0.5 + 0.5 * math.sin(phase * 2 * math.pi * phi * phi)
             
-            breath
+            # The isolated 'breath' line was here and has been removed.
+            # It's assumed to be a typo or incomplete.

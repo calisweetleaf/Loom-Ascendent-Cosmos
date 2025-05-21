@@ -805,8 +805,10 @@ class OramaSystem:
         }
         
         # Check for engine commands
+        # Use startswith for more precise command matching
+        query_lower = query_text.lower()
         for cmd, handler in engine_commands.items():
-            if cmd in query_text.lower():
+            if query_lower.startswith(cmd):
                 response = handler()
                 return response, context
         
@@ -927,12 +929,16 @@ class OramaSystem:
     
     def execute_command(self, command: str) -> str:
         """Execute a terminal command and return the output"""
-        success, output, error = self.terminal_agent.safe_execute(command)
+        success, output, error_msg = self.terminal_agent.safe_execute(command) # Correctly unpack three values
         
         if success:
             return f"Command executed successfully:\n\n{output}"
         else:
-            return f"Error executing command: {error}\n{output}"
+            # Include both error_msg and output (which might contain stderr)
+            response = f"Error executing command: {error_msg}"
+            if output: # output might be stderr content or empty
+                response += f"\nDetails: {output}"
+            return response
     
     def interactive_chat_mode(self):
         """Run the ORAMA system in interactive chat mode"""
@@ -1178,9 +1184,10 @@ def interactive_mode(orama: OramaSystem) -> None:
             elif user_input.startswith('!'):
                 # Terminal command
                 cmd = user_input[1:].strip()
-                success, output = orama.execute_command(cmd)
-                print(f"Command {'succeeded' if success else 'failed'}")
-                print(output)
+                # OramaSystem.execute_command now returns a single string,
+                # so we don't unpack success, output here.
+                response_str = orama.execute_command(cmd)
+                print(response_str)
                 
             elif user_input.startswith('?'):
                 # Query

@@ -663,30 +663,41 @@ class ParadoxEngine:
         contradictions = []
         
         # Check each proposition against all others
+        # A contradiction pattern is detected if two propositions P and Q are:
+        # 1. Marked as contradictory (i.e., other_id is in prop.contradicts).
+        #    Based on _calculate_semantic_relationships, this means they are
+        #    semantically similar AND were assigned different truth_values initially.
+        # 2. Currently have the SAME non-None truth_value.
+        # This identifies an evolution into a logically inconsistent state.
+        
+        processed_pairs = set() # To avoid detecting the same contradiction twice (P-Q and Q-P)
+
         for prop_id, prop in self.propositions.items():
-            # Skip propositions with unknown truth values
-            if prop.truth_value is None:
+            if prop.truth_value is None: # Only consider propositions with definite truth values
                 continue
-                
-            # Check all propositions related to this one
-            related_props = list(prop.contradicts)
-            
-            for other_id in related_props:
+
+            for other_id in list(prop.contradicts): # Iterate over a copy if modification occurs
                 if other_id not in self.propositions:
+                    # Clean up dangling reference if other_prop was deleted
+                    prop.contradicts.remove(other_id)
                     continue
-                    
-                other_prop = self.propositions[other_id]
                 
-                # Skip if other proposition has unknown truth value
-                if other_prop.truth_value is None:
+                # Avoid processing (P1, P2) and then (P2, P1)
+                pair_key = tuple(sorted((prop_id, other_id)))
+                if pair_key in processed_pairs:
                     continue
-                    
-                # Check for contradiction
+
+                other_prop = self.propositions[other_id]
+
+                if other_prop.truth_value is None: # Other proposition must also have a definite truth value
+                    continue
+                
+                # This is the core contradiction detection logic:
+                # They were marked as "contradictory" (meaning similar content, different initial truth values)
+                # And NOW they have the SAME truth value. This is a logical inconsistency.
                 if prop.truth_value == other_prop.truth_value:
-                    continue  # Same truth value, no contradiction
-                    
-                # Contradiction found
-                contradiction_id = f"pattern_contra_{uuid.uuid4().hex[:8]}"
+                    processed_pairs.add(pair_key) # Mark as processed
+                    contradiction_id = f"pattern_contra_{uuid.uuid4().hex[:8]}"
                 
                 # Calculate strength based on certainty of both propositions
                 strength = min(prop.certainty, other_prop.certainty)
@@ -1060,31 +1071,33 @@ class ParadoxEngine:
             prop.relatedness[other_id] = relatedness
             other_prop.relatedness[prop_id] = relatedness
             
-            # Check for implications and contradictions (simplified)
-            if relatedness > 0.7:
-                # For simplicity, we'll say if A and B are related and have same truth value,
-                # then A implies B
-                if prop.truth_value == other_prop.truth_value and prop.truth_value is not None:
-                    prop.implies.add(other_id)
-                    other_prop.implied_by.add(prop_id)
+            # Check for contradictions based on current understanding:
+            # If two propositions are highly related (similar content)
+            # AND have been assigned different truth values, they are marked as contradictory.
+            # This isn't true semantic contradiction (e.g. "A is B" vs "A is not B")
+            # but rather an inconsistency in how similar statements are valued.
+            if relatedness > 0.7: # High semantic similarity
+                if prop.truth_value is not None and \
+                   other_prop.truth_value is not None and \
+                   prop.truth_value != other_prop.truth_value:
                     
-                    # Add edge to knowledge graph
-                    self.knowledge_graph.add_edge(prop_id, other_id, 
-                                                 relationship="implies",
-                                                 weight=relatedness)
-                    
-                # If they have opposite truth values, they contradict
-                elif prop.truth_value is not None and other_prop.truth_value is not None and prop.truth_value != other_prop.truth_value:
                     prop.contradicts.add(other_id)
                     other_prop.contradicts.add(prop_id)
                     
                     # Add edge to knowledge graph
+                    # This edge signifies "is related to and has a different truth value than"
                     self.knowledge_graph.add_edge(prop_id, other_id, 
-                                                 relationship="contradicts",
+                                                 relationship="conflicts_truth_assignment_with",
                                                  weight=relatedness)
                     self.knowledge_graph.add_edge(other_id, prop_id, 
-                                                 relationship="contradicts",
+                                                 relationship="conflicts_truth_assignment_with",
                                                  weight=relatedness)
+                
+                # Removed the flawed implication logic:
+                # if prop.truth_value == other_prop.truth_value and prop.truth_value is not None:
+                #     prop.implies.add(other_id)
+                #     other_prop.implied_by.add(prop_id)
+                #     self.knowledge_graph.add_edge(prop_id, other_id, relationship="implies", weight=relatedness)
     
     def _generate_interventions(self, pattern: Pattern) -> None:
         """

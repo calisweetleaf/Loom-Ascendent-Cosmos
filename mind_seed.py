@@ -1,6 +1,6 @@
 # ================================================================
 #  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
-#  AuthorNo : Morpheus (Creator), Somnus Development Collective 
+#  Author: Morpheus (Creator), Somnus Development Collective 
 #  License: Proprietary Software License Agreement (Somnus Development Collective)
 #  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
 # ================================================================
@@ -143,14 +143,15 @@ class BehaviorEngine:
         
         match_score = 0.0
         for channel, condition in conditions.items():
-            if channel in perception:
+            if channel in perception: # Check if channel exists in perception
+                perception_value = perception[channel] # Get value safely
                 # Simple string matching for demonstration
-                if isinstance(condition, str) and isinstance(perception[channel], str):
-                    if condition in perception[channel]:
+                if isinstance(condition, str) and isinstance(perception_value, str):
+                    if condition in perception_value:
                         match_score += 1.0
                 # Threshold matching for numeric values
                 elif isinstance(condition, dict) and "min" in condition:
-                    if perception[channel] >= condition["min"]:
+                    if isinstance(perception_value, (int, float)) and perception_value >= condition["min"]:
                         match_score += 1.0
                         
         return match_score
