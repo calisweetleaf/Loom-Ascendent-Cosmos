@@ -38,50 +38,77 @@ class NarrativeArchetype:
         
         # Create pattern based on archetype
         if self.name.lower() == "creation":
-            # Creation increases energy in center
-            indices = np.indices(field_shape)
-            center = [dim // 2 for dim in field_shape]
-            distance = np.zeros(field_shape)
+            # Creation increases energy in center (generalized for N-dimensions)
+            center = np.array([dim // 2 for dim in field_shape])
+            grids = np.ogrid[[slice(0, dim) for dim in field_shape]]
+            distance_sq = np.zeros(field_shape)
+            for i in range(len(field_shape)):
+                distance_sq += ((grids[i] - center[i]) / (field_shape[i] / 2.0))**2 # Normalize distance by half-size
             
-            for i, idx in enumerate(indices):
-                distance += ((idx - center[i]) / field_shape[i])**2
-            
-            distance = np.sqrt(distance)
-            modulation += 0.3 * np.exp(-5 * distance) * self.intensity
-            
+            # Gaussian-like peak at the center
+            modulation += 0.3 * np.exp(-2.5 * distance_sq) * self.intensity # Adjusted falloff
+
         elif self.name.lower() == "destruction":
-            # Destruction creates chaotic interference patterns
+            # Destruction creates chaotic interference patterns (generalized for N-dimensions)
+            # This creates a sum of sine waves along each dimension, scaled by intensity
+            temp_modulation = np.zeros(field_shape)
             for i in range(len(field_shape)):
-                indices = np.indices(field_shape)[i]
-                modulation += 0.2 * np.sin(indices * 6.28 / field_shape[i]) * self.intensity
-                
+                # Create a coordinate grid for the current dimension
+                coords = np.indices(field_shape)[i]
+                # Generate a sine wave based on these coordinates
+                # Vary frequency and phase for more chaos
+                freq = random.uniform(4, 8) 
+                phase_offset = random.uniform(0, 2 * np.pi)
+                temp_modulation += np.sin(coords * freq * np.pi / field_shape[i] + phase_offset)
+            
+            # Normalize and scale the chaotic pattern
+            if np.max(np.abs(temp_modulation)) > 1e-6: # Avoid division by zero
+                 temp_modulation = temp_modulation / np.max(np.abs(temp_modulation))
+            modulation += 0.2 * temp_modulation * self.intensity
+
         elif self.name.lower() == "rebirth":
-            # Rebirth creates spiral patterns
-            indices = np.indices(field_shape)
-            center = [dim // 2 for dim in field_shape]
-            x, y = indices[0] - center[0], indices[1] - center[1]
-            
-            # Create a spiral pattern
-            radius = np.sqrt(x**2 + y**2) / max(field_shape) * 10
-            angle = np.arctan2(y, x)
-            spiral = np.sin(radius + 5 * angle) * 0.3 * self.intensity
-            modulation += spiral
-            
+            # Rebirth creates spiral patterns (primarily 2D, can be projected to higher dimensions)
+            if len(field_shape) >= 2:
+                indices = np.indices(field_shape)
+                center = np.array([dim // 2 for dim in field_shape])
+                x = (indices[0] - center[0]) / (field_shape[0] / 2.0) # Normalized coordinates
+                y = (indices[1] - center[1]) / (field_shape[1] / 2.0)
+                
+                radius = np.sqrt(x**2 + y**2) * 5 # Scale radius for more turns
+                angle = np.arctan2(y, x)
+                spiral = np.sin(radius + 3 * angle) # 3 arms for spiral
+                
+                # Apply spiral to the first two dimensions, replicate or average for others
+                if len(field_shape) == 2:
+                    modulation += 0.3 * spiral * self.intensity
+                else: # For 3D or more, apply to a "plane" and fade
+                    for i in range(field_shape[0]):
+                        for j in range(field_shape[1]):
+                            # Simple way: apply to slice, could be more complex
+                            modulation[i, j, ...] += 0.3 * spiral[i, j] * self.intensity 
+            else: # For 1D field, a simple wave
+                 coords = np.indices(field_shape)[0]
+                 modulation += 0.3 * np.sin(coords * 6 * np.pi / field_shape[0]) * self.intensity
+
+
         elif self.name.lower() == "transcendence":
-            # Transcendence creates rising energy gradients
+            # Transcendence creates rising energy gradients (generalized for N-dimensions)
+            # Gradient rises along the first dimension primarily, or an average
             height_factor = 0.3 * self.intensity
-            for i in range(len(field_shape)):
-                indices = np.indices(field_shape)[i] / field_shape[i]
-                modulation += height_factor * indices
+            coords_dim0 = np.indices(field_shape)[0] / field_shape[0] # Normalized 0 to 1
+            modulation += height_factor * coords_dim0
                 
         elif self.name.lower() == "equilibrium":
-            # Equilibrium creates balanced harmonic patterns
+            # Equilibrium creates balanced harmonic patterns (generalized for N-dimensions)
+            temp_modulation = np.zeros(field_shape)
             for i in range(len(field_shape)):
-                indices = np.indices(field_shape)[i]
-                modulation += 0.2 * np.cos(indices * 3.14 / field_shape[i]) * self.intensity
+                coords = np.indices(field_shape)[i]
+                temp_modulation += np.cos(coords * 2 * np.pi / field_shape[i]) # 2 cycles across dimension
+            if len(field_shape) > 0 : temp_modulation /= len(field_shape) # Average contribution
+            modulation += 0.2 * temp_modulation * self.intensity
         
-        # Normalize to ensure reasonable values
-        modulation = np.clip(modulation, 0.1, 2.0)
+        # Ensure modulation is applied and clipped
+        modulation = np.clip(modulation, 0.01, 3.0) # Allow for stronger boosts/dampening but bounded
         return modulation
 
 class QuantumBreathAdapter:

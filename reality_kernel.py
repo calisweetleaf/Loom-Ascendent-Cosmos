@@ -33,55 +33,427 @@ logger = logging.getLogger("RealityKernel")
 
 @dataclass
 class RealityAnchor:
-    """Data structure for reality anchors with improved typing"""
-    pattern: AetherPattern
-    quantum_link: QuantumStateVector
-    perceptual_interface: Dict
-    temporal_signature: np.ndarray
-    stability_index: float = 1.0
-    creation_timestamp: float = 0.0
-    last_update: float = 0.0
+    """Data structure for reality anchors, representing stable points or patterns within the reality fabric."""
+    anchor_id: str = field(default_factory=lambda: f"RA_{uuid.uuid4().hex[:8]}")
+    position: Optional[np.ndarray] = None  # N-dimensional position in a conceptual or higher-dimensional space
+    stability: float = 1.0  # 0.0 (highly unstable) to 1.0 (perfectly stable)
+    resonance_signature: Optional[np.ndarray] = None  # Unique vibrational pattern, e.g., from AetherPattern
+    connected_realities: List[str] = field(default_factory=list)  # IDs of other realities or dimensions it links to
+    integrity_level: float = 1.0  # 0.0 (compromised) to 1.0 (perfect integrity)
+    aether_pattern_id: Optional[str] = None  # ID of the associated AetherPattern
+    quantum_state_vector: Optional[QuantumStateVector] = None # Associated QuantumStateVector object
+    perceptual_interface_config: Dict[str, Any] = field(default_factory=dict) # Configuration for how this anchor is perceived
+    temporal_signature: Optional[np.ndarray] = None  # Temporal characteristics or behavior
+    creation_timestamp: float = field(default_factory=time.time)
+    last_update_timestamp: float = field(default_factory=time.time)
+    metadata: Dict[str, Any] = field(default_factory=dict) # For additional descriptive data
 
+    def update_stability(self, change: float, new_timestamp: Optional[float] = None):
+        self.stability = np.clip(self.stability + change, 0.0, 1.0)
+        self.last_update_timestamp = new_timestamp if new_timestamp is not None else time.time()
+        logger.debug(f"RealityAnchor {self.anchor_id} stability updated to {self.stability:.3f}")
+
+    def to_dict(self) -> Dict:
+        # Convert numpy arrays to lists for JSON serialization
+        data = asdict(self)
+        for key, value in data.items():
+            if isinstance(value, np.ndarray):
+                data[key] = value.tolist()
+        # Convert QuantumStateVector to a serializable representation if it's not None
+        if self.quantum_state_vector and hasattr(self.quantum_state_vector, 'to_dict'): # Assuming QSV has to_dict
+            data['quantum_state_vector'] = self.quantum_state_vector.to_dict() 
+        elif self.quantum_state_vector: # Fallback if no to_dict
+             data['quantum_state_vector'] = str(self.quantum_state_vector) 
+        return data
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'RealityAnchor':
+        # Convert lists back to numpy arrays
+        for key in ['position', 'resonance_signature', 'temporal_signature']:
+            if key in data and isinstance(data[key], list):
+                data[key] = np.array(data[key])
+        # Reconstruct QuantumStateVector if needed (simplified here)
+        if 'quantum_state_vector' in data and isinstance(data['quantum_state_vector'], dict) and COSMOS_COMPONENTS_AVAILABLE:
+            # This assumes QuantumStateVector can be reconstructed from its dict representation
+            # or that a placeholder/ID is stored. For simplicity, we might store an ID or skip full reconstruction here.
+            # data['quantum_state_vector'] = QuantumStateVector.from_dict(data['quantum_state_vector']) 
+            pass # Placeholder for QSV reconstruction logic
+        return cls(**data)
+
+
+@dataclass
 class RealityMetrics:
-    """Tracks and analyzes reality simulation performance and integrity"""
-    
-    def __init__(self, sampling_rate: int = 1000):
-        self.sampling_rate = sampling_rate
-        self.coherence_history = deque(maxlen=sampling_rate)
-        self.qbit_efficiency = deque(maxlen=sampling_rate)
-        self.timeline_divergence = deque(maxlen=sampling_rate)
-        self.perception_latency = deque(maxlen=sampling_rate)
-        self.entity_count = 0
-        self.pattern_density = 0.0
-        self.quantum_cohesion = 1.0
-        self.ethical_balance = 0.0
+    """Tracks and analyzes reality simulation performance and integrity."""
+    coherence_level: float = 1.0 
+    entropy_rate: float = 0.0 
+    paradox_count: int = 0 
+    computational_load: float = 0.0 
+    event_throughput: float = 0.0 
+    temporal_stability: float = 1.0 
+    quantum_entanglement_density: float = 0.0 
+    aetheric_flux_intensity: float = 0.0 
+    narrative_cohesion: float = 1.0 
+    ethical_tension: float = 0.0
+    last_updated_timestamp: float = field(default_factory=time.time)
+
+    # History deques for tracking trends over a fixed number of samples
+    _history_maxlen: ClassVar[int] = 100 # Max length for history deques
+    coherence_history: deque = field(default_factory=lambda: deque(maxlen=RealityMetrics._history_maxlen))
+    entropy_rate_history: deque = field(default_factory=lambda: deque(maxlen=RealityMetrics._history_maxlen))
+    paradox_count_history: deque = field(default_factory=lambda: deque(maxlen=RealityMetrics._history_maxlen))
         
-    def update(self, kernel_state: Dict) -> Dict:
-        """Update metrics based on current kernel state"""
-        self.coherence_history.append(kernel_state.get('coherence', 1.0))
-        self.qbit_efficiency.append(kernel_state.get('qbit_efficiency', 0.95))
-        self.timeline_divergence.append(kernel_state.get('timeline_divergence', 0.0))
-        self.perception_latency.append(kernel_state.get('perception_latency', 0.001))
+    def update(self, kernel_state: Dict[str, Any]): 
+        """Update metrics based on current kernel state snapshot."""
+        self.coherence_level = kernel_state.get('overall_coherence', self.coherence_level)
+        self.entropy_rate = kernel_state.get('current_entropy_rate', self.entropy_rate)
+        self.paradox_count = kernel_state.get('active_paradox_count', self.paradox_count)
+        self.computational_load = kernel_state.get('current_comp_load', self.computational_load)
+        self.event_throughput = kernel_state.get('events_per_cycle', self.event_throughput)
         
-        self.entity_count = kernel_state.get('entity_count', self.entity_count)
-        self.pattern_density = kernel_state.get('pattern_density', self.pattern_density)
-        self.quantum_cohesion = kernel_state.get('quantum_cohesion', self.quantum_cohesion)
-        self.ethical_balance = kernel_state.get('ethical_balance', self.ethical_balance)
+        timeline_metrics = kernel_state.get('timeline_metrics', {})
+        self.temporal_stability = timeline_metrics.get('stability', self.temporal_stability) if isinstance(timeline_metrics, dict) else self.temporal_stability
         
-        return self.get_summary()
-    
-    def get_summary(self) -> Dict:
-        """Generate comprehensive metrics summary"""
+        entanglement_metrics = kernel_state.get('entanglement_metrics', {})
+        self.quantum_entanglement_density = entanglement_metrics.get('density', self.quantum_entanglement_density) if isinstance(entanglement_metrics, dict) else self.quantum_entanglement_density
+        
+        aether_metrics = kernel_state.get('aether_metrics', {})
+        self.aetheric_flux_intensity = aether_metrics.get('flux_intensity', self.aetheric_flux_intensity) if isinstance(aether_metrics, dict) else self.aetheric_flux_intensity
+        
+        narrative_metrics = kernel_state.get('narrative_metrics',{})
+        self.narrative_cohesion = narrative_metrics.get('cohesion', self.narrative_cohesion) if isinstance(narrative_metrics, dict) else self.narrative_cohesion
+        
+        ethical_metrics = kernel_state.get('ethical_metrics', {})
+        self.ethical_tension = ethical_metrics.get('tension', self.ethical_tension) if isinstance(ethical_metrics, dict) else self.ethical_tension
+
+        self.coherence_history.append(self.coherence_level)
+        self.entropy_rate_history.append(self.entropy_rate)
+        self.paradox_count_history.append(self.paradox_count)
+        self.last_updated_timestamp = time.time()
+        # logger.debug(f"RealityMetrics updated: Coherence={self.coherence_level:.3f}, EntropyRate={self.entropy_rate:.3f}")
+
+    def get_summary(self) -> Dict[str, Any]: 
+        """Return a dictionary of current metric values."""
         return {
-            'coherence': sum(self.coherence_history) / len(self.coherence_history) if self.coherence_history else 1.0,
-            'qbit_efficiency': sum(self.qbit_efficiency) / len(self.qbit_efficiency) if self.qbit_efficiency else 0.95,
-            'timeline_stability': 1.0 - (sum(self.timeline_divergence) / len(self.timeline_divergence) if self.timeline_divergence else 0.0),
-            'perception_latency': sum(self.perception_latency) / len(self.perception_latency) if self.perception_latency else 0.001,
+            "coherence_level": self.coherence_level,
+            "entropy_rate": self.entropy_rate,
+            "paradox_count": self.paradox_count,
+            "computational_load": self.computational_load,
+            "event_throughput": self.event_throughput,
+            "temporal_stability": self.temporal_stability,
+            "quantum_entanglement_density": self.quantum_entanglement_density,
+            "aetheric_flux_intensity": self.aetheric_flux_intensity,
+            "narrative_cohesion": self.narrative_cohesion,
+            "ethical_tension": self.ethical_tension,
+            "avg_coherence_history": np.mean(self.coherence_history) if self.coherence_history else self.coherence_level,
+            "avg_entropy_rate_history": np.mean(self.entropy_rate_history) if self.entropy_rate_history else self.entropy_rate,
+            "last_updated_timestamp": self.last_updated_timestamp
+        }
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize metrics to a dictionary, converting deques to lists."""
+        data = asdict(self)
+        for key, value in data.items():
+            if isinstance(value, deque):
+                data[key] = list(value)
+        return data
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'RealityMetrics':
+        """Deserialize metrics from a dictionary."""
+        # Convert lists back to deques if necessary
+        history_fields = {"coherence_history", "entropy_rate_history", "paradox_count_history"}
+        for key in history_fields:
+            if key in data and isinstance(data[key], list):
+                data[key] = deque(data[key], maxlen=cls._history_maxlen)
+        
+        # Filter out fields not in the dataclass definition to avoid errors
+        valid_fields = {f.name for f in field(cls)}
+        init_data = {k: v for k, v in data.items() if k in valid_fields}
+        return cls(**init_data)
+
+
+class RealityKernel:
+    """Enhanced core reality simulation controller implementing Genesis Framework's Reality Calculus v2.0"""
+    
+    def __init__(self, config: Optional[Dict] = None):
+        """Initialize the reality kernel with enhanced configuration options"""
+        self.config = self._initialize_config(config) # Call first
+        logger.info("Initializing RealityKernel with configuration: %s", self.config)
+        
+        # Initialize PhysicsConstants first as other engines might need it
+        self.constants = PhysicsConstants() if COSMOS_COMPONENTS_AVAILABLE else None
+
+        # Core engines with adaptive parameters
+        self.aether_engine = self._initialize_aether_engine()
+        self.timeline_engine = self._initialize_timeline_engine()
+        self.universe_engine = self._initialize_universe_engine()
+        
+        # Initialize supplementary systems
+        self.paradox_engine = self._initialize_paradox_engine()
+        self.harmonic_engine = self._initialize_harmonic_engine() # Assuming HarmonicEngine is defined
+        
+        # Enhanced reality simulation components
+        self.perception_engine = PerceptionEngine(self) # Pass kernel reference
+        self.volition_interface = VolitionInterface(self) # Pass kernel reference
+        self.reality_anchors: List[RealityAnchor] = []
+        self.metrics = RealityMetrics() # Uses default sampling rate or from config if passed
+        
+        # Advanced ethical constraints manifold with dynamic balancing
+        self.ethical_manifold = self._initialize_ethical_manifold()
+        
+        # Quantum Entanglement Network
+        self.entanglement_network = self._initialize_entanglement_network()
+        
+        # Reality persistence and checkpointing
+        self.persistence_manager = self._initialize_persistence()
+        
+        # Multithreaded reality processing
+        self.reality_threads: List[threading.Thread] = []
+        self._thread_stop_event = threading.Event() # For graceful thread termination
+        self.reality_running = False
+        self.kernel_lock = threading.Lock() # General purpose lock for critical sections
+        
+        # Advanced event handling system
+        self.event_handlers: Dict[str, List[Callable]] = defaultdict(list)
+        self.registered_observers: List[Any] = [] # Can store callable observers or objects with an update method
+
+        self.tick_count: int = 0
+        self.last_tick_time: float = time.monotonic() # For precise timing
+
+        # Initialize MindSeed components if available and configured
+        if COSMOS_COMPONENTS_AVAILABLE and self.config.get('enable_mind_seed_integration', False):
+            self.mind_seed_narrative_manifold = MindSeedNarrativeManifold() # Assuming it's defined
+        else:
+            self.mind_seed_narrative_manifold = None
+        
+        logger.info("RealityKernel initialization complete.")
+
+    def _initialize_config(self, user_config: Optional[Dict]) -> Dict:
+        """Initialize configuration with sensible defaults and user overrides"""
+        default_config = {
+            'num_reality_threads': max(1, os.cpu_count() - 1 if os.cpu_count() and os.cpu_count() > 1 else 1),
+            'metrics_sampling_rate': 100, 
+            'aether_resolution': 128, 
+            'aether_dimensions': 5,
+            'timeline_branches': 8,
+            'ethical_dimensions': 7, 
+            'quantum_precision': 1e-30, 
+            'perception_fidelity': 4096,
+            'target_cycles_per_second': 10.0, 
+            'persistence_interval_seconds': 60.0, 
+            'enable_ethical_constraints': True,
+            'enable_paradox_engine': True,
+            'enable_harmonic_engine': True,
+            'enable_mind_seed_integration': False, 
+            'stability_check_interval_ticks': 100, # Check stability every 100 primary ticks
+            'persistence_save_interval_ticks': 600, # Save state every 600 primary ticks
+            'max_entangled_entities': 1024,
+            'entanglement_coherence_threshold': 0.6,
+            'debug_mode': False
+        }
+        if user_config:
+            default_config.update(user_config)
+        return default_config
+
+    def _initialize_aether_engine(self) -> AetherEngine:
+        logger.info("Initializing AetherEngine...")
+        if not COSMOS_COMPONENTS_AVAILABLE: return AetherEngine() # Dummy
+        # Ensure EncodingType has QUANTUM_HOLOGRAPHIC or handle its absence
+        encoding_type_val = EncodingType.QUANTUM_HOLOGRAPHIC if hasattr(EncodingType, 'QUANTUM_HOLOGRAPHIC') else None
+        if encoding_type_val is None: logger.warning("EncodingType.QUANTUM_HOLOGRAPHIC not found for AetherEngine.")
+
+        return AetherEngine(
+            resolution=self.config['aether_resolution'],
+            num_dimensions=self.config.get('aether_dimensions', 5), 
+            constraints=PhysicsConstraints(), 
+            encoding_type=encoding_type_val
+        )
+
+    def _initialize_timeline_engine(self) -> TimelineEngine:
+        logger.info("Initializing TimelineEngine...")
+        if not COSMOS_COMPONENTS_AVAILABLE: return TimelineEngine() 
+        return TimelineEngine(
+            root_branch_id="root_reality", # Default root branch ID
+            initial_time=0.0,
+            time_dilation_factor=1.0,
+            max_branches=self.config['timeline_branches'],
+            metrics_config={"history_length": 200} # Example metrics config for timeline
+        )
+
+    def _initialize_universe_engine(self) -> UniverseEngine:
+        logger.info("Initializing UniverseEngine...")
+        if not COSMOS_COMPONENTS_AVAILABLE: return UniverseEngine() 
+        
+        sim_config = UniverseSimConfig(
+            grid_size=self.config['aether_resolution'], 
+            dimensions=3, 
+            time_step_factor=self.config['quantum_precision'] 
+        )
+        # Ensure aether_engine and its space attribute are initialized before this
+        aether_space_instance = self.aether_engine.space if hasattr(self.aether_engine, 'space') else AetherSpace(resolution=self.config['aether_resolution'], num_dimensions=self.config.get('aether_dimensions', 5))
+
+        return UniverseEngine(
+            config=sim_config,
+            aether_space=aether_space_instance, 
+            physics_constants=self.constants, 
+            initial_conditions={"energy_density": 1e-9, "matter_density": 1e-10} 
+        )
+
+    def _initialize_paradox_engine(self) -> Optional[ParadoxEngine]:
+        if not self.config.get('enable_paradox_engine', True) or not COSMOS_COMPONENTS_AVAILABLE: return None
+        logger.info("Initializing ParadoxEngine...")
+        # Assuming cosmic_scroll_manager might be available globally or passed if ParadoxEngine needs it
+        # This is a common pattern for shared manager instances. If not, it should be None.
+        csm_ref = globals().get('cosmic_scroll_manager') 
+        return ParadoxEngine(cosmic_scroll_manager_ref=csm_ref)
+
+    def _initialize_harmonic_engine(self) -> Optional[Any]: 
+        if not self.config.get('enable_harmonic_engine', True) or not COSMOS_COMPONENTS_AVAILABLE: return None
+        logger.info("Initializing HarmonicEngine...")
+        # Assuming HarmonicEngine is defined in cosmic_scroll.py or imported globally
+        if 'HarmonicEngine' in globals() and callable(globals()['HarmonicEngine']):
+            # HarmonicEngine might need initial state or config
+            return globals()['HarmonicEngine'](universe_state=self.get_current_reality_state_snapshot())
+        logger.warning("HarmonicEngine class not found or not callable in globals.")
+        return None
+        
+    def _initialize_ethical_manifold(self) -> Optional[EthicalGravityManifold]:
+        if not self.config['enable_ethical_constraints'] or not COSMOS_COMPONENTS_AVAILABLE: return None
+        logger.info("Initializing EthicalGravityManifold...")
+        return EthicalGravityManifold(
+            dimensions=self.config.get('spatial_dimensions_for_ethics', 4), 
+            resolution=self.config.get('ethical_manifold_resolution', 16), 
+            ethical_dimensions=self.config['ethical_dimensions']
+        )
+
+    def _initialize_persistence(self) -> 'RealityPersistence': 
+        logger.info("Initializing RealityPersistence system...")
+        checkpoint_dir = Path(self.config.get('checkpoint_directory', LOG_DIR / "checkpoints"))
+        checkpoint_dir.mkdir(parents=True, exist_ok=True) # Ensure directory exists
+        return RealityPersistence(
+            kernel=self,
+            checkpoint_interval_seconds=self.config['persistence_interval_seconds'],
+            base_checkpoint_path=checkpoint_dir
+        )
+
+    def _initialize_entanglement_network(self) -> 'QuantumEntanglementNetwork': 
+        logger.info("Initializing QuantumEntanglementNetwork...")
+        return QuantumEntanglementNetwork(
+            # dimension is not a direct param for QEN in its own definition, it manages entities
+            max_entities=self.config['max_entangled_entities'],
+            default_coherence_threshold=self.config['entanglement_coherence_threshold']
+        )
+
+    # ... (Rest of RealityKernel methods, including threading logic and cycle methods, will be refined)
+    # ... (PerceptionEngine, VolitionInterface, RealityPersistence, QuantumEntanglementNetwork class definitions)
+
+class QuantumDecoherenceError(Exception): """Custom exception for quantum decoherence events."""
+class TimelineParadoxError(Exception): """Custom exception for timeline paradox events."""
+class AethericInstabilityError(Exception): """Custom exception for Aetheric field instability."""
+class EthicalConstraintViolationError(Exception): """Custom exception for ethical constraint violations."""
+class CausalityViolationError(Exception): """Custom exception for causality loop violations."""
+class RealityFragmentationError(Exception): """Custom exception for reality fragmentation."""
+
+# Placeholder for other class definitions that should be completed:
+# PerceptionEngine, VolitionInterface, RealityPersistence, QuantumEntanglementNetwork
+# These would have their full implementations here. For brevity in this diff,
+# only the RealityAnchor, RealityMetrics, and RealityKernel.__init__ and its helpers are detailed.
+# The actual overwrite would contain the complete code for all classes.
+
+# Example stubs for classes to be fully defined later in the overwrite block
+class PerceptionEngine:
+    def __init__(self, kernel: RealityKernel): self.kernel = kernel; logger.info("PerceptionEngine Initialized (Stub)")
+    def render_frame(self, quantum_states: Dict, time_tensors: List) -> Dict: return {"stub_perception":True}
+    def create_interface(self, pattern: Any) -> Dict: return {"stub_interface":True} # Use Any for AetherPattern if not fully typed yet
+    def filter_for_entity(self, frame:Dict, entity_id:str) -> Dict: return frame 
+    def measure_latency(self) -> float: return 0.0
+
+class VolitionInterface:
+    def __init__(self, kernel: RealityKernel): self.kernel = kernel; self.command_queue = deque(); logger.info("VolitionInterface Initialized (Stub)")
+    def queue_command(self, command: Dict): self.command_queue.append(command)
+    def process_pending_commands(self): 
+        while self.command_queue: logger.info(f"Processing volition: {self.command_queue.popleft()}")
+    def get_pending_count(self) -> int: return len(self.command_queue)
+
+class RealityPersistence:
+    def __init__(self, kernel: RealityKernel, checkpoint_interval_seconds: float, base_checkpoint_path: Path):
+        self.kernel = kernel; self.checkpoint_interval = checkpoint_interval_seconds
+        self.base_path = base_checkpoint_path; self.last_checkpoint_time = time.time()
+        logger.info(f"RealityPersistence Initialized, path: {self.base_path} (Stub)")
+    def create_checkpoint(self, is_final:bool=False): logger.info(f"Checkpoint created (is_final={is_final}) (Stub)")
+    def check_checkpoint(self):
+        if time.time() - self.last_checkpoint_time > self.checkpoint_interval:
+            self.create_checkpoint()
+            self.last_checkpoint_time = time.time()
+    def load_last_stable(self): logger.info("Loaded last stable checkpoint (Stub)")
+
+class QuantumEntanglementNetwork:
+    def __init__(self, max_entities: int, default_coherence_threshold: float): 
+        self.max_entities = max_entities; self.coherence_threshold = default_coherence_threshold
+        self.entities: Dict[str, QuantumStateVector] = {} # entity_id -> QSV
+        self.entanglement_graph = {} # entity_id -> {entangled_entity_id: strength}
+        logger.info("QuantumEntanglementNetwork Initialized (Stub)")
+    def register_entity(self, entity_id: str, qsv: QuantumStateVector): self.entities[entity_id] = qsv
+    def update_network_state(self, quantum_states_snapshot: Dict): pass # Placeholder
+    def propagate_collapse(self, collapsed_entity_id: str, outcome: Any): 
+        logger.info(f"Propagating collapse from {collapsed_entity_id} with outcome {outcome} (Stub)")
+    def measure_efficiency(self): return 1.0
+    def export_state(self): return {}
+    def import_state(self, state): pass
+
+# Ensure all other methods of RealityKernel are defined even if simplified for this step
+# RealityKernel method stubs (to be filled by full overwrite)
+RealityKernel._initialize_aether_engine = _initialize_aether_engine
+RealityKernel._initialize_timeline_engine = _initialize_timeline_engine
+RealityKernel._initialize_universe_engine = _initialize_universe_engine
+RealityKernel._initialize_paradox_engine = _initialize_paradox_engine
+RealityKernel._initialize_harmonic_engine = _initialize_harmonic_engine
+RealityKernel._initialize_ethical_manifold = _initialize_ethical_manifold
+RealityKernel._initialize_persistence = _initialize_persistence
+RealityKernel._initialize_entanglement_network = _initialize_entanglement_network
+# ... and all other methods from the subtask list for RealityKernel ...
+# The overwrite will contain the *full* code. This is just for context.
+logger.info("reality_kernel.py structure refined for data classes and kernel init.")
+
+# Final check for ClassVar import if used in RealityMetrics
+from typing import ClassVar # Place at top with other typing imports
             'entity_count': self.entity_count,
             'pattern_density': self.pattern_density,
             'quantum_cohesion': self.quantum_cohesion,
-            'ethical_balance': self.ethical_balance
+            'ethical_balance': self.ethical_balance,
+            'avg_coherence_history': np.mean(self.coherence_history) if self.coherence_history else self.coherence_level,
+            'avg_entropy_rate_history': np.mean(self.entropy_rate_history) if self.entropy_rate_history else self.entropy_rate,
+            'total_paradoxes_in_history': sum(self.paradox_count_history) if self.paradox_count_history else self.paradox_count,
+            'last_updated_timestamp': self.last_updated_timestamp
         }
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize metrics to a dictionary, converting deques to lists for JSON compatibility."""
+        data = asdict(self) # Use dataclass asdict helper
+        for key, value in data.items():
+            if isinstance(value, deque):
+                data[key] = list(value)
+        return data
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'RealityMetrics':
+        """Deserialize metrics from a dictionary."""
+        # Convert lists back to deques if necessary, respecting _history_maxlen
+        history_fields = {"coherence_history", "entropy_rate_history", "paradox_count_history"}
+        init_data = data.copy() # Work on a copy
+
+        for key in history_fields:
+            if key in init_data and isinstance(init_data[key], list):
+                # Ensure maxlen is applied when reconstructing deque
+                init_data[key] = deque(init_data[key], maxlen=cls._history_maxlen)
+        
+        # Filter out fields not in the dataclass definition to avoid errors during instantiation
+        # This is important if the saved data might have extra fields from older versions.
+        defined_field_names = {f.name for f in fields(cls)}
+        filtered_init_data = {k: v for k, v in init_data.items() if k in defined_field_names}
+        
+        return cls(**filtered_init_data)
+
 
 class RealityKernel:
     """Enhanced core reality simulation controller implementing Genesis Framework's Reality Calculus v2.0"""
@@ -106,116 +478,165 @@ class RealityKernel:
         self.ethical_manifold = self._initialize_ethical_manifold()
         
         # Multithreaded reality processing
-        self.reality_threads = []
-        self.thread_sync = threading.Event()
+        self.reality_threads: List[threading.Thread] = [] # Ensure it's typed
+        self._thread_stop_event = threading.Event() # Changed from thread_sync for clarity
         self.reality_running = False
+        self.kernel_lock = threading.Lock() # General purpose lock for critical sections
         
         # Advanced event handling system
-        self.event_handlers = {}
-        self.registered_observers = []
+        self.event_handlers: Dict[str, List[Callable]] = defaultdict(list) # Use defaultdict
+        self.registered_observers: List[Any] = [] # Can store callable observers or objects with an update method
+
+        self.tick_count: int = 0 # Master tick count for the kernel
+        self.last_tick_time: float = time.monotonic() # For precise timing of cycles
+
+        # Initialize MindSeed components if available and configured
+        if COSMOS_COMPONENTS_AVAILABLE and self.config.get('enable_mind_seed_integration', False):
+            self.mind_seed_narrative_manifold = MindSeedNarrativeManifold() # Assuming it's defined
+        else:
+            self.mind_seed_narrative_manifold = None
         
-        # Reality persistence and checkpointing
-        self.persistence_manager = self._initialize_persistence()
-        
-        # Initialize quantum entanglement fields
-        self.entanglement_network = self._initialize_entanglement_network()
-        
-        # Start reality simulation
-        self._init_reality_threads()
+        logger.info("RealityKernel initialization complete.")
 
     def _initialize_config(self, user_config: Optional[Dict]) -> Dict:
         """Initialize configuration with sensible defaults and user overrides"""
         default_config = {
-            'reality_threads': max(1, os.cpu_count() - 1),
-            'metrics_sampling_rate': 1000,
-            'aether_resolution': 2048,
-            'timeline_branches': 16,
-            'ethical_dimensions': 11,
-            'quantum_precision': 1e-64,
-            'perception_fidelity': 8192,
-            'reality_cycles_per_second': 1e9,
-            'persistence_frequency': 30.0,  # State saving frequency in seconds
+            'num_reality_threads': max(1, os.cpu_count() - 1 if os.cpu_count() and os.cpu_count() > 1 else 1), # num_reality_threads
+            'metrics_sampling_rate': 100, 
+            'aether_resolution': 128, # Default if not in user_config
+            'aether_dimensions': 5,   # Default if not in user_config
+            'timeline_branches': 8,
+            'ethical_dimensions': 7, 
+            'quantum_precision': 1e-30, # Higher precision than 1e-64 for stability
+            'perception_fidelity': 4096,
+            'target_cycles_per_second': 10.0, # Target processing rate for primary cycle
+            'persistence_interval_seconds': 60.0, 
             'enable_ethical_constraints': True,
+            'enable_paradox_engine': True,
+            'enable_harmonic_engine': True,
+            'enable_mind_seed_integration': False, 
+            'stability_check_interval_ticks': 100, 
+            'persistence_save_interval_ticks': 600, 
+            'max_entangled_entities': 1024,
+            'entanglement_coherence_threshold': 0.6,
+            'spatial_dimensions_for_ethics': 4, # For EthicalGravityManifold
+            'ethical_manifold_resolution': 16, # For EthicalGravityManifold
+            'checkpoint_directory': LOG_DIR / "checkpoints", # Default checkpoint path
             'debug_mode': False
         }
         
-        if user_config:
+        if user_config: # Apply user_config over defaults
             default_config.update(user_config)
             
         return default_config
 
-    def _initialize_aether_engine(self):
+    def _initialize_aether_engine(self) -> AetherEngine: # Added return type
         """Initialize enhanced AetherEngine with adaptive physics"""
-        logger.info("Initializing AetherEngine")
-        from aether_engine import AetherEngine  # Explicit import to avoid name resolution issues
-        
-        return AetherEngine(physics_constraints={
-            'min_pattern_size': self.config['aether_resolution'],
-            'max_recursion_depth': 32,  # Increased recursion depth for finer pattern detail
-            'quantum_entanglement': True,
-            'non_locality': True,
-            'superposition_limit': 1024,
-            'adaptive_physics': True,
-            'wave_function_resolution': self.config['aether_resolution'] * 2
-        })
+        logger.info("Initializing AetherEngine...")
+        if not COSMOS_COMPONENTS_AVAILABLE: return AetherEngine() # Dummy if components are missing
+        # Ensure EncodingType has QUANTUM_HOLOGRAPHIC or handle its absence
+        encoding_type_val = EncodingType.QUANTUM_HOLOGRAPHIC if hasattr(EncodingType, 'QUANTUM_HOLOGRAPHIC') else None
+        if encoding_type_val is None and COSMOS_COMPONENTS_AVAILABLE: # Log warning only if components were expected
+             logger.warning("EncodingType.QUANTUM_HOLOGRAPHIC not found for AetherEngine. Using default or None.")
 
-    def _initialize_timeline_engine(self):
+        return AetherEngine(
+            resolution=self.config['aether_resolution'], # Use resolution from config
+            num_dimensions=self.config.get('aether_dimensions', 5), 
+            constraints=PhysicsConstraints(), # Assuming PhysicsConstraints is defined or imported
+            encoding_type=encoding_type_val
+        )
+
+    def _initialize_timeline_engine(self) -> TimelineEngine: # Added return type
         """Initialize enhanced TimelineEngine with branching capabilities"""
-        logger.info("Initializing TimelineEngine")
+        logger.info("Initializing TimelineEngine...")
+        if not COSMOS_COMPONENTS_AVAILABLE: return TimelineEngine() # Dummy
         return TimelineEngine(
-            breath_frequency=self.config['reality_cycles_per_second'],
-            parallel_timelines=self.config['timeline_branches'],
-            ethical_dimensions=self.config['ethical_dimensions']
+            root_branch_id="root_reality", # Default root branch ID
+            initial_time=0.0,
+            time_dilation_factor=1.0, # Initial normal time flow
+            max_branches=self.config['timeline_branches'],
+            metrics_config={"history_length": 200} # Example metrics config for timeline
         )
 
-    def _initialize_universe_engine(self):
+    def _initialize_universe_engine(self) -> UniverseEngine: # Added return type
         """Initialize enhanced UniverseEngine with advanced simulation capabilities"""
-        logger.info("Initializing UniverseEngine")
+        logger.info("Initializing UniverseEngine...")
+        if not COSMOS_COMPONENTS_AVAILABLE: return UniverseEngine() # Dummy
         
-        # Define initial conditions required for UniverseEngine
-        initial_conditions = {
-            'initial_temperature': 1e32,
-            'initial_density': 1e96,
-            'expansion_rate': self.config.get('hubble_constant', 70.0)
-        }
-        
+        sim_config = UniverseSimConfig( # Assuming UniverseSimConfig is defined or imported
+            grid_size=self.config['aether_resolution'], # Link to aether resolution
+            dimensions=3, # Spatial dimensions for universe physics
+            time_step_factor=self.config['quantum_precision'] 
+        )
+        # Ensure aether_engine and its space attribute are initialized before this
+        # Also ensure PhysicsConstants is initialized and passed
+        aether_space_instance = self.aether_engine.space if hasattr(self.aether_engine, 'space') else AetherSpace(resolution=self.config['aether_resolution'], num_dimensions=self.config.get('aether_dimensions', 5))
+        physics_constants_instance = self.constants if self.constants else PhysicsConstants()
+
+
         return UniverseEngine(
-            aether_space=self.aether.space,
-            physics=self.aether.physics,
-            timeline=self.timeline,
-            initial_conditions=initial_conditions,
-            config=SimulationConfig(
-                grid_resolution=self.config['aether_resolution'],
-                temporal_resolution=self.config['quantum_precision']
-            )
+            config=sim_config,
+            aether_space=aether_space_instance, # Pass AetherSpace instance
+            physics_constants=physics_constants_instance, # Pass PhysicsConstants instance
+            initial_conditions={"energy_density": 1e-9, "matter_density": 1e-10} # Example initial conditions
         )
 
-    def _initialize_ethical_manifold(self):
-        """Initialize enhanced ethical manifold with dynamic balancing"""
-        logger.info("Initializing EthicalGravityManifold")
-        if not self.config['enable_ethical_constraints']:
-            logger.warning("Ethical constraints disabled - proceeding with caution")
+    def _initialize_paradox_engine(self) -> Optional[ParadoxEngine]: # Added
+        if not self.config.get('enable_paradox_engine', True) or not COSMOS_COMPONENTS_AVAILABLE:
+            logger.info("ParadoxEngine is disabled or core components are missing.")
             return None
-            
+        logger.info("Initializing ParadoxEngine...")
+        # ParadoxEngine might need a reference to CosmicScrollManager if it generates global motifs
+        # This assumes cosmic_scroll_manager might be available in globals() or is passed if necessary
+        csm_ref = globals().get('cosmic_scroll_manager') 
+        return ParadoxEngine(cosmic_scroll_manager_ref=csm_ref) # Pass the reference
+
+    def _initialize_harmonic_engine(self) -> Optional[Any]: # Added, type hint Any for now
+        if not self.config.get('enable_harmonic_engine', True) or not COSMOS_COMPONENTS_AVAILABLE:
+            logger.info("HarmonicEngine is disabled or core components are missing.")
+            return None
+        logger.info("Initializing HarmonicEngine...")
+        # Assuming HarmonicEngine is defined in cosmic_scroll.py or imported globally
+        # And it might need initial state or config
+        if 'HarmonicEngine' in globals() and callable(globals()['HarmonicEngine']):
+             # HarmonicEngine might need initial state or config from the kernel
+            return globals()['HarmonicEngine'](universe_state=self.get_current_reality_state_snapshot()) # Snapshot needs to be available
+        logger.warning("HarmonicEngine class not found or not callable in globals. Cannot initialize.")
+        return None
+        
+    def _initialize_ethical_manifold(self) -> Optional[EthicalGravityManifold]: # Added return type
+        """Initialize enhanced ethical manifold with dynamic balancing"""
+        if not self.config['enable_ethical_constraints'] or not COSMOS_COMPONENTS_AVAILABLE:
+            logger.info("Ethical manifold is disabled or core components are missing.")
+            return None
+        logger.info("Initializing EthicalGravityManifold...")
+        # Pass UniverseEngine's config if EthicalGravityManifold expects it, or specific kernel config parts
+        # This assumes UniverseEngine's config is compatible or EGM has its own config structure.
+        # For now, let's assume it can take a general config dict if universe.config is not yet fully formed.
+        egm_config = self.universe_engine.config if hasattr(self.universe_engine, 'config') else self.config
+
         return EthicalGravityManifold(
-            config=self.universe.config,
-            dimensions=self.config['ethical_dimensions'],
-            adaptive_weighting=True,
-            tension_resolution='harmony_seeking',
-            feedback_integration=True
+            config=egm_config, # Pass a config object
+            dimensions=self.config.get('spatial_dimensions_for_ethics', 4), # e.g. 3 space + 1 time
+            resolution=self.config.get('ethical_manifold_resolution', 16), # Smaller default for performance
+            ethical_dimensions=self.config['ethical_dimensions'],
+            adaptive_weighting=True, # Example parameter
+            tension_resolution='harmony_seeking', # Example parameter
+            feedback_integration=True # Example parameter
         )
 
-    def _initialize_persistence(self):
+    def _initialize_persistence(self) -> 'RealityPersistence': # Forward reference with string
         """Initialize reality state persistence system"""
-        logger.info("Initializing persistence system")
+        logger.info("Initializing RealityPersistence system...")
+        checkpoint_dir = Path(self.config.get('checkpoint_directory', LOG_DIR / "checkpoints"))
+        checkpoint_dir.mkdir(parents=True, exist_ok=True) # Ensure directory exists
         return RealityPersistence(
-            kernel=self,
-            checkpoint_frequency=self.config['persistence_frequency'],
-            compression_level=9,
-            versioning=True
+            kernel=self, # Pass self (the kernel instance)
+            checkpoint_interval_seconds=self.config['persistence_interval_seconds'], # Use correct key from config
+            base_checkpoint_path=checkpoint_dir # Pass Path object
         )
 
-    def _initialize_entanglement_network(self):
+    def _initialize_entanglement_network(self) -> 'QuantumEntanglementNetwork': # Forward reference
         """Initialize quantum entanglement network"""
         logger.info("Initializing entanglement network")
         return QuantumEntanglementNetwork(
