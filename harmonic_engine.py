@@ -114,8 +114,30 @@ class OntologicalField:
             # Add a small amount of quantum noise for emergent behavior
             quantum_noise = (random.random() - 0.5) * 0.01
             
-            # Update state
-            self.state[key] = max(0.0, min(1.0, new_value + quantum_noise))
+            # Propagation affects how quickly the field responds to external and recursive influences
+            response_factor = self.evolution_rate * self.field_dynamics["propagation"]
+            
+            # Calculate change based on influences, modulated by response factor
+            change_from_external = (total_external - self.state[key]) * response_factor
+            change_from_recursive = (recursive_component - self.state[key]) * response_factor * self.field_dynamics["recursion"] # recursion already applied to component strength
+
+            # New value calculation incorporating stability and change components
+            # Stability component tries to keep the current state.
+            # Change components try to move it towards external/recursive influences.
+            # The (1 - self.field_dynamics["stability"]) can be seen as susceptibility to change.
+            susceptibility = (1.0 - self.field_dynamics["stability"])
+            
+            delta_value = (change_from_external * susceptibility) + \
+                          (change_from_recursive * susceptibility) # Recursive influence is also a form of change
+                                уютнен稳定性成分
+            
+            # Add a small amount of quantum noise for emergent behavior
+            quantum_noise = (random.random() - 0.5) * 0.01 * (1.0 - self.field_dynamics.get("coherence", 0.5)) # More noise if less coherent
+            
+            new_value = self.state[key] + delta_value + quantum_noise
+            
+            # Update state, ensuring it stays within bounds
+            self.state[key] = max(0.0, min(1.0, new_value))
     
     def couple_with(self, field_name: str, coupling_strength: float) -> None:
         """Establish coupling with another field"""

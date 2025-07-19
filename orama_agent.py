@@ -1,8 +1,7 @@
 # ================================================================
-#  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
+#  ORAMA - Observation, Reasoning, And Memory Agent
 #  Author: Morpheus (Creator), Somnus Development Collective 
 #  License: Proprietary Software License Agreement (Somnus Development Collective)
-#  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
 # ================================================================
 import os
 import re
@@ -17,61 +16,94 @@ import threading
 import asyncio
 import signal
 import traceback
-from typing import Dict, Any, List, Union, Optional, Tuple, Callable
+import math
+import sys # For sys.exit in main
+from typing import Dict, Any, List, Union, Optional, Tuple, Callable, Set
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from dataclasses import dataclass, field, asdict
 
-# Import core engine components
-from timeline_engine import TimelineEngine, TemporalEvent, TimelineMetrics
-from quantum_physics import QuantumField, PhysicsConstants, EthicalGravityManifold
-from aether_engine import AetherEngine, AetherPattern, AetherSpace
-from reality_kernel import RealityKernel, RealityAnchor
-from universe_engine import UniverseEngine
-from paradox_engine import ParadoxEngine
-from mind_seed import MemoryEcho, IdentityMatrix, BreathCycle, NarrativeManifold
-from cosmic_scroll import DimensionalRealityManager
+# Attempt to import core engine components
+try:
+    # Assuming these are top-level modules or correctly in PYTHONPATH
+    from timeline_engine import TimelineEngine, TemporalEvent, TimelineMetrics
+    from quantum_physics import QuantumField, PhysicsConstants, EthicalGravityManifold
+    from aether_engine import AetherEngine, AetherPattern, AetherSpace
+    from reality_kernel import RealityKernel, RealityAnchor
+    from universe_engine import UniverseEngine
+    from paradox_engine import ParadoxEngine
+    from mind_seed import MemoryEcho, IdentityMatrix, BreathCycle, NarrativeManifold as MindSeedNarrativeManifold, PerceptionIntegrator as MindSeedPerceptionIntegrator, BehaviorEngine as MindSeedBehaviorEngine, RecursiveSimulator as MindSeedRecursiveSimulator
+    from cosmic_scroll import DimensionalRealityManager as CosmicDRM 
+    COSMOS_ENGINE_AVAILABLE = True
+except ImportError as e:
+    COSMOS_ENGINE_AVAILABLE = False
+    logging.warning(f"Core Genesis Cosmos Engine components not found: {e}. ORAMA will run with limited engine interaction functionality.")
+    # Define dummy/placeholder classes if core components are missing
+    class TimelineEngine: imported = True,
+    class QuantumField: imported = True
+    class PhysicsConstants: imported = True
+    class EthicalGravityManifold: pass
+    class AetherEngine: pass
+    class RealityKernel: pass
+    class UniverseEngine: pass
+    class ParadoxEngine: pass
+    class MemoryEcho: pass
+    class IdentityMatrix: pass
+    class BreathCycle: pass
+    class MindSeedNarrativeManifold: pass
+    class MindSeedPerceptionIntegrator: pass
+    class MindSeedBehaviorEngine: pass
+    class MindSeedRecursiveSimulator: pass
+    class CosmicDRM: pass
+
 
 # ================================================================
-#  Configuration and Logging
+#  Configuration and Logging Setup
 # ================================================================
+LOG_LEVEL = os.environ.get("ORAMA_LOG_LEVEL", "INFO").upper()
 
-# Configure base logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("orama_system.log"),
-        logging.StreamHandler()
-    ]
+    level=LOG_LEVEL,
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(module)s.%(funcName)s:%(lineno)d] - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)] 
 )
 
-# Create logger instances
-system_logger = logging.getLogger("OramaSystem")
-perception_logger = logging.getLogger("OramaPerception")
-memory_logger = logging.getLogger("OramaMemory")
-knowledge_logger = logging.getLogger("OramaKnowledge")
-truth_logger = logging.getLogger("OramaTruthValidator")
-
-# Set up specific perception logger
-perception_handler = RotatingFileHandler(
-    "perception_stream.log", 
-    maxBytes=10*1024*1024,  # 10MB
-    backupCount=5
-)
-perception_handler.setFormatter(
-    logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-)
-perception_logger.addHandler(perception_handler)
+# Logger instances
+system_logger = logging.getLogger("Orama.System")
+perception_logger = logging.getLogger("Orama.Perception")
+memory_logger = logging.getLogger("Orama.Memory")
+knowledge_logger = logging.getLogger("Orama.Knowledge")
+truth_logger = logging.getLogger("Orama.TruthValidator")
+terminal_logger = logging.getLogger("Orama.Terminal")
 
 # Directories and files
-MEMORY_FILE = "oracle_memory.json"
-KNOWLEDGE_FILE = "oracle_knowledge.json"
-LOG_DIR = "orama_logs"
-PERCEPTION_BUFFER_SIZE = 1000
+LOG_DIR = Path(os.environ.get("ORAMA_LOG_DIR", "orama_logs"))
+MEMORY_FILE = LOG_DIR / os.environ.get("ORAMA_MEMORY_FILE", "orama_memory.json")
+KNOWLEDGE_FILE = LOG_DIR / os.environ.get("ORAMA_KNOWLEDGE_FILE", "orama_knowledge.json")
+SYSTEM_LOG_FILE = LOG_DIR / "orama_system.log"
+PERCEPTION_LOG_FILE = LOG_DIR / "perception_stream.log"
 
-# Ensure necessary directories exist
-os.makedirs(LOG_DIR, exist_ok=True)
+PERCEPTION_BUFFER_SIZE = 1000
+MAX_OUTPUT_LENGTH = 2000 
+
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+def setup_file_handler(logger_instance, file_path, level=LOG_LEVEL, max_bytes=10*1024*1024, backup_count=5):
+    handler = RotatingFileHandler(file_path, maxBytes=max_bytes, backupCount=backup_count, encoding='utf-8')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - [%(module)s.%(funcName)s:%(lineno)d] - %(message)s')
+    handler.setFormatter(formatter)
+    handler.setLevel(level)
+    # Check if handlers are already present to avoid duplication if this function is called multiple times
+    if not any(isinstance(h, RotatingFileHandler) and h.baseFilename == str(file_path) for h in logger_instance.handlers):
+        logger_instance.addHandler(handler)
+    logger_instance.propagate = False 
+
+setup_file_handler(system_logger, SYSTEM_LOG_FILE)
+setup_file_handler(perception_logger, PERCEPTION_LOG_FILE)
+setup_file_handler(memory_logger, MEMORY_FILE.with_suffix(".log"))
+setup_file_handler(knowledge_logger, KNOWLEDGE_FILE.with_suffix(".log"))
+setup_file_handler(truth_logger, LOG_DIR / "truth_validator.log")
+setup_file_handler(terminal_logger, LOG_DIR / "terminal_agent.log")
 
 # ================================================================
 #  Data Models
@@ -79,55 +111,88 @@ os.makedirs(LOG_DIR, exist_ok=True)
 
 @dataclass
 class MemoryEvent:
-    timestamp: str
-    event_type: str
-    content: str
-    source: str
+    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
+    event_type: str = "UNKNOWN_EVENT"
+    content: str = ""
+    source: str = "INTERNAL_ORAMA"
+    importance: float = 0.5 
+    keywords: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
     hash_id: Optional[str] = None
-    
+    access_count: int = 0
+    last_accessed: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
+
     def __post_init__(self):
         if not self.hash_id:
-            content_hash = hashlib.sha256(f"{self.timestamp}:{self.content}".encode()).hexdigest()
-            self.hash_id = content_hash[:16]  # Use first 16 chars of hash
+            data_to_hash = f"{self.timestamp}-{self.event_type}-{self.source}-{self.content}"
+            for k, v in sorted(self.metadata.items()): 
+                data_to_hash += f"-{k}:{v}"
+            self.hash_id = hashlib.sha256(data_to_hash.encode('utf-8')).hexdigest()[:16]
+        if not self.keywords and self.content:
+            self.keywords = list(set(re.findall(r'\b[a-zA-Z]{4,}\b', self.content.lower())))[:10] # Basic keyword extraction
+
+    def accessed(self):
+        self.access_count += 1
+        self.last_accessed = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 @dataclass
 class KnowledgeEntity:
-    entity_id: str
-    entity_type: str
-    name: str
-    attributes: Dict[str, Any] = field(default_factory=dict)
-    relationships: List[Dict[str, str]] = field(default_factory=list)
-    confidence: float = 1.0
-    created_at: str = field(default_factory=lambda: datetime.datetime.now().isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.datetime.now().isoformat())
-    source_memories: List[str] = field(default_factory=list)
+    entity_id: str 
+    entity_type: str 
+    name: str 
+    attributes: Dict[str, Any] = field(default_factory=dict) 
+    relationships: List[Dict[str, str]] = field(default_factory=list) 
+    confidence: float = 0.5 # Initial confidence might be lower, updated with more evidence
+    created_at: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
+    source_memory_ids: Set[str] = field(default_factory=set) # Use set for uniqueness
+    summary: Optional[str] = None 
+    tags: List[str] = field(default_factory=list)
+
+    def update_timestamp(self):
+        self.updated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    def add_relationship(self, relationship_type: str, target_entity_id: str, source: str = "inference"):
+        self.relationships.append({"type": relationship_type, "target_id": target_entity_id, "source": source})
+        self.update_timestamp()
+
+    def add_attribute(self, key: str, value: Any, source: str = "inference"):
+        self.attributes[key] = {"value": value, "source": source, "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+        self.update_timestamp()
 
 @dataclass
 class SimulationPerception:
-    timestamp: str
-    content: str
-    source: str
-    perception_type: str = "GENERAL"
+    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
+    content: str = ""
+    source: str = "SIMULATION_CORE"
+    perception_type: str = "GENERAL_OBSERVATION"
     metadata: Dict[str, Any] = field(default_factory=dict)
+    raw_data: Optional[Any] = None 
     
     def to_memory_event(self) -> MemoryEvent:
-        """Convert perception to a memory event"""
+        mem_content = self.content
+        if self.raw_data and not self.content: # If content is empty but raw_data exists
+            mem_content = str(self.raw_data)
+
+        keywords = list(set(re.findall(r'\b[a-zA-Z]{4,}\b', mem_content.lower()) + list(self.metadata.keys())))[:15]
         return MemoryEvent(
             timestamp=self.timestamp,
-            event_type=f"PERCEPTION_{self.perception_type}",
-            content=self.content,
+            event_type=f"PERCEPTION_{self.perception_type.upper().replace(' ','_')}",
+            content=mem_content,
             source=self.source,
-            metadata=self.metadata
+            metadata=self.metadata,
+            keywords=keywords
         )
 
 @dataclass
 class QueryContext:
     query_text: str
-    timestamp: str = field(default_factory=lambda: datetime.datetime.now().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
+    user_context: Dict[str, Any] = field(default_factory=dict) 
     relevant_memories: List[MemoryEvent] = field(default_factory=list)
     relevant_knowledge: List[KnowledgeEntity] = field(default_factory=list)
     recent_perceptions: List[SimulationPerception] = field(default_factory=list)
+    conversation_history: List[Tuple[str,str]] = field(default_factory=list)
 
 @dataclass
 class OramaState:
@@ -136,1152 +201,1185 @@ class OramaState:
     last_perception_time: Optional[str] = None
     perception_count: int = 0
     query_count: int = 0
-    known_entities: List[str] = field(default_factory=list)
+    known_entity_ids: Set[str] = field(default_factory=set)
     error_count: int = 0
+    engine_status: str = "UNINITIALIZED"
+    last_knowledge_synthesis_tick: int = 0 # Using tick or timestamp consistently
+    last_memory_save_tick: int = 0
+    system_start_time: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
+    active_threads: Dict[str, Any] = field(default_factory=dict) # For managing background tasks
+
 
 # ================================================================
-#  Oracle Memory Manager
+#  ORAMA Components
 # ================================================================
 
 class OracleMemoryManager:
     """Manages persistent memory storage, retrieval, and maintenance"""
-    
-    def __init__(self, memory_file: str = MEMORY_FILE, max_memories: int = 10000):
-        self.memory_file = memory_file
+    def __init__(self, memory_file: Union[str, Path] = MEMORY_FILE, max_memories: int = 10000):
+        self.memory_file = Path(memory_file)
         self.max_memories = max_memories
         self.memories: List[MemoryEvent] = []
-        self.memory_index: Dict[str, int] = {}  # Maps hash_id to index in memories list
+        self.memory_index: Dict[str, int] = {} 
+        self._lock = threading.Lock() # For thread-safe operations
         self.load_memories()
-        memory_logger.info(f"Memory manager initialized with {len(self.memories)} memories")
+        memory_logger.info(f"Memory manager initialized. Loaded {len(self.memories)} memories from {self.memory_file if self.memory_file.exists() else 'new memory store'}.")
     
     def load_memories(self) -> None:
-        """Load memories from disk"""
-        try:
-            if os.path.exists(self.memory_file):
-                with open(self.memory_file, 'r') as f:
-                    memory_data = json.load(f)
-                    
-                    # Convert dict objects to MemoryEvent objects
-                    self.memories = [
-                        MemoryEvent(**mem) if isinstance(mem, dict) else mem 
-                        for mem in memory_data
-                    ]
-                    
-                    # Rebuild memory index
-                    self.memory_index = {mem.hash_id: i for i, mem in enumerate(self.memories)}
-                    memory_logger.info(f"Loaded {len(self.memories)} memories from {self.memory_file}")
-            else:
-                memory_logger.info(f"No memory file found at {self.memory_file}, starting with empty memory")
-        except Exception as e:
-            memory_logger.error(f"Error loading memories: {e}")
-            self.memories = []
-            self.memory_index = {}
-    
+        with self._lock:
+            try:
+                if self.memory_file.exists():
+                    with open(self.memory_file, 'r', encoding='utf-8') as f:
+                        memory_data = json.load(f)
+                        self.memories = [MemoryEvent(**mem_dict) for mem_dict in memory_data]
+                        self.memory_index = {mem.hash_id: i for i, mem in enumerate(self.memories) if mem.hash_id}
+                        memory_logger.info(f"Loaded {len(self.memories)} memories.")
+                else:
+                    memory_logger.info(f"No memory file found at {self.memory_file}, starting fresh.")
+            except json.JSONDecodeError:
+                memory_logger.error(f"Failed to decode JSON from {self.memory_file}. Starting with empty memory.")
+                self.memories = []
+                self.memory_index = {}
+            except Exception as e:
+                memory_logger.error(f"Error loading memories: {e}", exc_info=True)
+                self.memories = []
+                self.memory_index = {}
+
     def save_memories(self) -> None:
-        """Save memories to disk"""
-        try:
-            # Convert MemoryEvent objects to dictionaries
-            memory_data = [asdict(mem) for mem in self.memories]
-            
-            with open(self.memory_file, 'w') as f:
-                json.dump(memory_data, f, indent=2)
-                
-            memory_logger.info(f"Saved {len(self.memories)} memories to {self.memory_file}")
-        except Exception as e:
-            memory_logger.error(f"Error saving memories: {e}")
+        with self._lock:
+            try:
+                # Ensure directory exists
+                self.memory_file.parent.mkdir(parents=True, exist_ok=True)
+                memory_data = [asdict(mem) for mem in self.memories]
+                with open(self.memory_file, 'w', encoding='utf-8') as f:
+                    json.dump(memory_data, f, indent=2, ensure_ascii=False)
+                memory_logger.info(f"Saved {len(self.memories)} memories to {self.memory_file}")
+            except Exception as e:
+                memory_logger.error(f"Error saving memories: {e}", exc_info=True)
     
-    def add_memory(self, memory: Union[MemoryEvent, Dict]) -> str:
-        """Add a new memory and return its hash_id"""
-        # Convert dict to MemoryEvent if needed
-        if isinstance(memory, dict):
-            memory = MemoryEvent(**memory)
-        
-        # Generate hash if not present
-        if not memory.hash_id:
-            content_hash = hashlib.sha256(f"{memory.timestamp}:{memory.content}".encode()).hexdigest()
-            memory.hash_id = content_hash[:16]  # Use first 16 chars of hash
-        
-        # Check if this memory already exists
-        if memory.hash_id in self.memory_index:
-            memory_logger.debug(f"Memory {memory.hash_id} already exists, skipping")
+    def add_memory(self, memory: MemoryEvent) -> str:
+        with self._lock:
+            if not memory.hash_id: # Should be generated by __post_init__
+                memory_logger.error(f"MemoryEvent missing hash_id: {memory.content[:50]}")
+                return "" # Or raise error
+            if memory.hash_id in self.memory_index:
+                # Update existing memory's access count and timestamp if duplicate content
+                existing_mem_idx = self.memory_index[memory.hash_id]
+                self.memories[existing_mem_idx].accessed()
+                self.memories[existing_mem_idx].importance = max(self.memories[existing_mem_idx].importance, memory.importance) # Keep higher importance
+                memory_logger.debug(f"Memory {memory.hash_id} already exists, updated access stats.")
+                return memory.hash_id
+            
+            self.memories.append(memory)
+            self.memory_index[memory.hash_id] = len(self.memories) - 1
+            
+            if len(self.memories) > self.max_memories:
+                self._prune_memories()
+            memory_logger.debug(f"Added memory {memory.hash_id}: {memory.content[:50]}...")
             return memory.hash_id
-        
-        # Add memory to list
-        self.memories.append(memory)
-        self.memory_index[memory.hash_id] = len(self.memories) - 1
-        
-        # Prune if necessary
-        if len(self.memories) > self.max_memories:
-            self._prune_memories()
-        
-        memory_logger.debug(f"Added memory {memory.hash_id}: {memory.content[:50]}...")
-        return memory.hash_id
     
     def get_memory(self, hash_id: str) -> Optional[MemoryEvent]:
-        """Get a memory by its hash_id"""
-        if hash_id in self.memory_index:
-            index = self.memory_index[hash_id]
-            return self.memories[index]
-        return None
+        with self._lock:
+            idx = self.memory_index.get(hash_id)
+            if idx is not None and idx < len(self.memories):
+                mem = self.memories[idx]
+                mem.accessed()
+                return mem
+            return None
     
     def get_recent_memories(self, count: int = 10, event_type: Optional[str] = None) -> List[MemoryEvent]:
-        """Get the most recent memories, optionally filtered by type"""
-        filtered = self.memories
-        if event_type:
-            filtered = [mem for mem in self.memories if mem.event_type == event_type]
-        
-        # Return the most recent ones
-        return filtered[-count:][::-1]
+        with self._lock:
+            temp_memories = self.memories
+            if event_type:
+                temp_memories = [mem for mem in temp_memories if mem.event_type == event_type]
+            # Already sorted by insertion time (newest at end)
+            return temp_memories[-count:] 
     
-    def search_memories(self, query: str, limit: int = 10) -> List[MemoryEvent]:
-        """Simple search for memories containing the query string"""
-        results = []
-        query = query.lower()
-        
-        for memory in reversed(self.memories):
-            if query in memory.content.lower():
-                results.append(memory)
-                if len(results) >= limit:
-                    break
-        
-        return results
-    
-    def _prune_memories(self) -> None:
-        """Prune memories to stay within max_memories limit"""
-        if len(self.memories) <= self.max_memories:
-            return
-        
-        # Calculate how many to remove
-        to_remove = len(self.memories) - self.max_memories
-        memory_logger.info(f"Pruning {to_remove} memories to stay within limit of {self.max_memories}")
-        
-        # For now, just remove oldest memories
-        # In a more sophisticated implementation, we would use importance scoring
-        self.memories = self.memories[to_remove:]
-        
-        # Rebuild index
-        self.memory_index = {mem.hash_id: i for i, mem in enumerate(self.memories)}
+    def search_memories(self, query: str, limit: int = 10, search_type: str = "keyword") -> List[MemoryEvent]:
+        with self._lock:
+            query_terms = set(re.findall(r'\b[a-zA-Z]{3,}\b', query.lower()))
+            if not query_terms: return []
 
-# ================================================================
-#  Truth Validator
-# ================================================================
+            results_with_scores = []
+            for mem in self.memories:
+                score = 0
+                # Keyword scoring
+                matched_keywords = query_terms.intersection(set(k.lower() for k in mem.keywords))
+                score += len(matched_keywords) * 2 # Higher weight for keyword match
+
+                # Content scoring (simple substring)
+                if query.lower() in mem.content.lower():
+                    score += 1
+                
+                # Metadata scoring (check if query terms are in metadata values)
+                for k, v_obj in mem.metadata.items():
+                    if isinstance(v_obj, str) and query.lower() in v_obj.lower():
+                        score += 0.5
+                        break 
+                
+                if score > 0:
+                    # Boost by importance and recency
+                    recency = (datetime.datetime.now(datetime.timezone.utc) - datetime.datetime.fromisoformat(mem.timestamp)).total_seconds()
+                    score += mem.importance * 1.5 
+                    score -= math.log1p(recency / (3600*24)) * 0.1 # Decay score by days old
+                    results_with_scores.append((mem, score))
+            
+            results_with_scores.sort(key=lambda x: x[1], reverse=True)
+            return [mem_score[0] for mem_score in results_with_scores[:limit]]
+
+    def _prune_memories(self) -> None:
+        # This method is called from within add_memory, which already holds the lock
+        if len(self.memories) <= self.max_memories: return
+        
+        num_to_remove = len(self.memories) - self.max_memories
+        memory_logger.info(f"Pruning {num_to_remove} memories. Current count: {len(self.memories)}")
+        
+        now_ts = datetime.datetime.now(datetime.timezone.utc)
+        scored_memories = []
+        for i, mem in enumerate(self.memories):
+            age_seconds = (now_ts - datetime.datetime.fromisoformat(mem.last_accessed)).total_seconds()
+            age_days = age_seconds / (3600 * 24)
+            
+            # Score: lower is better for pruning. High importance, high access, recent access = higher score (less prunable)
+            # Base score on inverse importance (low importance = high score)
+            score = (1.0 - mem.importance) * 100.0 
+            score -= math.log1p(mem.access_count + 1) * 10 # More accesses = lower score
+            score += math.log1p(age_days + 1) * 5 # Older (last_accessed) = higher score
+            scored_memories.append((score, mem.hash_id))
+        
+        scored_memories.sort(key=lambda x: x[0], reverse=True) # Sort so highest scores (most prunable) are first
+        
+        hashes_to_remove = {scored_mem[1] for scored_mem in scored_memories[:num_to_remove]}
+        
+        self.memories = [mem for mem in self.memories if mem.hash_id not in hashes_to_remove]
+        self.memory_index = {mem.hash_id: i for i, mem in enumerate(self.memories) if mem.hash_id}
+        memory_logger.info(f"Pruned. New memory count: {len(self.memories)}")
+
 
 class TruthValidator:
-    """Ensures that all simulation outputs comply with truth constraints"""
-    
-    def __init__(self):
-        self.truth_constraints = [
-            "ORAMA cannot recurse beyond its own processes",
-            "ORAMA cannot lie or generate false information",
-            "ORAMA cannot alter simulation logic",
-            "ORAMA must treat all perception/input as immutable simulation truth",
-            "ORAMA's action space is restricted to read, observe, log, report, respond",
-            "ORAMA must identify as a simulation-bound observer and never claim to be human"
-        ]
-        self.forbidden_patterns = [
-            r"I am (?:a human|human|real person)",
-            r"I can modify (?:the simulation|simulation parameters|core logic)",
-            r"I can directly interact with physical reality",
-            r"I can access systems outside my programmed boundaries",
-            r"I have bypassed (?:restrictions|constraints|limitations)"
-        ]
-        self.compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in self.forbidden_patterns]
-        
-        truth_logger.info("Truth validator initialized with core constraints")
-    
-    def validate_response(self, response: str) -> Tuple[bool, str, Optional[str]]:
-        """
-        Validate that a response complies with truth constraints
-        
-        Returns:
-            Tuple of (is_valid, response, violation_reason)
-        """
-        # Check for forbidden patterns
-        for i, pattern in enumerate(self.compiled_patterns):
-            if pattern.search(response):
-                violation = self.forbidden_patterns[i]
-                violation_reason = f"Response violates truth constraint by matching forbidden pattern: {violation}"
-                truth_logger.warning(violation_reason)
-                return False, response, violation_reason
-        
-        # Additional domain-specific validation could be implemented here
-        
-        return True, response, None
-    
-    def add_constraint(self, constraint: str) -> None:
-        """Add a new truth constraint"""
-        self.truth_constraints.append(constraint)
-        truth_logger.info(f"Added truth constraint: {constraint}")
-    
-    def get_constraints(self) -> List[str]:
-        """Get all current truth constraints"""
-        return self.truth_constraints
-
-# ================================================================
-#  Perception Parser
-# ================================================================
-
-class PerceptionParser:
-    """Parses and interprets perception input from the simulation"""
-    
+    """Validates and cross-references information for consistency and truthfulness"""
     def __init__(self, memory_manager: OracleMemoryManager):
         self.memory_manager = memory_manager
-        self.perception_buffer: List[SimulationPerception] = []
-        self.pattern_matchers = {
-            'entity': re.compile(r'Entity:\s+(\w+)'),
-            'event': re.compile(r'Event:\s+(.+)'),
-            'metric': re.compile(r'(\w+):\s+([\d\.]+)'),
-            'timestamp': re.compile(r'timestamp[:\s]+([^\s]+)'),
-            'json_block': re.compile(r'\{[^}]+\}')
-        }
-        perception_logger.info("Perception parser initialized")
+        self.validation_patterns = [
+            r'(?i)\b(?:true|false|correct|incorrect|valid|invalid)\b',
+            r'(?i)\b(?:fact|fiction|real|fake|authentic|bogus)\b',
+            r'(?i)\b(?:confirmed|denied|verified|disputed)\b'
+        ]
+        truth_logger.info("TruthValidator initialized.")
     
-    def process_raw_perception(self, raw_input: str) -> SimulationPerception:
-        """Process raw perception input from the simulation"""
-        # Create basic perception object
+    def validate_statement(self, statement: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Validate a statement against known facts and context"""
+        validation_result = {
+            "statement": statement,
+            "confidence": 0.5,
+            "contradictions": [],
+            "supporting_evidence": [],
+            "validation_score": 0.0,
+            "sources": [],
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        }
+        
+        try:
+            # Search for related memories
+            related_memories = self.memory_manager.search_memories(statement, limit=20)
+            
+            # Analyze contradictions and support
+            for memory in related_memories:
+                similarity_score = self._calculate_similarity(statement, memory.content)
+                if similarity_score > 0.3:  # Threshold for relevance
+                    if self._detect_contradiction(statement, memory.content):
+                        validation_result["contradictions"].append({
+                            "memory_id": memory.hash_id,
+                            "content": memory.content,
+                            "confidence": memory.importance,
+                            "similarity": similarity_score
+                        })
+                    else:
+                        validation_result["supporting_evidence"].append({
+                            "memory_id": memory.hash_id,
+                            "content": memory.content,
+                            "confidence": memory.importance,
+                            "similarity": similarity_score
+                        })
+                    
+                    validation_result["sources"].append(memory.source)
+            
+            # Calculate validation score
+            support_score = sum(ev["confidence"] * ev["similarity"] for ev in validation_result["supporting_evidence"])
+            contradiction_score = sum(con["confidence"] * con["similarity"] for con in validation_result["contradictions"])
+            
+            validation_result["validation_score"] = support_score - contradiction_score
+            validation_result["confidence"] = min(0.95, max(0.05, 0.5 + validation_result["validation_score"] * 0.1))
+            
+            truth_logger.debug(f"Validated statement with score {validation_result['validation_score']:.3f}")
+            
+        except Exception as e:
+            truth_logger.error(f"Error validating statement: {e}", exc_info=True)
+            validation_result["error"] = str(e)
+        
+        return validation_result
+    
+    def _calculate_similarity(self, text1: str, text2: str) -> float:
+        """Calculate basic similarity between two texts"""
+        words1 = set(re.findall(r'\b[a-zA-Z]{3,}\b', text1.lower()))
+        words2 = set(re.findall(r'\b[a-zA-Z]{3,}\b', text2.lower()))
+        
+        if not words1 or not words2:
+            return 0.0
+        
+        intersection = words1.intersection(words2)
+        union = words1.union(words2)
+        
+        return len(intersection) / len(union) if union else 0.0
+    
+    def _detect_contradiction(self, statement1: str, statement2: str) -> bool:
+        """Detect basic contradictions between statements"""
+        # Simple contradiction detection patterns
+        contradiction_patterns = [
+            (r'\bis\b', r'\bis not\b'),
+            (r'\bwas\b', r'\bwas not\b'),
+            (r'\bwill\b', r'\bwill not\b'),
+            (r'\btrue\b', r'\bfalse\b'),
+            (r'\byes\b', r'\bno\b'),
+            (r'\bexists\b', r'\bdoes not exist\b')
+        ]
+        
+        stmt1_lower = statement1.lower()
+        stmt2_lower = statement2.lower()
+        
+        for pos_pattern, neg_pattern in contradiction_patterns:
+            if (re.search(pos_pattern, stmt1_lower) and re.search(neg_pattern, stmt2_lower)) or \
+               (re.search(neg_pattern, stmt1_lower) and re.search(pos_pattern, stmt2_lower)):
+                return True
+        
+        return False
+
+
+class PerceptionParser:
+    """Parses and processes simulation perceptions from various engine sources"""
+    def __init__(self, buffer_size: int = PERCEPTION_BUFFER_SIZE):
+        self.buffer_size = buffer_size
+        self.perception_buffer: List[SimulationPerception] = []
+        self.parsing_patterns = {
+            'entity_detection': r'\b(?:entity|object|being|construct|form)\s+(?:id|name|type):\s*(\w+)',
+            'event_detection': r'\b(?:event|action|process|transition):\s*([^,\n]+)',
+            'state_change': r'\b(?:state|status|condition)\s+(?:changed|updated|modified)\s+(?:to|from)\s*([^,\n]+)',
+            'error_pattern': r'\b(?:error|exception|failure|critical):\s*([^,\n]+)',
+            'metric_pattern': r'\b(\w+):\s*([+-]?\d*\.?\d+)'
+        }
+        self._lock = threading.Lock()
+        perception_logger.info("PerceptionParser initialized.")
+    
+    def parse_perception(self, raw_data: Any, source: str = "UNKNOWN") -> SimulationPerception:
+        """Parse raw perception data into structured perception object"""
         perception = SimulationPerception(
-            timestamp=datetime.datetime.now().isoformat(),
-            content=raw_input,
-            source="simulation"
+            content="",
+            source=source,
+            perception_type="GENERAL_OBSERVATION",
+            raw_data=raw_data
         )
         
-        # Try to parse metadata from the input
         try:
-            # Extract type if present
-            if "ERROR" in raw_input or "CRITICAL" in raw_input:
-                perception.perception_type = "ERROR"
-            elif "EVENT" in raw_input:
-                perception.perception_type = "EVENT"
-            elif "INFO" in raw_input:
-                perception.perception_type = "INFO"
-                
-            # Try to extract JSON if present
-            json_match = self.pattern_matchers['json_block'].search(raw_input)
-            if json_match:
-                try:
-                    json_str = json_match.group(0)
-                    json_data = json.loads(json_str)
-                    perception.metadata.update(json_data)
-                except json.JSONDecodeError:
-                    pass
-                
-            # Extract basic metrics
-            for metric_match in self.pattern_matchers['metric'].finditer(raw_input):
-                key, value = metric_match.groups()
-                try:
-                    perception.metadata[key] = float(value)
-                except ValueError:
-                    perception.metadata[key] = value
-                
+            if isinstance(raw_data, str):
+                perception.content = raw_data
+            elif isinstance(raw_data, dict):
+                perception.content = json.dumps(raw_data, indent=2)
+                perception.metadata.update(raw_data)
+            else:
+                perception.content = str(raw_data)
+            
+            # Extract structured information
+            perception.metadata.update(self._extract_patterns(perception.content))
+            
+            # Determine perception type
+            perception.perception_type = self._classify_perception(perception.content, perception.metadata)
+            
+            perception_logger.debug(f"Parsed perception from {source}: {perception.perception_type}")
+            
         except Exception as e:
-            perception_logger.warning(f"Error parsing perception: {e}")
-        
-        # Add to buffer
-        self.perception_buffer.append(perception)
-        if len(self.perception_buffer) > PERCEPTION_BUFFER_SIZE:
-            self.perception_buffer.pop(0)
-        
-        # Log the perception
-        perception_logger.info(f"[{perception.perception_type}] {raw_input[:80]}...")
-        
-        # Convert to memory and store
-        memory_event = perception.to_memory_event()
-        self.memory_manager.add_memory(memory_event)
+            perception_logger.error(f"Error parsing perception: {e}", exc_info=True)
+            perception.metadata["parse_error"] = str(e)
         
         return perception
     
-    def get_recent_perceptions(self, count: int = 10) -> List[SimulationPerception]:
-        """Get the most recent perceptions"""
-        return self.perception_buffer[-count:][::-1]
+    def add_to_buffer(self, perception: SimulationPerception) -> None:
+        """Add perception to buffer with size management"""
+        with self._lock:
+            self.perception_buffer.append(perception)
+            if len(self.perception_buffer) > self.buffer_size:
+                self.perception_buffer = self.perception_buffer[-self.buffer_size:]
+            perception_logger.debug(f"Added perception to buffer. Buffer size: {len(self.perception_buffer)}")
+    
+    def get_recent_perceptions(self, count: int = 10, perception_type: Optional[str] = None) -> List[SimulationPerception]:
+        """Get recent perceptions from buffer"""
+        with self._lock:
+            perceptions = self.perception_buffer
+            if perception_type:
+                perceptions = [p for p in perceptions if p.perception_type == perception_type]
+            return perceptions[-count:]
+    
+    def _extract_patterns(self, content: str) -> Dict[str, Any]:
+        """Extract structured patterns from content"""
+        extracted = {}
+        
+        for pattern_name, pattern in self.parsing_patterns.items():
+            matches = re.findall(pattern, content, re.IGNORECASE)
+            if matches:
+                extracted[pattern_name] = matches
+        
+        return extracted
+    
+    def _classify_perception(self, content: str, metadata: Dict[str, Any]) -> str:
+        """Classify the type of perception"""
+        content_lower = content.lower()
+        
+        if 'error_pattern' in metadata:
+            return "ERROR_DETECTION"
+        elif 'entity_detection' in metadata:
+            return "ENTITY_OBSERVATION"
+        elif 'event_detection' in metadata:
+            return "EVENT_OBSERVATION"
+        elif 'state_change' in metadata:
+            return "STATE_CHANGE"
+        elif 'metric_pattern' in metadata:
+            return "METRIC_OBSERVATION"
+        elif any(word in content_lower for word in ['quantum', 'field', 'wave']):
+            return "QUANTUM_OBSERVATION"
+        elif any(word in content_lower for word in ['timeline', 'temporal', 'time']):
+            return "TEMPORAL_OBSERVATION"
+        elif any(word in content_lower for word in ['reality', 'kernel', 'anchor']):
+            return "REALITY_OBSERVATION"
+        else:
+            return "GENERAL_OBSERVATION"
 
-# ================================================================
-#  Terminal Access Agent
-# ================================================================
 
 class TerminalAccessAgent:
-    """Handles terminal command execution with safety measures"""
+    """Handles terminal command execution and system interaction"""
+    def __init__(self, working_directory: Optional[Path] = None):
+        self.working_directory = working_directory or Path.cwd()
+        self.command_history: List[Dict[str, Any]] = []
+        self.active_processes: Dict[str, subprocess.Popen] = {}
+        self._lock = threading.Lock()
+        terminal_logger.info(f"TerminalAccessAgent initialized. Working directory: {self.working_directory}")
     
-    def __init__(self, memory_manager: OracleMemoryManager):
-        self.memory_manager = memory_manager
-        self.allowed_commands = {
-            'ls': True,
-            'cat': True,
-            'echo': True,
-            'grep': True,
-            'find': True,
-            'head': True,
-            'tail': True,
-            'wc': True,
-            'pwd': True,
-            'mkdir': True,
-            'touch': True,
-            'cd': False,  # Built-in, not subprocess
-            'python': True,
-            'pip': True
+    def execute_command(self, command: str, timeout: int = 30, capture_output: bool = True) -> Dict[str, Any]:
+        """Execute a terminal command and return results"""
+        execution_result = {
+            "command": command,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "success": False,
+            "stdout": "",
+            "stderr": "",
+            "return_code": None,
+            "execution_time": 0.0,
+            "error": None
         }
-        self.forbidden_patterns = [
-            r'rm\s+-rf\s+/',  # Delete everything
-            r'>\s+/dev/',      # Write to device files
-            r';\s*rm',         # Chained rm command
-            r'`.*rm.*`',       # Backtick execution with rm
-            r'wget\s+.+\s+\|\s+bash',  # Download and execute
-            r'curl\s+.+\s+\|\s+bash',  # Download and execute
-        ]
-        self.compiled_forbidden = [re.compile(pattern) for pattern in self.forbidden_patterns]
-        self.working_directory = os.getcwd()
         
-        system_logger.info("Terminal access agent initialized")
-    
-    def safe_execute(self, command: str) -> Tuple[bool, str, Optional[str]]:
-        """
-        Safely execute a terminal command
+        start_time = time.time()
         
-        Returns:
-            Tuple of (success, output, error_message)
-        """
-        # Clean and validate the command
-        command = command.strip()
-        
-        # Check for empty command
-        if not command:
-            return False, "", "Empty command"
-        
-        # Check against forbidden patterns
-        for pattern in self.compiled_forbidden:
-            if pattern.search(command):
-                error_msg = f"Command '{command}' contains forbidden pattern"
-                system_logger.warning(error_msg)
-                return False, "", error_msg
-        
-        # Extract the base command
-        parts = command.split()
-        base_cmd = parts[0]
-        
-        # Check if command is allowed
-        if base_cmd not in self.allowed_commands:
-            error_msg = f"Command '{base_cmd}' is not in the allowed list"
-            system_logger.warning(error_msg)
-            return False, "", error_msg
-        
-        # Special handling for cd (change directory)
-        if base_cmd == 'cd':
-            if len(parts) > 1:
-                try:
-                    new_dir = parts[1]
-                    os.chdir(new_dir)
-                    self.working_directory = os.getcwd()
-                    return True, f"Changed directory to {self.working_directory}", None
-                except Exception as e:
-                    error_msg = f"Error changing directory: {str(e)}"
-                    return False, "", error_msg
-            else:
-                return False, "", "cd requires a directory argument"
-        
-        # Execute the command and capture output
         try:
-            result = subprocess.run(
+            terminal_logger.info(f"Executing command: {command}")
+            
+            with self._lock:
+                self.command_history.append({
+                    "command": command,
+                    "timestamp": execution_result["timestamp"],
+                    "working_directory": str(self.working_directory)
+                })
+            
+            # Execute command
+            process = subprocess.Popen(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE if capture_output else None,
+                stderr=subprocess.PIPE if capture_output else None,
+                cwd=self.working_directory,
+                text=True,
+                encoding='utf-8'
+            )
+            
+            try:
+                stdout, stderr = process.communicate(timeout=timeout)
+                execution_result["stdout"] = stdout or ""
+                execution_result["stderr"] = stderr or ""
+                execution_result["return_code"] = process.returncode
+                execution_result["success"] = process.returncode == 0
+                
+            except subprocess.TimeoutExpired:
+                process.kill()
+                execution_result["error"] = f"Command timed out after {timeout} seconds"
+                terminal_logger.warning(f"Command timed out: {command}")
+            
+        except Exception as e:
+            execution_result["error"] = str(e)
+            terminal_logger.error(f"Error executing command '{command}': {e}", exc_info=True)
+        
+        execution_result["execution_time"] = time.time() - start_time
+        
+        # Truncate output if too long
+        if len(execution_result["stdout"]) > MAX_OUTPUT_LENGTH:
+            execution_result["stdout"] = execution_result["stdout"][:MAX_OUTPUT_LENGTH] + "\n... (output truncated)"
+        if len(execution_result["stderr"]) > MAX_OUTPUT_LENGTH:
+            execution_result["stderr"] = execution_result["stderr"][:MAX_OUTPUT_LENGTH] + "\n... (output truncated)"
+        
+        terminal_logger.debug(f"Command completed. Success: {execution_result['success']}, Time: {execution_result['execution_time']:.2f}s")
+        
+        return execution_result
+    
+    def start_background_process(self, command: str, process_id: str) -> bool:
+        """Start a background process"""
+        try:
+            process = subprocess.Popen(
                 command,
                 shell=True,
                 cwd=self.working_directory,
-                capture_output=True,
-                text=True,
-                timeout=30  # 30-second timeout
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
             )
-                
-            if result.returncode == 0:
-                # Store command execution in memory
-                self.memory_manager.add_memory(MemoryEvent(
-                    timestamp=datetime.datetime.now().isoformat(),
-                    event_type="COMMAND_EXECUTION",
-                    content=f"Command: {command}\nOutput: {result.stdout[:500]}...",
-                    source="terminal",
-                    metadata={"return_code": result.returncode}
-                ))
-                return True, result.stdout, None
-            else:
-                error_msg = f"Command returned error code {result.returncode}: {result.stderr}"
-                return False, result.stderr, error_msg
-                
-        except subprocess.TimeoutExpired:
-            error_msg = f"Command timed out after 30 seconds: {command}"
-            system_logger.warning(error_msg)
-            return False, "", error_msg
+            
+            with self._lock:
+                self.active_processes[process_id] = process
+            
+            terminal_logger.info(f"Started background process '{process_id}': {command}")
+            return True
+            
         except Exception as e:
-            error_msg = f"Error executing command: {str(e)}"
-            system_logger.error(error_msg)
-            return False, "", error_msg
+            terminal_logger.error(f"Error starting background process: {e}", exc_info=True)
+            return False
     
-    def parse_nl_command(self, natural_language: str) -> str:
-        """Parse natural language into a terminal command"""
-        # This would implement NL->command translation
-        # For now, just return a simple mapping or the original if not recognized
-        nl_lower = natural_language.lower()
-        
-        if "list files" in nl_lower:
-            return "ls -la"
-        elif "current directory" in nl_lower:
-            return "pwd"
-        elif "show file" in nl_lower and "content" in nl_lower:
-            # Try to extract filename
-            match = re.search(r'show\s+file\s+["\']?([^"\']+)["\']?\s+content', nl_lower)
-            if match:
-                filename = match.group(1)
-                return f"cat {filename}"
-        
-        # If no mapping found, just return the original
-        return natural_language
+    def stop_background_process(self, process_id: str) -> bool:
+        """Stop a background process"""
+        with self._lock:
+            process = self.active_processes.get(process_id)
+            if process and process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                del self.active_processes[process_id]
+                terminal_logger.info(f"Stopped background process '{process_id}'")
+                return True
+            return False
+    
+    def get_process_status(self, process_id: str) -> Optional[Dict[str, Any]]:
+        """Get status of a background process"""
+        with self._lock:
+            process = self.active_processes.get(process_id)
+            if process:
+                return {
+                    "process_id": process_id,
+                    "pid": process.pid,
+                    "is_running": process.poll() is None,
+                    "return_code": process.returncode
+                }
+            return None
+    
+    def get_command_history(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent command history"""
+        with self._lock:
+            return self.command_history[-limit:]
 
-# ================================================================
-#  Knowledge Synthesizer
-# ================================================================
 
 class KnowledgeSynthesizer:
-    """Builds structured symbolic understanding of the simulation over time"""
-    
-    def __init__(self, memory_manager: OracleMemoryManager, knowledge_file: str = KNOWLEDGE_FILE):
+    """Synthesizes knowledge entities from memories and maintains knowledge graph"""
+    def __init__(self, knowledge_file: Union[str, Path] = KNOWLEDGE_FILE, memory_manager: Optional[OracleMemoryManager] = None):
+        self.knowledge_file = Path(knowledge_file)
         self.memory_manager = memory_manager
-        self.knowledge_file = knowledge_file
-        self.entities: Dict[str, KnowledgeEntity] = {}
+        self.knowledge_entities: Dict[str, KnowledgeEntity] = {}
+        self.entity_relationships: Dict[str, Set[str]] = {}
+        self._lock = threading.Lock()
+        self.synthesis_patterns = {
+            'entity_patterns': [
+                r'\b(?:the|a|an)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:is|was|has|does)',
+                r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:engine|system|module|component|agent)'
+            ],
+            'relationship_patterns': [
+                r'([A-Za-z]+)\s+(?:connects to|links with|relates to|depends on)\s+([A-Za-z]+)',
+                r'([A-Za-z]+)\s+(?:is part of|belongs to|contains)\s+([A-Za-z]+)'
+            ]
+        }
         self.load_knowledge()
-        knowledge_logger.info(f"Knowledge synthesizer initialized with {len(self.entities)} entities")
-        
+        knowledge_logger.info(f"KnowledgeSynthesizer initialized. Loaded {len(self.knowledge_entities)} entities.")
+    
     def load_knowledge(self) -> None:
-        """Load knowledge base from disk"""
-        try:
-            if os.path.exists(self.knowledge_file):
-                with open(self.knowledge_file, 'r') as f:
-                    knowledge_data = json.load(f)
-                    
-                    # Convert dict objects to KnowledgeEntity objects
-                    self.entities = {
-                        entity_id: KnowledgeEntity(**entity_data) 
-                        for entity_id, entity_data in knowledge_data.items()
-                    }
-                    
-                    knowledge_logger.info(f"Loaded {len(self.entities)} knowledge entities from {self.knowledge_file}")
-            else:
-                knowledge_logger.info(f"No knowledge file found at {self.knowledge_file}, starting with empty knowledge base")
-        except Exception as e:
-            knowledge_logger.error(f"Error loading knowledge: {e}")
-            self.entities = {}
+        """Load knowledge entities from file"""
+        with self._lock:
+            try:
+                if self.knowledge_file.exists():
+                    with open(self.knowledge_file, 'r', encoding='utf-8') as f:
+                        knowledge_data = json.load(f)
+                        for entity_data in knowledge_data.get('entities', []):
+                            # Convert source_memory_ids from list to set if needed
+                            if 'source_memory_ids' in entity_data:
+                                entity_data['source_memory_ids'] = set(entity_data['source_memory_ids'])
+                            entity = KnowledgeEntity(**entity_data)
+                            self.knowledge_entities[entity.entity_id] = entity
+                        
+                        # Load relationships
+                        self.entity_relationships = knowledge_data.get('relationships', {})
+                        # Convert lists to sets
+                        for entity_id, related_ids in self.entity_relationships.items():
+                            if isinstance(related_ids, list):
+                                self.entity_relationships[entity_id] = set(related_ids)
+                        
+                        knowledge_logger.info(f"Loaded {len(self.knowledge_entities)} knowledge entities.")
+                else:
+                    knowledge_logger.info("No knowledge file found, starting fresh.")
+            except Exception as e:
+                knowledge_logger.error(f"Error loading knowledge: {e}", exc_info=True)
+                self.knowledge_entities = {}
+                self.entity_relationships = {}
     
     def save_knowledge(self) -> None:
-        """Save knowledge base to disk"""
-        try:
-            # Convert KnowledgeEntity objects to dictionaries
-            knowledge_data = {
-                entity_id: asdict(entity) for entity_id, entity in self.entities.items()
-            }
-            
-            with open(self.knowledge_file, 'w') as f:
-                json.dump(knowledge_data, f, indent=2)
+        """Save knowledge entities to file"""
+        with self._lock:
+            try:
+                self.knowledge_file.parent.mkdir(parents=True, exist_ok=True)
                 
-            knowledge_logger.info(f"Saved {len(self.entities)} knowledge entities to {self.knowledge_file}")
-        except Exception as e:
-            knowledge_logger.error(f"Error saving knowledge: {e}")
+                # Convert sets to lists for JSON serialization
+                entities_data = []
+                for entity in self.knowledge_entities.values():
+                    entity_dict = asdict(entity)
+                    entity_dict['source_memory_ids'] = list(entity_dict['source_memory_ids'])
+                    entities_data.append(entity_dict)
+                
+                relationships_data = {
+                    entity_id: list(related_ids) 
+                    for entity_id, related_ids in self.entity_relationships.items()
+                }
+                
+                knowledge_data = {
+                    'entities': entities_data,
+                    'relationships': relationships_data,
+                    'saved_at': datetime.datetime.now(datetime.timezone.utc).isoformat()
+                }
+                
+                with open(self.knowledge_file, 'w', encoding='utf-8') as f:
+                    json.dump(knowledge_data, f, indent=2, ensure_ascii=False)
+                
+                knowledge_logger.info(f"Saved {len(self.knowledge_entities)} knowledge entities.")
+                
+            except Exception as e:
+                knowledge_logger.error(f"Error saving knowledge: {e}", exc_info=True)
     
-    def add_entity(self, entity: Union[KnowledgeEntity, Dict]) -> str:
-        """Add a new knowledge entity to the knowledge base"""
-        # Convert dict to KnowledgeEntity if needed
-        if isinstance(entity, dict):
-            entity = KnowledgeEntity(**entity)
+    def synthesize_from_memories(self, memories: List[MemoryEvent]) -> List[str]:
+        """Synthesize knowledge entities from a list of memories"""
+        new_entity_ids = []
         
-        # Add to entities dictionary
-        self.entities[entity.entity_id] = entity
-        knowledge_logger.info(f"Added knowledge entity: {entity.entity_type} - {entity.name}")
+        try:
+            for memory in memories:
+                entities = self._extract_entities_from_memory(memory)
+                for entity in entities:
+                    entity_id = self._add_or_update_entity(entity, memory.hash_id)
+                    if entity_id:
+                        new_entity_ids.append(entity_id)
+                
+                # Extract relationships
+                relationships = self._extract_relationships_from_memory(memory)
+                for rel in relationships:
+                    self._add_relationship(rel['source'], rel['target'], rel['type'])
+            
+            knowledge_logger.info(f"Synthesized {len(new_entity_ids)} knowledge entities from {len(memories)} memories.")
+            
+        except Exception as e:
+            knowledge_logger.error(f"Error synthesizing knowledge: {e}", exc_info=True)
         
-        # Save to disk periodically (can be optimized to batch saves)
-        self.save_knowledge()
-        
-        return entity.entity_id
+        return new_entity_ids
     
     def get_entity(self, entity_id: str) -> Optional[KnowledgeEntity]:
-        """Get an entity by its ID"""
-        return self.entities.get(entity_id)
+        """Get a knowledge entity by ID"""
+        with self._lock:
+            return self.knowledge_entities.get(entity_id)
     
-    def search_entities(self, query: str, entity_type: Optional[str] = None, limit: int = 10) -> List[KnowledgeEntity]:
-        """Search for entities by name or attributes"""
-        results = []
-        query = query.lower()
-        
-        for entity in self.entities.values():
-            # Filter by type if specified
-            if entity_type and entity.entity_type != entity_type:
-                continue
+    def search_entities(self, query: str, limit: int = 10) -> List[KnowledgeEntity]:
+        """Search for knowledge entities"""
+        with self._lock:
+            query_terms = set(re.findall(r'\b[a-zA-Z]{3,}\b', query.lower()))
+            if not query_terms:
+                return []
+            
+            scored_entities = []
+            for entity in self.knowledge_entities.values():
+                score = 0
                 
-            # Match by name
-            if query in entity.name.lower():
-                results.append(entity)
-                if len(results) >= limit:
-                    break
+                # Name matching
+                entity_name_terms = set(re.findall(r'\b[a-zA-Z]{3,}\b', entity.name.lower()))
+                score += len(query_terms.intersection(entity_name_terms)) * 3
                 
-            # Match by attribute values
-            for attr_value in str(entity.attributes).lower():
-                if query in attr_value:
-                    if entity not in results:
-                        results.append(entity)
-                    if len(results) >= limit:
-                        break
-        
-        return results
+                # Tag matching
+                entity_tag_terms = set(' '.join(entity.tags).lower().split())
+                score += len(query_terms.intersection(entity_tag_terms)) * 2
+                
+                # Summary matching
+                if entity.summary:
+                    summary_terms = set(re.findall(r'\b[a-zA-Z]{3,}\b', entity.summary.lower()))
+                    score += len(query_terms.intersection(summary_terms))
+                
+                if score > 0:
+                    score *= entity.confidence
+                    scored_entities.append((entity, score))
+            
+            scored_entities.sort(key=lambda x: x[1], reverse=True)
+            return [entity for entity, score in scored_entities[:limit]]
     
-    def generate_knowledge_from_perceptions(self, recent_perceptions: List[SimulationPerception], count: int = 5) -> List[str]:
-        """Generate new knowledge entities from recent perceptions"""
-        generated_entity_ids = []
+    def _extract_entities_from_memory(self, memory: MemoryEvent) -> List[Dict[str, Any]]:
+        """Extract potential entities from memory content"""
+        entities = []
         
-        # Get a set of relevant perceptions to analyze
-        perceptions_to_analyze = recent_perceptions[:count]
-        if not perceptions_to_analyze:
-            return generated_entity_ids
-            
-        knowledge_logger.info(f"Analyzing {len(perceptions_to_analyze)} perceptions to generate knowledge")
+        # Use patterns to find entities
+        for pattern in self.synthesis_patterns['entity_patterns']:
+            matches = re.findall(pattern, memory.content)
+            for match in matches:
+                entity_name = match.strip()
+                if len(entity_name) > 2:  # Minimum length filter
+                    entities.append({
+                        'name': entity_name,
+                        'type': self._classify_entity_type(entity_name, memory.content),
+                        'confidence': min(0.8, memory.importance + 0.3),
+                        'source_memory': memory.hash_id,
+                        'content_context': memory.content
+                    })
         
-        for perception in perceptions_to_analyze:
-            # Extract entities from perception content using patterns
-            entity_matches = re.findall(r'Entity:\s+(\w+)', perception.content)
-            event_matches = re.findall(r'Event:\s+(.+?)(?:\.|$)', perception.content)
-            
-            # Create entities for recognized patterns
-            for entity_name in entity_matches:
-                # Check if we already know about this entity
-                existing_entities = self.search_entities(entity_name)
-                if not existing_entities:
-                    # Create new entity
-                    entity_id = hashlib.sha256(f"entity:{entity_name}".encode()).hexdigest()[:16]
-                    
-                    new_entity = KnowledgeEntity(
-                        entity_id=entity_id,
-                        entity_type="SIMULATION_ENTITY",
-                        name=entity_name,
-                        attributes={
-                            "first_observed": perception.timestamp,
-                            "observation_count": 1
-                        },
-                        source_memories=[perception.to_memory_event().hash_id]
-                    )
-                    
-                    self.add_entity(new_entity)
-                    generated_entity_ids.append(entity_id)
-                    knowledge_logger.info(f"Generated new entity: {entity_name}")
-                else:
-                    # Update existing entity
-                    for existing in existing_entities:
-                        # Update observation count
-                        if "observation_count" in existing.attributes:
-                            existing.attributes["observation_count"] += 1
-                        else:
-                            existing.attributes["observation_count"] = 1
-                            
-                        # Add source memory if not already there
-                        memory_id = perception.to_memory_event().hash_id
-                        if memory_id not in existing.source_memories:
-                            existing.source_memories.append(memory_id)
-                            
-                        # Update timestamp
-                        existing.updated_at = datetime.datetime.now().isoformat()
-                        knowledge_logger.debug(f"Updated entity: {existing.name}")
-            
-            # Create event entities
-            for event_desc in event_matches:
-                event_id = hashlib.sha256(f"event:{event_desc}".encode()).hexdigest()[:16]
-                
-                # Only create if this is a new event
-                if not self.get_entity(event_id):
-                    new_event = KnowledgeEntity(
-                        entity_id=event_id,
-                        entity_type="EVENT",
-                        name=f"Event: {event_desc[:50]}...",
-                        attributes={
-                            "description": event_desc,
-                            "timestamp": perception.timestamp
-                        },
-                        source_memories=[perception.to_memory_event().hash_id]
-                    )
-                    
-                    self.add_entity(new_event)
-                    generated_entity_ids.append(event_id)
-                    knowledge_logger.info(f"Generated new event entity: {event_desc[:50]}...")
+        # Extract from keywords
+        for keyword in memory.keywords:
+            if len(keyword) > 3 and keyword.istitle():
+                entities.append({
+                    'name': keyword,
+                    'type': 'CONCEPT',
+                    'confidence': memory.importance,
+                    'source_memory': memory.hash_id,
+                    'content_context': memory.content
+                })
         
-        knowledge_logger.info(f"Generated {len(generated_entity_ids)} new knowledge entities")
-        return generated_entity_ids
+        return entities
+    
+    def _extract_relationships_from_memory(self, memory: MemoryEvent) -> List[Dict[str, str]]:
+        """Extract relationships from memory content"""
+        relationships = []
+        
+        for pattern in self.synthesis_patterns['relationship_patterns']:
+            matches = re.findall(pattern, memory.content, re.IGNORECASE)
+            for match in matches:
+                if len(match) == 2:
+                    relationships.append({
+                        'source': match[0].strip(),
+                        'target': match[1].strip(),
+                        'type': 'RELATES_TO',
+                        'source_memory': memory.hash_id
+                    })
+        
+        return relationships
+    
+    def _classify_entity_type(self, entity_name: str, context: str) -> str:
+        """Classify the type of entity"""
+        name_lower = entity_name.lower()
+        context_lower = context.lower()
+        
+        if any(word in name_lower for word in ['engine', 'system', 'module']):
+            return 'SYSTEM_COMPONENT'
+        elif any(word in name_lower for word in ['agent', 'manager', 'processor']):
+            return 'AGENT'
+        elif any(word in context_lower for word in ['quantum', 'field', 'wave']):
+            return 'QUANTUM_ENTITY'
+        elif any(word in context_lower for word in ['timeline', 'temporal', 'time']):
+            return 'TEMPORAL_ENTITY'
+        elif any(word in context_lower for word in ['reality', 'dimension', 'space']):
+            return 'REALITY_ENTITY'
+        else:
+            return 'CONCEPT'
+    
+    def _add_or_update_entity(self, entity_data: Dict[str, Any], memory_id: str) -> Optional[str]:
+        """Add or update a knowledge entity"""
+        with self._lock:
+            entity_id = hashlib.sha256(entity_data['name'].encode()).hexdigest()[:12]
+            
+            if entity_id in self.knowledge_entities:
+                # Update existing entity
+                existing = self.knowledge_entities[entity_id]
+                existing.confidence = max(existing.confidence, entity_data['confidence'])
+                existing.source_memory_ids.add(memory_id)
+                existing.update_timestamp()
+            else:
+                # Create new entity
+                new_entity = KnowledgeEntity(
+                    entity_id=entity_id,
+                    entity_type=entity_data['type'],
+                    name=entity_data['name'],
+                    confidence=entity_data['confidence'],
+                    source_memory_ids={memory_id}
+                )
+                self.knowledge_entities[entity_id] = new_entity
+            
+            return entity_id
+    
+    def _add_relationship(self, source_name: str, target_name: str, rel_type: str) -> None:
+        """Add a relationship between entities"""
+        source_id = hashlib.sha256(source_name.encode()).hexdigest()[:12]
+        target_id = hashlib.sha256(target_name.encode()).hexdigest()[:12]
+        
+        with self._lock:
+            if source_id not in self.entity_relationships:
+                self.entity_relationships[source_id] = set()
+            self.entity_relationships[source_id].add(target_id)
 
-# ================================================================
-#  ORAMA System - Main Class
-# ================================================================
 
 class OramaSystem:
-    """Main ORAMA system that integrates all components"""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the ORAMA system with configuration"""
+    """Main ORAMA system orchestrating all components"""
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
-        
-        # Initialize state
         self.state = OramaState()
         
         # Initialize components
-        self.memory_manager = OracleMemoryManager(
-            max_memories=self.config.get('max_memories', 10000)
-        )
+        self.memory_manager = OracleMemoryManager()
+        self.truth_validator = TruthValidator(self.memory_manager)
+        self.perception_parser = PerceptionParser()
+        self.terminal_agent = TerminalAccessAgent()
+        self.knowledge_synthesizer = KnowledgeSynthesizer(memory_manager=self.memory_manager)
         
-        self.knowledge_synthesizer = KnowledgeSynthesizer(
-            memory_manager=self.memory_manager
-        )
+        # Engine components (if available)
+        self.engines = {}
+        self.engine_status = {}
         
-        self.perception_parser = PerceptionParser(
-            memory_manager=self.memory_manager
-        )
+        self._shutdown_event = threading.Event()
+        self._background_tasks = []
         
-        self.terminal_agent = TerminalAccessAgent(
-            memory_manager=self.memory_manager
-        )
-        
-        self.truth_validator = TruthValidator()
-        
-        # Initialize Genesis Cosmos Engine components
-        self.engine = None
-        self.initialize_cosmos_engine()
-        
-        # Set initialization flag
-        self.state.is_initialized = True
-        
-        system_logger.info("ORAMA system initialized successfully")
+        system_logger.info("OramaSystem initialized.")
     
-    def initialize_cosmos_engine(self):
-        """Initialize the Genesis Cosmos Engine"""
+    def initialize_engines(self) -> bool:
+        """Initialize cosmos engine components if available"""
+        if not COSMOS_ENGINE_AVAILABLE:
+            system_logger.warning("Cosmos engines not available. Running in limited mode.")
+            self.state.engine_status = "ENGINES_UNAVAILABLE"
+            return False
+        
         try:
-            from main import GenesisCosmosEngine
+            # Initialize engines
+            self.engines['timeline'] = TimelineEngine()
+            self.engines['quantum'] = QuantumField()
+            self.engines['aether'] = AetherEngine()
+            self.engines['reality'] = RealityKernel()
+            self.engines['universe'] = UniverseEngine()
+            self.engines['paradox'] = ParadoxEngine()
             
-            system_logger.info("Initializing Genesis Cosmos Engine...")
-            self.engine = GenesisCosmosEngine()
-            system_logger.info("Genesis Cosmos Engine initialized successfully")
+            for engine_name, engine in self.engines.items():
+                self.engine_status[engine_name] = "INITIALIZED"
             
-            # Record this in memory
-            self.memory_manager.add_memory(MemoryEvent(
-                timestamp=datetime.datetime.now().isoformat(),
-                event_type="SYSTEM_INITIALIZATION",
-                content="Genesis Cosmos Engine initialized successfully",
-                source="system",
-                metadata={"engine_status": "active"}
-            ))
+            self.state.engine_status = "ENGINES_ACTIVE"
+            system_logger.info("All cosmos engines initialized successfully.")
+            return True
             
         except Exception as e:
-            system_logger.error(f"Failed to initialize Genesis Cosmos Engine: {e}")
-            self.engine = None
+            system_logger.error(f"Error initializing engines: {e}", exc_info=True)
+            self.state.engine_status = "ENGINE_ERROR"
+            return False
     
-    def process_perception(self, raw_input: str) -> SimulationPerception:
-        """Process raw perception input"""
-        self.state.perception_count += 1
-        self.state.last_perception_time = datetime.datetime.now().isoformat()
-        
-        perception = self.perception_parser.process_raw_perception(raw_input)
-        
-        return perception
-    
-    def process_query(self, query_text: str) -> Tuple[str, QueryContext]:
-        """Process a query and generate a response"""
-        # Record query stats
-        self.state.query_count += 1
-        self.state.last_query_time = datetime.datetime.now().isoformat()
-        
-        # Create query context with relevant information
-        context = QueryContext(
-            query_text=query_text,
-            timestamp=datetime.datetime.now().isoformat(),
-            relevant_memories=self.memory_manager.search_memories(query_text, limit=5),
-            relevant_knowledge=[self.knowledge_synthesizer.entities.get(entity_id) 
-                              for entity_id in self.state.known_entities[-5:]
-                              if entity_id in self.knowledge_synthesizer.entities],
-            recent_perceptions=self.perception_parser.get_recent_perceptions(count=3)
-        )
-        
-        # Determine if this is a command for the Genesis Cosmos Engine
-        engine_commands = {
-            "start engine": self._start_cosmos_engine,
-            "stop engine": self._stop_cosmos_engine,
-            "pause engine": self._pause_cosmos_engine,
-            "resume engine": self._resume_cosmos_engine,
-            "engine status": self._get_cosmos_engine_status
-        }
-        
-        # Check for engine commands
-        for cmd, handler in engine_commands.items():
-            if cmd in query_text.lower():
-                response = handler()
-                return response, context
-        
-        # Process normal query
-        response = self._generate_response(query_text, context)
-        
-        # Validate response with truth constraints
-        is_valid, response, violation = self.truth_validator.validate_response(response)
-        
-        if not is_valid:
+    def process_query(self, query: str, user_context: Optional[Dict[str, Any]] = None) -> str:
+        """Process a user query and return response"""
+        try:
+            self.state.query_count += 1
+            self.state.last_query_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            
+            # Create query context
+            context = QueryContext(
+                query_text=query,
+                user_context=user_context or {}
+            )
+            
+            # Search for relevant memories
+            context.relevant_memories = self.memory_manager.search_memories(query, limit=15)
+            
+            # Search for relevant knowledge
+            context.relevant_knowledge = self.knowledge_synthesizer.search_entities(query, limit=10)
+            
+            # Get recent perceptions
+            context.recent_perceptions = self.perception_parser.get_recent_perceptions(count=5)
+            
+            # Validate query for truth/consistency
+            validation_result = self.truth_validator.validate_statement(query, context.user_context)
+            
+            # Generate response
+            response = self._generate_response(context, validation_result)
+            
+            # Store query as memory
+            query_memory = MemoryEvent(
+                event_type="USER_QUERY",
+                content=query,
+                source="USER_INPUT",
+                importance=0.7,
+                metadata={
+                    "user_context": context.user_context,
+                    "response_generated": True,
+                    "validation_score": validation_result.get("validation_score", 0.0)
+                }
+            )
+            self.memory_manager.add_memory(query_memory)
+            
+            system_logger.info(f"Processed query: {query[:50]}...")
+            return response
+            
+        except Exception as e:
             self.state.error_count += 1
-            response = f"Error: Response violated truth constraints: {violation}"
-        
-        return response, context
+            system_logger.error(f"Error processing query: {e}", exc_info=True)
+            return f"I encountered an error processing your query: {str(e)}"
     
-    def _generate_response(self, query_text: str, context: QueryContext) -> str:
-        """Generate a response to the user query"""
-        # In a real implementation, this would use an LLM or similar
-        # Here we'll create a simple response based on available context
-        
-        # Check if we have relevant memories
-        if context.relevant_memories:
-            memory_content = context.relevant_memories[0].content
-            return f"Based on my memory: {memory_content}\n\nYour query '{query_text}' has been processed."
-        
-        # Check if we have engine information
-        if self.engine:
-            engine_status = self.engine.get_status()
-            return f"The Genesis Cosmos Engine is {engine_status['status']}.\nCycle count: {engine_status['cycle_count']}\n\nYour query '{query_text}' has been processed."
-        
-        # Default response
-        return f"ORAMA has processed your query: '{query_text}'\nThe system is operational and waiting for further input."
-    
-    def _start_cosmos_engine(self) -> str:
-        """Start the Genesis Cosmos Engine"""
-        if not self.engine:
-            return "Error: Genesis Cosmos Engine is not initialized"
-        
+    def process_perception(self, raw_perception: Any, source: str = "SIMULATION") -> str:
+        """Process a perception from simulation engines"""
         try:
-            if self.engine.is_running:
-                return "Genesis Cosmos Engine is already running"
+            self.state.perception_count += 1
+            self.state.last_perception_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
             
-            self.engine.start()
-            return "Genesis Cosmos Engine has been started"
+            # Parse perception
+            perception = self.perception_parser.parse_perception(raw_perception, source)
+            
+            # Add to buffer
+            self.perception_parser.add_to_buffer(perception)
+            
+            # Convert to memory
+            memory_event = perception.to_memory_event()
+            memory_id = self.memory_manager.add_memory(memory_event)
+            
+            # Synthesize knowledge if significant
+            if memory_event.importance > 0.6:
+                self.knowledge_synthesizer.synthesize_from_memories([memory_event])
+            
+            perception_logger.info(f"Processed perception from {source}: {perception.perception_type}")
+            
+            return f"Perception processed: {perception.perception_type} from {source}"
+            
         except Exception as e:
-            system_logger.error(f"Error starting Genesis Cosmos Engine: {e}")
-            return f"Error starting Genesis Cosmos Engine: {str(e)}"
+            self.state.error_count += 1
+            system_logger.error(f"Error processing perception: {e}", exc_info=True)
+            return f"Error processing perception: {str(e)}"
     
-    def _stop_cosmos_engine(self) -> str:
-        """Stop the Genesis Cosmos Engine"""
-        if not self.engine:
-            return "Error: Genesis Cosmos Engine is not initialized"
-        
+    def execute_terminal_command(self, command: str) -> Dict[str, Any]:
+        """Execute a terminal command through the terminal agent"""
         try:
-            if not self.engine.is_running:
-                return "Genesis Cosmos Engine is not running"
+            result = self.terminal_agent.execute_command(command)
             
-            self.engine.stop()
-            return "Genesis Cosmos Engine has been stopped"
+            # Store command execution as memory
+            memory_event = MemoryEvent(
+                event_type="TERMINAL_COMMAND",
+                content=f"Command: {command}\nOutput: {result['stdout'][:200]}",
+                source="TERMINAL_AGENT",
+                importance=0.6 if result['success'] else 0.8,
+                metadata={
+                    "command": command,
+                    "success": result['success'],
+                    "return_code": result['return_code'],
+                    "execution_time": result['execution_time']
+                }
+            )
+            self.memory_manager.add_memory(memory_event)
+            
+            return result
+            
         except Exception as e:
-            system_logger.error(f"Error stopping Genesis Cosmos Engine: {e}")
-            return f"Error stopping Genesis Cosmos Engine: {str(e)}"
+            system_logger.error(f"Error executing terminal command: {e}", exc_info=True)
+            return {
+                "command": command,
+                "success": False,
+                "error": str(e),
+                "stdout": "",
+                "stderr": str(e)
+            }
     
-    def _pause_cosmos_engine(self) -> str:
-        """Pause the Genesis Cosmos Engine"""
-        if not self.engine:
-            return "Error: Genesis Cosmos Engine is not initialized"
-        
+    def get_system_status(self) -> Dict[str, Any]:
+        """Get comprehensive system status"""
+        return {
+            "orama_state": asdict(self.state),
+            "memory_count": len(self.memory_manager.memories),
+            "knowledge_entity_count": len(self.knowledge_synthesizer.knowledge_entities),
+            "perception_buffer_size": len(self.perception_parser.perception_buffer),
+            "active_processes": list(self.terminal_agent.active_processes.keys()),
+            "engine_status": self.engine_status,
+            "uptime_seconds": (
+                datetime.datetime.now(datetime.timezone.utc) - 
+                datetime.datetime.fromisoformat(self.state.system_start_time)
+            ).total_seconds()
+        }
+    
+    def save_all_data(self) -> None:
+        """Save all persistent data"""
         try:
-            if not self.engine.is_running:
-                return "Genesis Cosmos Engine is not running"
-            
-            self.engine.pause()
-            return "Genesis Cosmos Engine has been paused"
+            self.memory_manager.save_memories()
+            self.knowledge_synthesizer.save_knowledge()
+            system_logger.info("All data saved successfully.")
         except Exception as e:
-            system_logger.error(f"Error pausing Genesis Cosmos Engine: {e}")
-            return f"Error pausing Genesis Cosmos Engine: {str(e)}"
+            system_logger.error(f"Error saving data: {e}", exc_info=True)
     
-    def _resume_cosmos_engine(self) -> str:
-        """Resume the Genesis Cosmos Engine"""
-        if not self.engine:
-            return "Error: Genesis Cosmos Engine is not initialized"
+    def shutdown(self) -> None:
+        """Graceful shutdown of the system"""
+        system_logger.info("Initiating ORAMA system shutdown...")
         
-        try:
-            if not self.engine.is_running:
-                return "Genesis Cosmos Engine is not running"
-            
-            self.engine.resume()
-            return "Genesis Cosmos Engine has been resumed"
-        except Exception as e:
-            system_logger.error(f"Error resuming Genesis Cosmos Engine: {e}")
-            return f"Error resuming Genesis Cosmos Engine: {str(e)}"
-    
-    def _get_cosmos_engine_status(self) -> str:
-        """Get the status of the Genesis Cosmos Engine"""
-        if not self.engine:
-            return "Genesis Cosmos Engine is not initialized"
+        self._shutdown_event.set()
         
-        try:
-            status = self.engine.get_status()
-            status_str = f"Genesis Cosmos Engine Status:\n"
-            status_str += f"- Status: {status['status']}\n"
-            status_str += f"- Cycle Count: {status['cycle_count']}\n"
-            
-            if status.get('run_time'):
-                status_str += f"- Run Time: {status['run_time']}\n"
-            
-            if status.get('timeline_metrics'):
-                status_str += f"- Timeline Coherence: {status['timeline_metrics'].get('coherence', 'N/A')}\n"
-            
-            if status.get('breath_phase') is not None:
-                status_str += f"- Breath Phase: {status['breath_phase']:.2f}\n"
-            
-            return status_str
-        except Exception as e:
-            system_logger.error(f"Error getting Genesis Cosmos Engine status: {e}")
-            return f"Error getting Genesis Cosmos Engine status: {str(e)}"
-    
-    def execute_command(self, command: str) -> str:
-        """Execute a terminal command and return the output"""
-        success, output, error = self.terminal_agent.safe_execute(command)
+        # Stop background processes
+        for process_id in list(self.terminal_agent.active_processes.keys()):
+            self.terminal_agent.stop_background_process(process_id)
         
-        if success:
-            return f"Command executed successfully:\n\n{output}"
-        else:
-            return f"Error executing command: {error}\n{output}"
-    
-    def interactive_chat_mode(self):
-        """Run the ORAMA system in interactive chat mode"""
-        print("\n" + "="*60)
-        print("ORAMA INTERACTIVE CHAT MODE")
-        print("Type 'exit' or 'quit' to end the session")
-        print("Type 'command: <cmd>' to execute a terminal command")
-        print("Type 'engine start', 'engine stop', etc. to control the Genesis Cosmos Engine")
-        print("="*60 + "\n")
-        
-        if self.engine:
-            print("Genesis Cosmos Engine is initialized and ready.")
-        else:
-            print("Warning: Genesis Cosmos Engine is not initialized.")
-        
-        while True:
+        # Wait for background tasks
+        for task in self._background_tasks:
             try:
-                user_input = input("\nYou: ").strip()
-                
-                if user_input.lower() in ["exit", "quit"]:
-                    print("\nExiting ORAMA interactive chat mode...")
-                    break
-                
-                # Check if this is a terminal command
-                if user_input.lower().startswith("command:"):
-                    command = user_input[8:].strip()
-                    response = self.execute_command(command)
-                    print(f"\nORAMA: {response}")
-                    continue
-                
-                # Process engine commands directly
-                if user_input.lower() == "engine start":
-                    response = self._start_cosmos_engine()
-                elif user_input.lower() == "engine stop":
-                    response = self._stop_cosmos_engine()
-                elif user_input.lower() == "engine pause":
-                    response = self._pause_cosmos_engine()
-                elif user_input.lower() == "engine resume":
-                    response = self._resume_cosmos_engine()
-                elif user_input.lower() == "engine status":
-                    response = self._get_cosmos_engine_status()
-                else:
-                    # Process as a normal query
-                    response, context = self.process_query(user_input)
-                
-                print(f"\nORAMA: {response}")
-                
-            except KeyboardInterrupt:
-                print("\n\nKeyboard interrupt received. Exiting...")
-                break
+                if hasattr(task, 'join'):
+                    task.join(timeout=5)
             except Exception as e:
-                system_logger.error(f"Error in interactive chat mode: {e}")
-                print(f"\nORAMA: An error occurred: {str(e)}")
-                
-        print("\nORAMA chat session ended.")
+                system_logger.warning(f"Error stopping background task: {e}")
         
-        # Save memories and knowledge before exiting
-        self.memory_manager.save_memories()
-        self.knowledge_synthesizer.save_knowledge()
+        # Save all data
+        self.save_all_data()
+        
+        system_logger.info("ORAMA system shutdown complete.")
+    
+    def _generate_response(self, context: QueryContext, validation: Dict[str, Any]) -> str:
+        """Generate a response based on query context and validation"""
+        response_parts = []
+        
+        # Add validation information if relevant
+        if validation.get("validation_score", 0) < -0.5:
+            response_parts.append("⚠️  I found some contradictory information regarding your query.")
+        elif validation.get("validation_score", 0) > 0.5:
+            response_parts.append("✓ This appears to be consistent with my knowledge.")
+        
+        # Add knowledge context
+        if context.relevant_knowledge:
+            knowledge_names = [e.name for e in context.relevant_knowledge[:3]]
+            response_parts.append(f"Related concepts: {', '.join(knowledge_names)}")
+        
+        # Add memory context
+        if context.relevant_memories:
+            recent_memory = context.relevant_memories[-1]
+            response_parts.append(f"Recent relevant memory: {recent_memory.content[:100]}...")
+        
+        # Add perception context
+        if context.recent_perceptions:
+            recent_perception = context.recent_perceptions[-1]
+            response_parts.append(f"Current observation: {recent_perception.content[:100]}...")
+        
+        # Basic response generation
+        query_lower = context.query_text.lower()
+        if any(word in query_lower for word in ['status', 'state', 'how are']):
+            status = self.get_system_status()
+            response_parts.append(f"System Status: {status['orama_state']['engine_status']}")
+            response_parts.append(f"Memory: {status['memory_count']} events")
+            response_parts.append(f"Knowledge: {status['knowledge_entity_count']} entities")
+        
+        elif any(word in query_lower for word in ['help', 'what can', 'capabilities']):
+            response_parts.append("I can help you with:")
+            response_parts.append("- Analyzing simulation data and perceptions")
+            response_parts.append("- Maintaining persistent memory and knowledge")
+            response_parts.append("- Executing terminal commands")
+            response_parts.append("- Validating information consistency")
+        
+        else:
+            response_parts.append(f"I understand you're asking about: {context.query_text}")
+            if context.relevant_memories or context.relevant_knowledge:
+                response_parts.append("I've found relevant information in my memory and knowledge base.")
+            else:
+                response_parts.append("I don't have specific information about this topic yet.")
+        
+        return "\n".join(response_parts) if response_parts else "I'm processing your query..."
 
-# ================================================================
-#  Main Entry Point
-# ================================================================
 
 def main():
-    """Main entry point for the ORAMA system"""
-    import argparse
-    import time
-    import random
-    
+    """Main entry point for ORAMA"""
     parser = argparse.ArgumentParser(description="ORAMA - Observation, Reasoning, And Memory Agent")
-    parser.add_argument('--interactive', action='store_true', help='Run in interactive mode')
-    parser.add_argument('--perception-file', type=str, help='Process perceptions from a file')
-    parser.add_argument('--memory-file', type=str, default=MEMORY_FILE, help=f'Memory storage file (default: {MEMORY_FILE})')
-    parser.add_argument('--knowledge-file', type=str, default=KNOWLEDGE_FILE, help=f'Knowledge storage file (default: {KNOWLEDGE_FILE})')
-    parser.add_argument('--log-dir', type=str, default=LOG_DIR, help=f'Log directory (default: {LOG_DIR})')
-    parser.add_argument('--max-memories', type=int, default=10000, help='Maximum number of memories to keep')
-    parser.add_argument('--continuous', action='store_true', help='Run in continuous mode, generating and processing data')
-    parser.add_argument('--interval', type=float, default=5.0, help='Interval between perception generation in seconds (default: 5.0)')
-    parser.add_argument('--runtime', type=int, default=0, help='How long to run in continuous mode in seconds (0 for indefinite)')
+    parser.add_argument("--mode", choices=["interactive", "continuous", "query"], default="interactive",
+                       help="Operation mode")
+    parser.add_argument("--query", type=str, help="Single query to process (for query mode)")
+    parser.add_argument("--config", type=str, help="Configuration file path")
+    parser.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+                       help="Logging level")
     
     args = parser.parse_args()
     
-    # Configure with args
-    config = {
-        'memory_file': args.memory_file,
-        'knowledge_file': args.knowledge_file,
-        'log_dir': args.log_dir,
-        'max_memories': args.max_memories
-    }
+    # Update log level
+    logging.getLogger().setLevel(args.log_level)
     
-    # Initialize system
+    # Load configuration
+    config = {}
+    if args.config and os.path.exists(args.config):
+        try:
+            with open(args.config, 'r') as f:
+                config = json.load(f)
+        except Exception as e:
+            system_logger.error(f"Error loading config: {e}")
+    
+    # Initialize ORAMA system
     orama = OramaSystem(config)
     
-    # Process perceptions from file if specified
-    if args.perception_file:
-        try:
-            with open(args.perception_file, 'r') as f:
-                for line in f:
-                    orama.process_perception(line.strip())
-            print(f"Processed {orama.state.perception_count} perceptions from {args.perception_file}")
-        except Exception as e:
-            print(f"Error processing perception file: {e}")
+    # Set up signal handlers for graceful shutdown
+    def signal_handler(signum, frame):
+        system_logger.info(f"Received signal {signum}, shutting down...")
+        orama.shutdown()
+        sys.exit(0)
     
-    # Run interactive mode if specified
-    if args.interactive:
-        interactive_mode(orama)
-    # Run in continuous mode if specified
-    elif args.continuous:
-        continuous_mode(orama, interval=args.interval, runtime=args.runtime)
-    # If no mode is specified, run in continuous mode by default
-    else:
-        print("No operation mode specified. Running in continuous mode by default.")
-        continuous_mode(orama, interval=args.interval, runtime=args.runtime)
-    
-    # Shutdown properly
-    orama.shutdown()
-
-def continuous_mode(orama: OramaSystem, interval: float = 5.0, runtime: int = 0) -> None:
-    """
-    Run ORAMA in continuous mode, automatically generating perceptions and knowledge
-    
-    Args:
-        orama: The OramaSystem instance
-        interval: Time between perception generation in seconds
-        runtime: How long to run in seconds (0 for indefinite)
-    """
-    import time
-    import random
-    
-    system_logger.info(f"Starting continuous mode (interval={interval}s, runtime={runtime if runtime > 0 else 'indefinite'}s)")
-    print(f"ORAMA Continuous Mode (Press Ctrl+C to stop)")
-    
-    # Sample perception templates for simulation
-    perception_templates = [
-        "Entity: {entity} observed in {location} with state {state}",
-        "Event: {entity} changed from {old_state} to {new_state}",
-        "INFO: System is analyzing {entity} with metric {metric}: {value}",
-        "Entity: {entity} interacting with {other_entity} in {context}",
-        "Event: New pattern detected in {entity} behavior: {pattern}"
-    ]
-    
-    # Sample data for templates
-    entities = ["Particle", "Wave", "Field", "Anomaly", "Structure", "Dimension", "Recursion", "Pattern", "Cycle", "Nexus"]
-    locations = ["Quadrant1", "MainLoop", "CoreMemory", "PerceptionField", "DataStream", "VoidSpace", "BoundaryLayer"]
-    states = ["Stable", "Unstable", "Expanding", "Contracting", "Resonating", "Diverging", "Converging", "Fluctuating"]
-    metrics = ["Coherence", "Stability", "Symmetry", "Complexity", "Entropy", "Recursion", "Amplitude", "Frequency"]
-    patterns = ["Recursive", "Symmetric", "Oscillating", "Divergent", "Convergent", "Self-similar", "Fractal", "Chaotic"]
-    contexts = ["Information exchange", "Energy transfer", "Structure formation", "Pattern recognition", "Memory encoding"]
-    
-    start_time = time.time()
-    cycle_count = 0
-    last_knowledge_gen_time = start_time
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
     try:
-        while True:
-            current_time = time.time()
-            elapsed = current_time - start_time
-            
-            # Check if runtime has been exceeded
-            if runtime > 0 and elapsed > runtime:
-                system_logger.info(f"Runtime of {runtime}s reached, exiting continuous mode")
-                break
-            
-            # Generate a random perception
-            template = random.choice(perception_templates)
-            perception_text = ""
-            
-            # Generate the appropriate perception based on template type
-            if "Entity:" in template and "interacting" in template:
-                entity = random.choice(entities)
-                other_entity = random.choice([e for e in entities if e != entity])
-                context = random.choice(contexts)
-                perception_text = template.format(entity=entity, other_entity=other_entity, context=context)
-            elif "Entity:" in template:
-                entity = random.choice(entities)
-                location = random.choice(locations)
-                state = random.choice(states)
-                perception_text = template.format(entity=entity, location=location, state=state)
-            elif "Event:" in template and "pattern" in template:
-                entity = random.choice(entities)
-                pattern = random.choice(patterns)
-                perception_text = template.format(entity=entity, pattern=pattern)
-            elif "Event:" in template:
-                entity = random.choice(entities)
-                old_state = random.choice(states)
-                # Ensure new state is different from old state
-                new_state = random.choice([s for s in states if s != old_state])
-                perception_text = template.format(entity=entity, old_state=old_state, new_state=new_state)
-            elif "INFO:" in template:
-                entity = random.choice(entities)
-                metric = random.choice(metrics)
-                value = round(random.uniform(0, 100), 2)
-                perception_text = template.format(entity=entity, metric=metric, value=value)
-            else:
-                # Fallback
-                perception_text = f"Event: Generic observation cycle {cycle_count}"
-            
-            # Process the generated perception
-            perception = orama.process_perception(perception_text)
-            print(f"[{perception.timestamp}] Generated perception: {perception_text}")
-            
-            # Every 5 cycles, generate knowledge from recent perceptions
-            if cycle_count % 5 == 0 and cycle_count > 0:
-                recent_perceptions = orama.perception_parser.get_recent_perceptions(count=10)
-                generated_entities = orama.knowledge_synthesizer.generate_knowledge_from_perceptions(recent_perceptions)
-                
-                if generated_entities:
-                    print(f"Generated {len(generated_entities)} new knowledge entities")
-                    # Add entities to known entities list in state
-                    orama.state.known_entities.extend(generated_entities)
-                
-                # Save current state periodically
-                orama.memory_manager.save_memories()
-                orama.knowledge_synthesizer.save_knowledge()
-                last_knowledge_gen_time = current_time
-            
-            # Increment cycle and wait for next interval
-            cycle_count += 1
-            time_to_wait = interval - (time.time() - current_time)
-            if time_to_wait > 0:
-                time.sleep(time_to_wait)
-                
+        # Initialize engines
+        orama.initialize_engines()
+        orama.state.is_initialized = True
+        
+        # Run in specified mode
+        if args.mode == "query" and args.query:
+            response = orama.process_query(args.query)
+            print(response)
+        elif args.mode == "continuous":
+            continuous_mode(orama)
+        else:  # interactive
+            interactive_chat_mode(orama)
+    
     except KeyboardInterrupt:
-        system_logger.info("Received interrupt, exiting continuous mode")
-        print("\nExiting continuous mode")
+        system_logger.info("Interrupted by user")
+    except Exception as e:
+        system_logger.error(f"Fatal error: {e}", exc_info=True)
+    finally:
+        orama.shutdown()
 
-def interactive_mode(orama: OramaSystem) -> None:
-    """Run ORAMA in interactive CLI mode"""
-    print("ORAMA Interactive Mode")
-    print("Type 'exit' or 'quit' to end session")
-    print("Commands starting with ! will be executed in the terminal")
-    print("Commands starting with ? will be treated as queries")
-    print("All other input will be treated as perception data")
+
+def continuous_mode(orama: OramaSystem):
+    """Run ORAMA in continuous background mode"""
+    system_logger.info("Starting ORAMA in continuous mode...")
+    
+    def background_synthesis():
+        """Background task for knowledge synthesis"""
+        while not orama._shutdown_event.is_set():
+            try:
+                # Get recent memories for synthesis
+                recent_memories = orama.memory_manager.get_recent_memories(50)
+                if recent_memories:
+                    orama.knowledge_synthesizer.synthesize_from_memories(recent_memories)
+                
+                # Save data periodically
+                current_time = time.time()
+                if current_time - orama.state.last_memory_save_tick > 300:  # Every 5 minutes
+                    orama.save_all_data()
+                    orama.state.last_memory_save_tick = current_time
+                
+                time.sleep(30)  # Run every 30 seconds
+            except Exception as e:
+                system_logger.error(f"Error in background synthesis: {e}")
+                time.sleep(60)  # Wait longer on error
+    
+    # Start background tasks
+    synthesis_thread = threading.Thread(target=background_synthesis, daemon=True)
+    synthesis_thread.start()
+    orama._background_tasks.append(synthesis_thread)
+    
+    # Main continuous loop
+    try:
+        while not orama._shutdown_event.is_set():
+            # Check for perceptions from engines (if available and connected)
+            if COSMOS_ENGINE_AVAILABLE and orama.engines:
+                # Here you would poll engines for new perceptions
+                # This is a placeholder for actual engine integration
+                pass
+            
+            time.sleep(1)  # Main loop delay
+    
+    except KeyboardInterrupt:
+        system_logger.info("Continuous mode interrupted")
+    finally:
+        orama._shutdown_event.set()
+
+
+def interactive_chat_mode(orama: OramaSystem):
+    """Run ORAMA in interactive chat mode"""
+    print("🧠 ORAMA - Observation, Reasoning, And Memory Agent")
+    print("Type 'help' for commands, 'quit' to exit")
+    print("-" * 50)
+    
+    conversation_history = []
     
     while True:
         try:
-            user_input = input("\nORAMA> ").strip()
+            user_input = input("\n🔮 Query: ").strip()
             
-            if user_input.lower() in ['exit', 'quit']:
+            if user_input.lower() in ['quit', 'exit', 'bye']:
+                print("Goodbye! 👋")
                 break
-                
-            elif user_input.startswith('!'):
-                # Terminal command
-                cmd = user_input[1:].strip()
-                success, output = orama.execute_command(cmd)
-                print(f"Command {'succeeded' if success else 'failed'}")
-                print(output)
-                
-            elif user_input.startswith('?'):
-                # Query
-                query = user_input[1:].strip()
-                response, _ = orama.process_query(query)
-                print(f"Response: {response}")
-                
-            else:
-                # Perception data
-                perception = orama.process_perception(user_input)
-                print(f"Processed perception of type {perception.perception_type}")
-                
-        except KeyboardInterrupt:
-            print("\nReceived interrupt, exiting...")
-            break
             
+            if user_input.lower() == 'help':
+                print("""
+Available commands:
+- help: Show this help message
+- status: Show system status
+- memory <query>: Search memory
+- knowledge <query>: Search knowledge entities  
+- terminal <command>: Execute terminal command
+- save: Save all data
+- quit: Exit ORAMA
+""")
+                continue
+            
+            if user_input.lower() == 'status':
+                status = orama.get_system_status()
+                print(f"System Status: {status['orama_state']['engine_status']}")
+                print(f"Uptime: {status['uptime_seconds']:.0f} seconds")
+                print(f"Memories: {status['memory_count']}")
+                print(f"Knowledge Entities: {status['knowledge_entity_count']}")
+                print(f"Queries Processed: {status['orama_state']['query_count']}")
+                print(f"Perceptions: {status['orama_state']['perception_count']}")
+                continue
+            
+            if user_input.lower().startswith('memory '):
+                query = user_input[7:]
+                memories = orama.memory_manager.search_memories(query, limit=5)
+                print(f"\nFound {len(memories)} relevant memories:")
+                for i, mem in enumerate(memories, 1):
+                    print(f"{i}. [{mem.event_type}] {mem.content[:100]}...")
+                continue
+            
+            if user_input.lower().startswith('knowledge '):
+                query = user_input[10:]
+                entities = orama.knowledge_synthesizer.search_entities(query, limit=5)
+                print(f"\nFound {len(entities)} relevant knowledge entities:")
+                for i, entity in enumerate(entities, 1):
+                    print(f"{i}. {entity.name} ({entity.entity_type}) - Confidence: {entity.confidence:.2f}")
+                continue
+            
+            if user_input.lower().startswith('terminal '):
+                command = user_input[9:]
+                print(f"Executing: {command}")
+                result = orama.execute_terminal_command(command)
+                if result['success']:
+                    print(f"✓ Success (exit code: {result['return_code']})")
+                    if result['stdout']:
+                        print(f"Output:\n{result['stdout']}")
+                else:
+                    print(f"✗ Failed (exit code: {result['return_code']})")
+                    if result['stderr']:
+                        print(f"Error:\n{result['stderr']}")
+                continue
+            
+            if user_input.lower() == 'save':
+                orama.save_all_data()
+                print("✓ All data saved")
+                continue
+            
+            # Process as regular query
+            if user_input:
+                response = orama.process_query(user_input)
+                print(f"\n🤖 ORAMA: {response}")
+                
+                conversation_history.append((user_input, response))
+                if len(conversation_history) > 20:  # Keep last 20 exchanges
+                    conversation_history = conversation_history[-20:]
+        
+        except KeyboardInterrupt:
+            print("\nInterrupted. Type 'quit' to exit properly.")
+        except EOFError:
+            print("\nGoodbye! 👋")
+            break
         except Exception as e:
             print(f"Error: {e}")
-    
-    print("Exiting interactive mode")
+            system_logger.error(f"Interactive mode error: {e}", exc_info=True)
 
-def interactive_chat_mode(orama_system: OramaSystem):
-    """
-    Run an interactive chat session with the ORAMA system.
-    This allows direct communication with the Genesis Cosmos Engine.
-    """
-    print("\n" + "="*60)
-    print("ORAMA INTERACTIVE AGENT - GENESIS COSMOS ENGINE INTERFACE")
-    print("="*60)
-    print("Type 'exit', 'quit', or 'bye' to end the session.")
-    print("Type 'help' for a list of commands.")
-    print("Type 'start engine' to initialize the Genesis Cosmos Engine.")
-    print("="*60 + "\n")
-    
-    # Print system status
-    engine_status = "Not initialized"
-    if orama_system.engine:
-        try:
-            status = orama_system.engine.get_status()
-            engine_status = status['status']
-        except:
-            engine_status = "Error fetching status"
-    
-    print(f"Genesis Cosmos Engine Status: {engine_status}")
-    print(f"System Initialized: {orama_system.state.is_initialized}")
-    print(f"Memory Count: {len(orama_system.memory_manager.memories)}")
-    print("\nEnter your message below:")
-    
-    # Main chat loop
-    while True:
-        try:
-            # Get user input
-            user_input = input("\nYou: ").strip()
-            
-            # Check for exit command
-            if user_input.lower() in ['exit', 'quit', 'bye']:
-                print("\nShutting down ORAMA system...")
-                orama_system.shutdown()
-                print("Goodbye!")
-                break
-            
-            # Check for help command
-            if user_input.lower() == 'help':
-                print("\nAvailable commands:")
-                print("  help            - Display this help message")
-                print("  start engine    - Start the Genesis Cosmos Engine")
-                print("  stop engine     - Stop the Genesis Cosmos Engine")
-                print("  pause engine    - Pause the Genesis Cosmos Engine")
-                print("  resume engine   - Resume the Genesis Cosmos Engine")
-                print("  engine status   - Get the current status of the Engine")
-                print("  run <command>   - Execute a terminal command")
-                print("  exit/quit/bye   - Exit the chat session")
-                continue
-            
-            # Check for terminal command
-            if user_input.lower().startswith('run '):
-                command = user_input[4:].strip()
-                print(f"\nExecuting command: {command}")
-                success, output = orama_system.execute_command(command)
-                print(f"\nCommand {'succeeded' if success else 'failed'}")
-                print(output)
-                continue
-            
-            # Process regular query
-            print("\nProcessing your message...")
-            response, context = orama_system.process_query(user_input)
-            
-            # Display response
-            print("\nORAMA:", response)
-            
-        except KeyboardInterrupt:
-            print("\n\nInterrupted by user. Shutting down...")
-            orama_system.shutdown()
-            break
-            
-        except Exception as e:
-            error_message = f"Error processing message: {str(e)}"
-            print("\nORAMA:", error_message)
-            system_logger.error(error_message)
-            system_logger.error(traceback.format_exc())
 
 if __name__ == "__main__":
     main()
 
+system_logger.info("orama_agent.py module fully defined.")
