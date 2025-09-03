@@ -527,7 +527,10 @@ class CollapseAdapter:
         # Calculate pattern metrics
         collapsed_pattern = self._identify_pattern(after_density)
         entropy_change = self._calculate_entropy(after_density) - self._calculate_entropy(before_density)
-        ethical_alignment = self._calculate_ethical_alignment(collapse_idx, ethical_tensor)
+        
+        # Convert numpy indices to Python integers for type compatibility
+        collapse_idx_int = tuple(int(idx) for idx in collapse_idx)
+        ethical_alignment = self._calculate_ethical_alignment(collapse_idx_int, ethical_tensor)
         
         # Get ethical vector at collapse position
         ethical_vector = [ethical_tensor[e][collapse_idx] for e in range(ethical_tensor.shape[0])]

@@ -734,6 +734,53 @@ class AMRGrid:
         slices = tuple(slice(b[0], b[1] + 1) for b in patch)
         self.grids[level][slices] = self._refine(self.grids[level - 1][slices])
         self.refined_regions[level] = self.refined_regions.get(level, []) + [patch]
+    
+    def _resample(self, data, target_shape):
+        """Resample data array to target shape using interpolation"""
+        from scipy.interpolate import RegularGridInterpolator
+        
+        # Create coordinate grids for original data
+        original_coords = []
+        for dim_size in data.shape:
+            original_coords.append(np.linspace(0, 1, dim_size))
+        
+        # Create interpolator
+        interpolator = RegularGridInterpolator(
+            original_coords, data, 
+            method='linear', bounds_error=False, fill_value=0.0
+        )
+        
+        # Create target coordinate grid
+        target_coords = []
+        for dim_size in target_shape:
+            target_coords.append(np.linspace(0, 1, dim_size))
+        
+        # Generate all combinations of target coordinates
+        target_meshgrid = np.meshgrid(*target_coords, indexing='ij')
+        target_points = np.stack([grid.ravel() for grid in target_meshgrid], axis=-1)
+        
+        # Interpolate to target shape
+        resampled_flat = interpolator(target_points)
+        resampled = resampled_flat.reshape(target_shape)
+        
+        return resampled
+    
+    def _refine(self, coarse_data):
+        """Refine coarse data by factor of 2 using interpolation"""
+        # Double resolution in each dimension
+        refined_shape = tuple(2 * s for s in coarse_data.shape)
+        
+        # Use bilinear/trilinear interpolation for refinement
+        from scipy.ndimage import zoom
+        
+        # Calculate zoom factors
+        zoom_factors = [refined_shape[i] / coarse_data.shape[i] for i in range(len(coarse_data.shape))]
+        
+        # Apply zoom interpolation
+        refined_data = zoom(coarse_data, zoom_factors, order=1)  # Linear interpolation
+        
+        return refined_data
+
 # -------------------------------------------------------------------------
 # Symbolic Operators from Genesis Framework
 # -------------------------------------------------------------------------
@@ -1559,3 +1606,252 @@ class QuantumStateVector:
         self.apply_gate(self.cnot_gate(), [0, 1])
         
         return self
+
+# -------------------------------------------------------------------------
+# Quantum Field Evolution
+# -------------------------------------------------------------------------
+class QuantumFieldEvolution:
+    """Advanced quantum field evolution with multiple integration schemes"""
+    
+    def __init__(self, field, config):
+        self.field = field
+        self.config = config
+        self.dt = config.temporal_resolution
+        self.evolution_history = []
+        
+    def runge_kutta_4th_order(self, dt=None):
+        """4th order Runge-Kutta integration for field evolution"""
+        if dt is None:
+            dt = self.dt
+            
+        psi = self.field.psi.copy()
+        
+        # Define the derivative function
+        def dpsi_dt(psi_current):
+            # Temporarily set field state
+            original_psi = self.field.psi.copy()
+            self.field.psi = psi_current
+            
+            # Compute derivatives
+            laplacian = self.field._compute_laplacian()
+            time_deriv = np.zeros_like(psi_current)  # Skip second derivative for RK4
+            ethical_term = self.field._ethical_divergence_term()
+            potential_term = self.field.potential * psi_current
+            
+            # Restore original state
+            self.field.psi = original_psi
+            
+            # Return combined derivative
+            return -1j * (laplacian + potential_term + ethical_term)
+        
+        # RK4 steps
+        k1 = dt * dpsi_dt(psi)
+        k2 = dt * dpsi_dt(psi + k1/2)
+        k3 = dt * dpsi_dt(psi + k2/2)
+        k4 = dt * dpsi_dt(psi + k3)
+        
+        # Update field
+        self.field.psi = psi + (k1 + 2*k2 + 2*k3 + k4) / 6
+        self.field._enforce_normalization()
+        
+        # Store evolution history
+        self.evolution_history.append({
+            'time': len(self.evolution_history) * dt,
+            'energy': self.field.compute_energy(),
+            'norm': np.sum(np.abs(self.field.psi)**2)
+        })
+    
+    def adaptive_step_evolution(self, error_tolerance=1e-6):
+        """Adaptive step size evolution with error control"""
+        dt = self.dt
+        max_dt = 10 * self.dt
+        min_dt = 0.01 * self.dt
+        
+        psi_original = self.field.psi.copy()
+        
+        # Take one full step
+        self.runge_kutta_4th_order(dt)
+        psi_full = self.field.psi.copy()
+        
+        # Take two half steps
+        self.field.psi = psi_original.copy()
+        self.runge_kutta_4th_order(dt/2)
+        self.runge_kutta_4th_order(dt/2)
+        psi_half = self.field.psi.copy()
+        
+        # Estimate error
+        error = np.max(np.abs(psi_full - psi_half))
+        
+        # Adjust step size
+        if error > error_tolerance:
+            # Error too large, reduce step size and retry
+            dt_new = max(min_dt, dt * 0.5)
+            self.field.psi = psi_original.copy()
+            self.runge_kutta_4th_order(dt_new)
+        elif error < error_tolerance / 10:
+            # Error very small, can increase step size for next iteration
+            dt_new = min(max_dt, dt * 1.5)
+            self.field.psi = psi_half.copy()  # Use more accurate half-step result
+        else:
+            # Error acceptable, use half-step result
+            dt_new = dt
+            self.field.psi = psi_half.copy()
+        
+        # Update step size for next iteration
+        self.dt = dt_new
+        
+        return error
+
+class QuantumDynamics:
+    """High-level quantum dynamics simulation manager"""
+    
+    def __init__(self, config):
+        self.config = config
+        self.field = QuantumField(config)
+        self.monte_carlo = QuantumMonteCarlo(config)
+        self.evolution = QuantumFieldEvolution(self.field, config)
+        self.temporal_framework = TemporalFramework(config)
+        
+        # Simulation state
+        self.current_time = 0.0
+        self.step_count = 0
+        self.simulation_data = []
+        
+    def initialize_simulation(self, initial_state=None, ethical_params=None):
+        """Initialize the quantum dynamics simulation"""
+        # Set initial field state
+        if initial_state is not None:
+            self.field.psi = initial_state.copy()
+            self.field._enforce_normalization()
+        
+        # Set ethical parameters
+        if ethical_params is not None:
+            ethical_tensor = np.zeros((self.config.ethical_dim, *self.field.grid_shape))
+            for dim in range(min(len(ethical_params), self.config.ethical_dim)):
+                ethical_tensor[dim] = ethical_params[dim]
+            self.field.set_ethical_tensor(ethical_tensor)
+        
+        # Thermalize Monte Carlo
+        if hasattr(self.monte_carlo, 'thermalize'):
+            print("Thermalizing quantum vacuum...")
+            acceptance_ratio = self.monte_carlo.thermalize()
+            print(f"Thermalization complete. Average acceptance ratio: {acceptance_ratio:.3f}")
+        
+        print("Quantum dynamics simulation initialized")
+    
+    def run_simulation(self, total_time=None, save_frequency=None):
+        """Run the complete quantum dynamics simulation"""
+        if total_time is None:
+            total_time = self.config.total_time
+        if save_frequency is None:
+            save_frequency = self.config.save_frequency
+        
+        num_steps = int(total_time / self.config.temporal_resolution)
+        
+        print(f"Running quantum simulation for {total_time} time units ({num_steps} steps)")
+        
+        # Main simulation loop
+        for step in tqdm(range(num_steps), desc="Quantum Evolution"):
+            # Evolve quantum field
+            if self.config.adaptive_step_size:
+                error = self.evolution.adaptive_step_evolution()
+                self.current_time += self.evolution.dt
+            else:
+                self.evolution.runge_kutta_4th_order()
+                self.current_time += self.config.temporal_resolution
+            
+            # Update Monte Carlo configuration
+            if step % 10 == 0:  # Don't update every step for efficiency
+                _, accept_ratio = self.monte_carlo.metropolis_step()
+            
+            # Handle temporal events
+            if hasattr(self.temporal_framework, 'timeline') and self.temporal_framework.timeline:
+                # Check for temporal events
+                current_tick = int(self.current_time / self.config.temporal_resolution)
+                if current_tick != self.temporal_framework.get_current_tick():
+                    event_data = {'type': 'tick', 'time': self.current_time}
+                    self.temporal_framework._handle_temporal_event(event_data)
+            
+            # Save data periodically
+            if step % save_frequency == 0:
+                self._save_simulation_data(step)
+            
+            self.step_count += 1
+            
+            # Check for decoherence
+            try:
+                coherence_value = np.abs(np.sum(self.field.psi * np.conj(self.field.psi)))
+                if coherence_value < 1e-6:
+                    raise QuantumDecoherenceError(
+                        coherence_value=coherence_value,
+                        location=f"step_{step}",
+                        affected_patterns=["vacuum_state"]
+                    )
+            except QuantumDecoherenceError as e:
+                print(f"Warning: {e}")
+                # Re-normalize field
+                self.field._enforce_normalization()
+        
+        print(f"Simulation complete. Final time: {self.current_time:.3f}")
+        return self.simulation_data
+    
+    def _save_simulation_data(self, step):
+        """Save current simulation state"""
+        data_point = {
+            'step': step,
+            'time': self.current_time,
+            'energy': self.field.compute_energy(),
+            'field_norm': np.sum(np.abs(self.field.psi)**2),
+            'max_field_amplitude': np.max(np.abs(self.field.psi)),
+            'coherence': self.field.coherence if hasattr(self.field, 'coherence') else None,
+            'ethical_coupling': self.field.ethical_coupling if hasattr(self.field, 'ethical_coupling') else None
+        }
+        
+        # Add quantum entanglement measures if applicable
+        if hasattr(self.field, 'psi') and self.field.psi is not None:
+            try:
+                # Create quantum state vector for entanglement analysis
+                n_qubits = min(8, int(np.log2(np.prod(self.field.psi.shape))))  # Limit to prevent memory issues
+                if n_qubits >= 1:
+                    # Flatten and normalize field for quantum state analysis
+                    flat_psi = self.field.psi.flatten()
+                    if len(flat_psi) >= 2**n_qubits:
+                        truncated_psi = flat_psi[:2**n_qubits]
+                        normalized_psi = truncated_psi / np.sqrt(np.sum(np.abs(truncated_psi)**2))
+                        
+                        qstate = QuantumStateVector(n_qubits, normalized_psi)
+                        if n_qubits > 1:
+                            # Calculate entanglement entropy for first half of qubits
+                            subsystem = list(range(n_qubits // 2))
+                            entropy = qstate.entanglement_entropy(subsystem)
+                            data_point['entanglement_entropy'] = entropy
+            except Exception as e:
+                # Don't let entanglement calculation break the simulation
+                data_point['entanglement_entropy'] = None
+        
+        self.simulation_data.append(data_point)
+    
+    def get_simulation_summary(self):
+        """Get summary statistics from the simulation"""
+        if not self.simulation_data:
+            return {"status": "No data collected"}
+        
+        energies = [d['energy'] for d in self.simulation_data if 'energy' in d]
+        norms = [d['field_norm'] for d in self.simulation_data if 'field_norm' in d]
+        
+        summary = {
+            'total_steps': self.step_count,
+            'final_time': self.current_time,
+            'energy_conservation': {
+                'initial': energies[0] if energies else None,
+                'final': energies[-1] if energies else None,
+                'variation': (max(energies) - min(energies)) / abs(energies[0]) if energies else None
+            },
+            'normalization': {
+                'mean': np.mean(norms) if norms else None,
+                'std': np.std(norms) if norms else None
+            },
+            'data_points': len(self.simulation_data)
+        }
+        
+        return summary

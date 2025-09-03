@@ -6,17 +6,38 @@
 # ================================================================
 import math
 import random
+import time
 import collections
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Set, Optional, Union, Any, Callable
 import numpy as np
-
 import logging
 from collections import deque
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime%s - %(name)s - %(levelname)s - %(message)s')
+# Try to import scipy, fall back to numpy for convolution if not available
+try:
+    from scipy.signal import convolve2d
+    HAS_SCIPY = True
+except ImportError:
+    HAS_SCIPY = False
+    # Fallback convolution function using numpy
+    def convolve2d(signal, kernel, mode='same', boundary='symm'):
+        """Fallback convolution using numpy when scipy is not available"""
+        # Simple 2D convolution implementation
+        if mode == 'same':
+            padded = np.pad(signal, 1, mode='constant')
+            result = np.zeros_like(signal)
+            for i in range(signal.shape[0]):
+                for j in range(signal.shape[1]):
+                    result[i, j] = np.sum(padded[i:i+3, j:j+3] * kernel)
+            return result
+        else:
+            # Basic implementation for other modes
+            return signal
+
+# Configure logging - fix the format string syntax error
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("PerceptionModule")
 
 class PerceptionProcessor:
@@ -1380,7 +1401,6 @@ class PerceptionIntegrator:
         self.attention_focus = None
     
     def perceive(self, universal_state: Dict[str, Any]) -> Dict[str, Any]:
-        from perception_module_core import PerceptionProcessor  # Local import to avoid circular dependency
         """
         Generate subjective experience from universal state.
         This is the main perception function that ties everything together.
@@ -1668,7 +1688,7 @@ class PerceptionIntegrator:
                 "harmonic": ("overtone_alignment", 0.7),
                 "quantum": ("reality_bleed", 0.6)
             },
-            "genesis": {
+                       "genesis": {
                 "harmonic": ("resonance_cascade", 0.8),
                 "symbolic": ("pattern:archetype:anima", 0.9),
                 "temporal": ("acceleration", 0.7),
@@ -2383,7 +2403,6 @@ class HapticFieldGenerator:
             ]) * diffusion_rate
             
             # Apply diffusion
-            from scipy.signal import convolve2d
             diffused = convolve2d(temp_field, diffusion_kernel, mode='same', boundary='symm')
             
             # Combine original with diffused
@@ -2508,129 +2527,6 @@ class HapticFieldGenerator:
         
         return sample
 
-class PerceptualBuffer:
-    """
-    A buffer that holds and integrates multi-sensory perceptual data.
-    """
-    
-    def __init__(self, visual=None, auditory=None, tactile=None, olfactory=None, 
-                taste=None, proprioception=None, electromagnetic=None, temporal=None):
-        self.visual = visual
-        self.auditory = auditory
-        self.tactile = tactile
-        self.olfactory = olfactory
-        self.taste = taste
-        self.proprioception = proprioception
-        self.electromagnetic = electromagnetic
-        self.temporal = temporal
-        self.integration_weights = {
-            'visual': 0.3,
-            'auditory': 0.2,
-            'tactile': 0.2,
-            'olfactory': 0.1,
-            'taste': 0.05,
-            'proprioception': 0.05,
-            'electromagnetic': 0.05,
-            'temporal': 0.05
-        }
-    
-    def integrate(self) -> Dict[str, Any]:
-        """
-        Integrate all sensory modalities into a unified perception.
-        
-        Returns:
-            Integrated perception data
-        """
-        # Calculate which senses are active
-        active_senses = {}
-        for sense in self.integration_weights:
-            if getattr(self, sense) is not None:
-                active_senses[sense] = getattr(self, sense)
-        
-        if not active_senses:
-            return {'coherence': 0.0, 'integrated': None}
-        
-        # Normalize weights for active senses
-        active_weights = {sense: self.integration_weights[sense] for sense in active_senses}
-        weight_sum = sum(active_weights.values())
-        
-        if weight_sum > 0:
-            normalized_weights = {k: v/weight_sum for k, v in active_weights.items()}
-        else:
-            equal_weight = 1.0 / len(active_senses)
-            normalized_weights = {k: equal_weight for k in active_senses}
-        
-        # Calculate cross-modal coherence
-        coherence_matrix = self._calculate_coherence_matrix(active_senses)
-        overall_coherence = np.mean(coherence_matrix) if coherence_matrix.size > 0 else 1.0
-        
-        # Return integrated result
-        return {
-            'modalities': active_senses,
-            'weights': normalized_weights,
-            'coherence': float(overall_coherence),
-            'coherence_matrix': coherence_matrix.tolist() if coherence_matrix.size > 0 else [],
-            'dominant_modality': max(normalized_weights.items(), key=lambda x: x[1])[0] if normalized_weights else None
-        }
-    
-    def _calculate_coherence_matrix(self, active_senses: Dict[str, Any]) -> np.ndarray:
-        """
-        Calculate coherence between each pair of sensory modalities.
-        
-        Returns:
-            Coherence matrix as numpy array
-        """
-        senses = list(active_senses.keys())
-        n_senses = len(senses)
-        
-        if n_senses <= 1:
-            return np.ones((1, 1))
-        
-        coherence = np.ones((n_senses, n_senses))
-        
-        # Calculate coherence for each pair
-        for i in range(n_senses):
-            for j in range(i+1, n_senses):
-                sense1 = senses[i]
-                sense2 = senses[j]
-                
-                # Calculate cross-modal coherence
-                c = self._cross_modal_coherence(sense1, sense2)
-                coherence[i, j] = c
-                coherence[j, i] = c
-        
-        return coherence
-    
-    def _cross_modal_coherence(self, sense1: str, sense2: str) -> float:
-        """
-        Calculate coherence between two sensory modalities.
-        Higher value means more consistent information across modalities.
-        
-        Returns:
-            Coherence value between 0 and 1
-        """
-        # Default high coherence
-        base_coherence = 0.8
-        
-        # In a full implementation, would compare actual data
-        # For example, checking if visual object positions align with sounds
-        
-        # Basic implementation just returns fixed values for each combination
-        coherence_map = {
-            ('visual', 'auditory'): 0.7,
-            ('visual', 'tactile'): 0.8,
-            ('auditory', 'tactile'): 0.6,
-            ('olfactory', 'taste'): 0.9,
-            ('visual', 'olfactory'): 0.5,
-            ('visual', 'electromagnetic'): 0.7,
-            ('proprioception', 'tactile'): 0.9,
-            ('temporal', 'auditory'): 0.8
-        }
-        
-        # Get coherence value if defined, otherwise use default
-        pair = tuple(sorted([sense1, sense2]))
-        return coherence_map.get(pair, base_coherence)
-
 class ChemicalPerceptionGenerator:
     """
     Generates chemical perception data for smell and taste.
@@ -2697,7 +2593,6 @@ class ChemicalPerceptionGenerator:
             rate = self.diffusion_rates[compound] * time_step
             
             # Apply convolution for diffusion
-            from scipy.signal import convolve2d
             diffused = convolve2d(
                 self.compound_fields[compound], 
                 kernel, 
@@ -2863,8 +2758,8 @@ class ProprioceptionGenerator:
         self.muscle_joint_map = {}
         for m in range(muscle_count):
             # Each muscle affects 1-3 joints
-            joint_count = np.random.randint(1, 4)
-            affected_joints = np.random.choice(joint_count, joint_count, replace=False)
+            affected_joint_count = np.random.randint(1, 4)
+            affected_joints = np.random.choice(joint_count, affected_joint_count, replace=False)
             self.muscle_joint_map[m] = list(affected_joints)
         
         # Balance and orientation
@@ -2938,7 +2833,8 @@ class ProprioceptionGenerator:
         self.velocity += self.acceleration * dt
         
         # Update positions based on velocity
-        self.joint_positions += np.array([self.velocity * dt for _ in range(self.joint_count)])
+        velocity_matrix = np.tile(self.velocity, (self.joint_count, 1))
+        self.joint_positions += velocity_matrix * dt
         
         # Keep joints within bounds
         self.joint_positions = np.clip(self.joint_positions, 0.0, 1.0)
@@ -2947,9 +2843,10 @@ class ProprioceptionGenerator:
         for m in range(self.muscle_count):
             tension = self.muscle_tension[m]
             for joint_idx in self.muscle_joint_map.get(m, []):
-                # Simple model: tension affects joint angle
-                angle_change = (tension - 0.5) * 0.1 * dt
-                self.joint_angles[joint_idx] += angle_change
+                if joint_idx < len(self.joint_angles):
+                    # Simple model: tension affects joint angle
+                    angle_change = (tension - 0.5) * 0.1 * dt
+                    self.joint_angles[joint_idx] += angle_change
                 
         # Simulate balance changes
         if np.random.random() < 0.1:  # Occasional balance perturbation
@@ -3325,7 +3222,12 @@ class TemporalPerceptionGenerator:
             previous_window = self.previous_timestamps[window_size:window_size*2]
             
             # Calculate similarity (correlation)
-            similarity = np.corrcoef(recent_window, previous_window)[0, 1]
+            try:
+                similarity = np.corrcoef(recent_window, previous_window)[0, 1]
+                if np.isnan(similarity):
+                    continue
+            except:
+                continue
             
             if similarity > similarity_threshold:
                 # Detected a loop
@@ -3369,11 +3271,11 @@ class TemporalPerceptionGenerator:
         # Calculate time deltas
         deltas = np.diff(self.previous_timestamps[:20])
         
-        if len(deltas) == 0 or np.mean(deltas) == 0:
+        if len(deltas) == 0 or np.mean(np.abs(deltas)) == 0:
             return 1.0
             
         # Calculate coefficient of variation
-        cv = np.std(deltas) / np.mean(deltas)
+        cv = np.std(deltas) / (np.mean(np.abs(deltas)) + 1e-10)
         
         # Convert to consistency score (lower cv = higher consistency)
         consistency = 1.0 / (1.0 + cv)

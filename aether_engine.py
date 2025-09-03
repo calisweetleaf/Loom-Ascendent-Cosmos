@@ -916,110 +916,247 @@ class AetherEngine:
     # --------------------------
     @lru_cache(maxsize=128)
     def _encode_binary(self, data: bytes) -> bytes:
-        """Boolean state representation"""
-        if not data:
-            raise ValueError("Input data for binary encoding cannot be empty.")
-        return hashlib.sha3_512(data).digest()
+        """Boolean state representation with comprehensive error handling"""
+        try:
+            if not data:
+                raise EncodingError("Input data for binary encoding cannot be empty")
+            
+            if len(data) > self.physics.get('max_pattern_size', 1048576):  # 1MB limit
+                raise EncodingError(f"Input data size {len(data)} exceeds maximum allowed size")
+            
+            result = hashlib.sha3_512(data).digest()
+            logger.debug(f"Binary encoding completed for {len(data)} bytes -> {len(result)} bytes")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Binary encoding failed: {e}")
+            raise EncodingError(f"Binary encoding failed: {e}")
 
     def _encode_symbolic(self, data: bytes) -> bytes:
-        """Abstract character-based encoding"""
-        return data.ljust(self.physics.get('min_pattern_size', 64), b'\x00')
+        """Abstract character-based encoding with validation"""
+        try:
+            if not data:
+                raise EncodingError("Input data for symbolic encoding cannot be empty")
+            
+            min_size = self.physics.get('min_pattern_size', 64)
+            max_size = self.physics.get('max_pattern_size', 1048576)
+            
+            if len(data) > max_size:
+                raise EncodingError(f"Input data size {len(data)} exceeds maximum {max_size}")
+            
+            result = data.ljust(min_size, b'\x00')[:max_size]  # Truncate if too large
+            logger.debug(f"Symbolic encoding completed: {len(data)} -> {len(result)} bytes")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Symbolic encoding failed: {e}")
+            raise EncodingError(f"Symbolic encoding failed: {e}")
 
     def _encode_voxel(self, data: bytes) -> bytes:
-        """3D volumetric encoding"""
-        arr = np.frombuffer(data, dtype=np.uint8)
-        size = max(int(len(arr) ** (1/3)) + 1, 1)
-        return arr.tobytes().ljust(size**3, b'\x00')
+        """3D volumetric encoding with bounds checking"""
+        try:
+            if not data:
+                raise EncodingError("Input data for voxel encoding cannot be empty")
+            
+            arr = np.frombuffer(data, dtype=np.uint8)
+            if len(arr) == 0:
+                raise EncodingError("Cannot create voxel array from empty data")
+            
+            # Calculate cube size with limits
+            cube_size = max(int(len(arr) ** (1/3)) + 1, 1)
+            max_cube_size = self.physics.get('max_voxel_dimension', 100)
+            
+            if cube_size > max_cube_size:
+                logger.warning(f"Voxel cube size {cube_size} exceeds maximum {max_cube_size}, clamping")
+                cube_size = max_cube_size
+            
+            target_size = cube_size ** 3
+            result = arr.tobytes().ljust(target_size, b'\x00')[:target_size]
+            logger.debug(f"Voxel encoding completed: {len(data)} -> {len(result)} bytes ({cube_size}³)")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Voxel encoding failed: {e}")
+            raise EncodingError(f"Voxel encoding failed: {e}")
 
     def _encode_glyph(self, data: bytes) -> bytes:
-        """Visual symbolic encoding"""
-        return data.center(self.physics.get('min_pattern_size', 64), b'\x01')
+        """Visual symbolic encoding with padding validation"""
+        try:
+            if not data:
+                raise EncodingError("Input data for glyph encoding cannot be empty")
+            
+            target_size = self.physics.get('min_pattern_size', 64)
+            max_size = self.physics.get('max_pattern_size', 1048576)
+            
+            if len(data) > max_size:
+                raise EncodingError(f"Input data size {len(data)} exceeds maximum {max_size}")
+            
+            # Center the data with glyph padding
+            if len(data) >= target_size:
+                result = data[:max_size]
+            else:
+                padding_needed = target_size - len(data)
+                left_pad = padding_needed // 2
+                right_pad = padding_needed - left_pad
+                result = b'\x01' * left_pad + data + b'\x01' * right_pad
+            
+            logger.debug(f"Glyph encoding completed: {len(data)} -> {len(result)} bytes")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Glyph encoding failed: {e}")
+            raise EncodingError(f"Glyph encoding failed: {e}")
     
     def _encode_quantum(self, data: bytes) -> bytes:
-        """Probabilistic quantum state encoding"""
-        # Generate quantum-like state vector
-        seed = int.from_bytes(hashlib.md5(data).digest()[:4], 'big')
-        rng = np.random.RandomState(seed)
-        
-        # Create normalized complex state vector
-        state_size = max(64, len(data))
-        real_parts = rng.normal(0, 1, state_size)
-        # Generate phases for the quantum state
-        phases = rng.uniform(-np.pi, np.pi, state_size)
-        
-        # Combine real parts and phases into a single byte array
-        wave_bytes = np.concatenate((real_parts, phases)).tobytes()
-        
-        # Hash for consistency
-        return hashlib.sha3_512(wave_bytes).digest()
+        """Probabilistic quantum state encoding with error handling"""
+        try:
+            if not data:
+                raise EncodingError("Input data for quantum encoding cannot be empty")
+            
+            # Generate quantum-like state vector
+            seed = int.from_bytes(hashlib.md5(data).digest()[:4], 'big')
+            rng = np.random.RandomState(seed)
+            
+            # Create normalized complex state vector
+            state_size = max(64, min(len(data), self.physics.get('max_quantum_states', 1024)))
+            
+            try:
+                real_parts = rng.normal(0, 1, state_size)
+                phases = rng.uniform(-np.pi, np.pi, state_size)
+                
+                # Normalize to unit vector
+                norm = np.sqrt(np.sum(real_parts**2))
+                if norm > 0:
+                    real_parts = real_parts / norm
+                
+                # Combine real parts and phases into a single byte array
+                wave_bytes = np.concatenate((real_parts, phases)).tobytes()
+                
+                # Hash for consistency and security
+                result = hashlib.sha3_512(wave_bytes).digest()
+                logger.debug(f"Quantum encoding completed: {len(data)} -> {len(result)} bytes")
+                return result
+                
+            except Exception as e:
+                raise EncodingError(f"Quantum state generation failed: {e}")
+                
+        except Exception as e:
+            logger.error(f"Quantum encoding failed: {e}")
+            raise EncodingError(f"Quantum encoding failed: {e}")
 
     def _encode_fractal(self, data: bytes) -> bytes:
-        """
-        Self-similar recursive encoding for fractal patterns.
-        This method generates a fractal-like structure by recursively hashing the input data
-        and combining the results to create a self-similar pattern.
-        
-        Args:
-            data: Input data to encode as a fractal pattern.
-        
-        Returns:
-            bytes: Encoded fractal pattern.
-        """
-        # Define recursion depth for fractal generation
-        recursion_depth = self.physics.get('max_recursion_depth', 3)
-
-        # Initialize fractal data with the input data
-        fractal_data = data
-
-        # Recursively hash and combine data
-        for _ in range(recursion_depth):
-            # Hash the current fractal data
-            hashed_data = hashlib.sha256(fractal_data).digest()
-
-            # Combine the hashed data with the original data
-            fractal_data = bytes((a + b) % 256 for a, b in zip(fractal_data, hashed_data))
-
-        # Ensure the result meets the minimum pattern size
-        min_size = self.physics.get('min_pattern_size', 64)
-        if len(fractal_data) < min_size:
-            fractal_data = fractal_data.ljust(min_size, b'\x00')
-
-        return fractal_data
+        """Self-similar recursive encoding with bounds checking and error handling"""
+        try:
+            if not data:
+                raise EncodingError("Input data for fractal encoding cannot be empty")
+            
+            # Define recursion depth for fractal generation with limits
+            max_depth = self.physics.get('max_fractal_depth', 5)
+            recursion_depth = min(max_depth, self.physics.get('max_recursion_depth', 3))
+            
+            if recursion_depth <= 0:
+                raise EncodingError("Invalid recursion depth for fractal encoding")
+            
+            # Initialize fractal data with the input data
+            fractal_data = data
+            max_size = self.physics.get('max_pattern_size', 1048576)
+            
+            # Recursively hash and combine data
+            for iteration in range(recursion_depth):
+                try:
+                    # Hash the current fractal data
+                    hashed_data = hashlib.sha256(fractal_data).digest()
+                    
+                    # Ensure we don't exceed size limits
+                    if len(fractal_data) > max_size:
+                        fractal_data = fractal_data[:max_size]
+                        logger.warning(f"Fractal data truncated to {max_size} bytes at iteration {iteration}")
+                    
+                    # Combine the hashed data with the current fractal data
+                    min_length = min(len(fractal_data), len(hashed_data))
+                    fractal_data = bytes((a + b) % 256 for a, b in 
+                                       zip(fractal_data[:min_length], hashed_data[:min_length]))
+                    
+                    # Extend with original pattern if needed
+                    if len(fractal_data) < len(data):
+                        extension = data[:len(data) - len(fractal_data)]
+                        fractal_data = fractal_data + extension
+                    
+                except Exception as e:
+                    raise EncodingError(f"Fractal iteration {iteration} failed: {e}")
+            
+            # Ensure the result meets size requirements
+            min_size = self.physics.get('min_pattern_size', 64)
+            if len(fractal_data) < min_size:
+                fractal_data = fractal_data.ljust(min_size, b'\x00')
+            
+            logger.debug(f"Fractal encoding completed: {len(data)} -> {len(fractal_data)} bytes ({recursion_depth} iterations)")
+            return fractal_data
+            
+        except Exception as e:
+            logger.error(f"Fractal encoding failed: {e}")
+            raise EncodingError(f"Fractal encoding failed: {e}")
 
     def _encode_wave(self, data: bytes) -> bytes:
-        """
-        Frequency/amplitude-based encoding for wave patterns.
-        This method generates a wave-like structure by applying a Fourier transform
-        to the input data and encoding the result as a frequency/amplitude representation.
-        
-        Args:
-            data: Input data to encode as a wave pattern.
-        
-        Returns:
-            bytes: Encoded wave pattern.
-        """
-        # Convert input data to a NumPy array
-        data_array = np.frombuffer(data, dtype=np.uint8)
-        
-        # Apply a Fourier transform to generate frequency components
-        frequency_components = np.fft.fft(data_array)
-        
-        # Extract amplitude and phase information
-        amplitudes = np.abs(frequency_components)
-        phases = np.angle(frequency_components)
-        
-        # Normalize amplitudes to fit within a byte range
-        normalized_amplitudes = (amplitudes / amplitudes.max() * 255).astype(np.uint8)
-        
-        # Combine amplitudes and phases into a single byte array
-        wave_pattern = np.concatenate((normalized_amplitudes, phases)).tobytes()
-        
-        # Ensure the result meets the minimum pattern size
-        min_size = self.physics.get('min_pattern_size', 64)
-        if len(wave_pattern) < min_size:
-            wave_pattern = wave_pattern.ljust(min_size, b'\x00')
-        
-        return wave_pattern
+        """Frequency/amplitude-based encoding with comprehensive error handling"""
+        try:
+            if not data:
+                raise EncodingError("Input data for wave encoding cannot be empty")
+            
+            # Convert input data to a NumPy array
+            data_array = np.frombuffer(data, dtype=np.uint8)
+            
+            if len(data_array) == 0:
+                raise EncodingError("Cannot create wave array from empty data")
+            
+            # Limit array size for performance
+            max_wave_size = self.physics.get('max_wave_samples', 4096)
+            if len(data_array) > max_wave_size:
+                logger.warning(f"Wave data truncated from {len(data_array)} to {max_wave_size} samples")
+                data_array = data_array[:max_wave_size]
+            
+            try:
+                # Apply a Fourier transform to generate frequency components
+                frequency_components = np.fft.fft(data_array)
+                
+                # Extract amplitude and phase information
+                amplitudes = np.abs(frequency_components)
+                phases = np.angle(frequency_components)
+                
+                # Validate results
+                if np.any(np.isnan(amplitudes)) or np.any(np.isnan(phases)):
+                    raise EncodingError("FFT produced NaN values")
+                
+                # Normalize amplitudes to fit within a byte range
+                if amplitudes.max() > 0:
+                    normalized_amplitudes = (amplitudes / amplitudes.max() * 255).astype(np.uint8)
+                else:
+                    normalized_amplitudes = np.zeros_like(amplitudes, dtype=np.uint8)
+                
+                # Normalize phases to byte range
+                normalized_phases = ((phases + np.pi) / (2 * np.pi) * 255).astype(np.uint8)
+                
+                # Combine amplitudes and phases into a single byte array
+                wave_pattern = np.concatenate((normalized_amplitudes, normalized_phases)).tobytes()
+                
+                # Ensure the result meets size requirements
+                min_size = self.physics.get('min_pattern_size', 64)
+                max_size = self.physics.get('max_pattern_size', 1048576)
+                
+                if len(wave_pattern) < min_size:
+                    wave_pattern = wave_pattern.ljust(min_size, b'\x00')
+                elif len(wave_pattern) > max_size:
+                    wave_pattern = wave_pattern[:max_size]
+                
+                logger.debug(f"Wave encoding completed: {len(data)} -> {len(wave_pattern)} bytes")
+                return wave_pattern
+                
+            except Exception as e:
+                raise EncodingError(f"Wave transformation failed: {e}")
+                
+        except Exception as e:
+            logger.error(f"Wave encoding failed: {e}")
+            raise EncodingError(f"Wave encoding failed: {e}")
 
     def _handle_combine(self, patterns: List[AetherPattern]) -> AetherPattern:
         """
