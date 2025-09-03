@@ -25,6 +25,13 @@ class EncodingType(Enum):
     VOXEL = "voxel"
     GLYPH = "glyph"
 
+class InteractionProtocol(Enum):
+    """Defines the types of interaction protocols between patterns."""
+    GRAVITATIONAL = "gravitational"
+    ELECTROMAGNETIC = "electromagnetic"
+    QUANTUM_TUNNELING = "quantum_tunneling"
+    RECURSIVE_BINDING = "recursive_binding"
+
 @dataclass
 class PhysicsConstraints:
     """Physics constraint configuration"""

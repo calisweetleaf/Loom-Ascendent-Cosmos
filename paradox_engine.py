@@ -371,6 +371,16 @@ class ParadoxEngine:
             return None
         
         # Create new proposition
+        prop_id = f"prop_{uuid.uuid4().hex[:8]}"
+        prop = Proposition(
+            id=prop_id,
+            content=content,
+            truth_value=truth_value,
+            certainty=certainty,
+            timestamp=datetime.now(),
+            source=source
+        )
+        
         # Store proposition
         self.propositions[prop_id] = prop
         
@@ -1159,124 +1169,256 @@ class ParadoxEngine:
             self.knowledge_graph.add_edge(intervention_id, pattern.id, 
                                          relationship="addresses")
 
-    def _calculate_cycle_coherence(self, cycle: List[str]) -> float:
+    def _initialize_implication_patterns(self) -> Dict[str, List[Tuple[str, float]]]:
         """
-        Calculate the coherence of a loop/cycle.
-        A more coherent cycle has stronger implications between elements.
+        Initialize patterns that indicate logical implication relationships.
+        Returns a dictionary mapping pattern types to lists of (regex_pattern, confidence) tuples.
         """
-        if not cycle or len(cycle) < 2:
-            return 0.0
-            
-        # Calculate average relatedness between consecutive elements
-        total_relatedness = 0.0
-        count = 0
-        
-        for i in range(len(cycle)):
-            curr_id = cycle[i]
-            next_id = cycle[(i + 1) % len(cycle)]
-            
-            if curr_id in self.propositions and next_id in self.propositions:
-                curr_prop = self.propositions[curr_id]
-                if next_id in curr_prop.relatedness:
-                    total_relatedness += curr_prop.relatedness[next_id]
-                    count += 1
-        
-        if count == 0:
-            return 0.0
-            
-        return total_relatedness / count
-    
-    def _find_weakest_link(self, loop_elements: List[str]) -> Tuple[str, str]:
+        return {
+            'strong_implication': [
+                (r'\b(?:if|when)\s+(.+?)\s+then\s+(.+)', 0.9),
+                (r'\b(.+?)\s+implies\s+(.+)', 0.95),
+                (r'\b(.+?)\s+entails\s+(.+)', 0.9),
+                (r'\b(.+?)\s+necessitates\s+(.+)', 0.85),
+                (r'\bgiven\s+(.+?),?\s+(.+?)\s+follows', 0.8),
+                (r'\bsince\s+(.+?),?\s+(.+)', 0.75),
+                (r'\bbecause\s+(.+?),?\s+(.+)', 0.7),
+            ],
+            'weak_implication': [
+                (r'\b(.+?)\s+suggests\s+(.+)', 0.6),
+                (r'\b(.+?)\s+indicates\s+(.+)', 0.65),
+                (r'\b(.+?)\s+supports\s+(.+)', 0.6),
+                (r'\blikely\s+(.+?)\s+(?:means|implies)\s+(.+)', 0.55),
+                (r'\bprobably\s+(.+?)\s+(?:means|suggests)\s+(.+)', 0.5),
+            ],
+            'causal_implication': [
+                (r'\b(.+?)\s+causes\s+(.+)', 0.85),
+                (r'\b(.+?)\s+leads\s+to\s+(.+)', 0.8),
+                (r'\b(.+?)\s+results\s+in\s+(.+)', 0.8),
+                (r'\bdue\s+to\s+(.+?),?\s+(.+)', 0.75),
+                (r'\bas\s+a\s+result\s+of\s+(.+?),?\s+(.+)', 0.75),
+            ],
+            'conditional_implication': [
+                (r'\bunless\s+(.+?),?\s+(.+)', 0.7),
+                (r'\bprovided\s+(?:that\s+)?(.+?),?\s+(.+)', 0.75),
+                (r'\bassuming\s+(.+?),?\s+(.+)', 0.65),
+                (r'\bin\s+the\s+event\s+(?:that\s+)?(.+?),?\s+(.+)', 0.7),
+            ]
+        }
+
+    def _initialize_contradiction_patterns(self) -> Dict[str, List[Tuple[str, float]]]:
         """
-        Find the weakest implication link in a loop.
-        Returns a tuple of (source_id, target_id) for the weakest link.
+        Initialize patterns that indicate logical contradiction relationships.
+        Returns a dictionary mapping pattern types to lists of (regex_pattern, confidence) tuples.
         """
-        if len(loop_elements) < 2:
-            raise ValueError("Loop must have at least 2 elements")
-            
-        weakest_link = None
-        min_relatedness = float('inf')
-        
-        for i in range(len(loop_elements)):
-            source_id = loop_elements[i]
-            target_id = loop_elements[(i + 1) % len(loop_elements)]
-            
-            if source_id in self.propositions and target_id in self.propositions:
-                source_prop = self.propositions[source_id]
-                if target_id in source_prop.relatedness:
-                    relatedness = source_prop.relatedness[target_id]
-                    if relatedness < min_relatedness:
-                        min_relatedness = relatedness
-                        weakest_link = (source_id, target_id)
-        
-        if weakest_link is None:
-            # Fallback if no relatedness scores are available
-            return (loop_elements[0], loop_elements[1])
-            
-        return weakest_link
-    
-    def _calculate_current_recursion_depth(self) -> int:
+        return {
+            'direct_contradiction': [
+                (r'\b(.+?)\s+contradicts\s+(.+)', 0.95),
+                (r'\b(.+?)\s+is\s+incompatible\s+with\s+(.+)', 0.9),
+                (r'\b(.+?)\s+cannot\s+coexist\s+with\s+(.+)', 0.85),
+                (r'\bit\s+is\s+impossible\s+for\s+both\s+(.+?)\s+and\s+(.+)', 0.9),
+                (r'\b(.+?)\s+precludes\s+(.+)', 0.85),
+                (r'\b(.+?)\s+excludes\s+(.+)', 0.8),
+            ],
+            'negation_patterns': [
+                (r'\bnot\s+(.+)', 0.8),
+                (r'\b(.+?)\s+is\s+not\s+(.+)', 0.75),
+                (r'\b(.+?)\s+does\s+not\s+(.+)', 0.75),
+                (r'\bno\s+(.+)', 0.7),
+                (r'\bnever\s+(.+)', 0.8),
+                (r'\b(.+?)\s+lacks\s+(.+)', 0.6),
+                (r'\b(.+?)\s+without\s+(.+)', 0.5),
+            ],
+            'opposing_concepts': [
+                (r'\b(.+?)\s+(?:but|however|nevertheless)\s+(.+)', 0.6),
+                (r'\balthough\s+(.+?),?\s+(.+)', 0.65),
+                (r'\bdespite\s+(.+?),?\s+(.+)', 0.7),
+                (r'\b(.+?)\s+while\s+(.+)', 0.55),
+                (r'\b(.+?)\s+whereas\s+(.+)', 0.6),
+                (r'\bon\s+the\s+contrary,?\s+(.+)', 0.75),
+                (r'\binstead\s+of\s+(.+?),?\s+(.+)', 0.7),
+            ],
+            'mutual_exclusivity': [
+                (r'\beither\s+(.+?)\s+or\s+(.+?)(?:\s+but\s+not\s+both)?', 0.8),
+                (r'\b(.+?)\s+xor\s+(.+)', 0.95),
+                (r'\b(.+?)\s+mutually\s+exclusive\s+(?:with\s+)?(.+)', 0.9),
+                (r'\bonly\s+one\s+of\s+(.+?)\s+(?:and|or)\s+(.+)', 0.85),
+            ]
+        }
+
+    def _calculate_semantic_relationships(self, prop_id: str):
         """
-        Calculate the current recursion depth based on patterns and interventions.
+        Calculate semantic relationships between a proposition and all existing propositions.
+        Uses TF-IDF vectorization and pattern matching to determine implications and contradictions.
         """
-        # Count recursive patterns and meta-recursive patterns
-        recursion_patterns = [p for p in self.patterns.values() if p.pattern_type == PatternType.RECURSION]
+        if prop_id not in self.propositions:
+            return
+            
+        target_prop = self.propositions[prop_id]
+        target_content = target_prop.content.lower()
         
-        # Look for meta-recursion (patterns about recursive patterns)
-        meta_recursion = 0
-        for pattern in recursion_patterns:
-            if "meta_recursion" in pattern.features.get("recursion_type", ""):
-                meta_recursion = max(meta_recursion, pattern.features.get("nesting_level", 1))
+        # Get or compute TF-IDF embedding for the target proposition
+        if prop_id not in self._proposition_embeddings:
+            self._compute_proposition_embedding(prop_id)
         
-        # Calculate recursion depth
-        if meta_recursion > 0:
-            return meta_recursion
-        elif recursion_patterns:
-            return 1
+        # Analyze relationships with all other propositions
+        for other_id, other_prop in self.propositions.items():
+            if other_id == prop_id:
+                continue
+                
+            # Get or compute embedding for the other proposition
+            if other_id not in self._proposition_embeddings:
+                self._compute_proposition_embedding(other_id)
+            
+            # Calculate semantic similarity
+            similarity = self._calculate_semantic_similarity(target_content, other_prop.content.lower())
+            
+            if similarity > self.semantic_similarity_threshold:
+                target_prop.relatedness[other_id] = similarity
+                other_prop.relatedness[prop_id] = similarity
+            
+            # Check for implication patterns
+            implication_confidence = self._detect_implication_relationship(target_content, other_prop.content.lower())
+            if implication_confidence > self.implication_threshold:
+                target_prop.implies.add(other_id)
+                other_prop.implied_by.add(prop_id)
+                
+                # Add edge to knowledge graph
+                if self.knowledge_graph.has_node(prop_id) and self.knowledge_graph.has_node(other_id):
+                    self.knowledge_graph.add_edge(prop_id, other_id, 
+                                                relationship="implies", 
+                                                confidence=implication_confidence)
+            
+            # Check for contradiction patterns
+            contradiction_confidence = self._detect_contradiction_relationship(target_content, other_prop.content.lower())
+            if contradiction_confidence > self.contradiction_threshold:
+                target_prop.contradicts.add(other_id)
+                other_prop.contradicts.add(prop_id)
+                
+                # Add edge to knowledge graph
+                if self.knowledge_graph.has_node(prop_id) and self.knowledge_graph.has_node(other_id):
+                    self.knowledge_graph.add_edge(prop_id, other_id, 
+                                                relationship="contradicts", 
+                                                confidence=contradiction_confidence)
+
+    def _compute_proposition_embedding(self, prop_id: str):
+        """Compute and cache TF-IDF embedding for a proposition."""
+        if prop_id not in self.propositions:
+            return
+            
+        prop = self.propositions[prop_id]
+        
+        # Collect all proposition texts for TF-IDF fitting if not done yet
+        if not hasattr(self, '_tfidf_fitted') or not self._tfidf_fitted:
+            all_texts = [p.content for p in self.propositions.values()]
+            if len(all_texts) > 1:
+                try:
+                    self._tfidf_vectorizer.fit(all_texts)
+                    self._tfidf_fitted = True
+                except ValueError:
+                    # Not enough data to fit, use simple bag-of-words
+                    self._proposition_embeddings[prop_id] = self._simple_embedding(prop.content)
+                    return
+        
+        # Transform the proposition content
+        try:
+            embedding = self._tfidf_vectorizer.transform([prop.content]).toarray()[0]
+            self._proposition_embeddings[prop_id] = embedding
+        except (ValueError, AttributeError):
+            # Fallback to simple embedding
+            self._proposition_embeddings[prop_id] = self._simple_embedding(prop.content)
+
+    def _simple_embedding(self, text: str) -> np.ndarray:
+        """Create a simple embedding for text when TF-IDF fails."""
+        # Simple word frequency vector
+        words = text.lower().split()
+        word_counts = Counter(words)
+        
+        # Create a fixed-size vector (100 dimensions)
+        embedding = np.zeros(100)
+        for i, (word, count) in enumerate(word_counts.most_common(100)):
+            if i < 100:
+                embedding[i] = count / len(words)
+        
+        return embedding
+
+    def _calculate_semantic_similarity(self, text1: str, text2: str) -> float:
+        """Calculate semantic similarity between two text strings."""
+        cache_key = (hash(text1), hash(text2))
+        if cache_key in self._semantic_cache:
+            return self._semantic_cache[cache_key]
+        
+        # Simple word overlap similarity as fallback
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+        
+        if not words1 or not words2:
+            similarity = 0.0
         else:
-            return 0
-    
-    def _generate_symbolic_representation(self, patterns: List[Pattern]) -> str:
-        """
-        Generate a symbolic representation for a set of patterns.
-        This is a simple implementation. A real system would use more 
-        sophisticated symbolic abstraction techniques.
-        """
-        pattern_type = patterns[0].pattern_type
-        count = len(patterns)
+            intersection = words1.intersection(words2)
+            union = words1.union(words2)
+            similarity = len(intersection) / len(union)
         
-        # Each pattern type gets a different symbol
-        if pattern_type == PatternType.LOOP:
-            base_symbol = "◯"
-        elif pattern_type == PatternType.CONTRADICTION:
-            base_symbol = "⊥"
-        elif pattern_type == PatternType.RECURSION:
-            base_symbol = "∞"
-        elif pattern_type == PatternType.DIVERGENCE:
-            base_symbol = "⤊"
-        elif pattern_type == PatternType.OSCILLATION:
-            base_symbol = "∿"
-        elif pattern_type == PatternType.FIXATION:
-            base_symbol = "⚓"
-        elif pattern_type == PatternType.RESONANCE:
-            base_symbol = "⟇"
-        else:
-            base_symbol = "?"
+        # Try to use cosine similarity with embeddings if available
+        try:
+            if hasattr(self, '_tfidf_fitted') and self._tfidf_fitted:
+                vec1 = self._tfidf_vectorizer.transform([text1]).toarray()
+                vec2 = self._tfidf_vectorizer.transform([text2]).toarray()
+                cos_sim = cosine_similarity(vec1, vec2)[0][0]
+                similarity = max(similarity, cos_sim)
+        except (ValueError, AttributeError):
+            pass
+        
+        self._semantic_cache[cache_key] = similarity
+        return similarity
+
+    def _detect_implication_relationship(self, text1: str, text2: str) -> float:
+        """Detect if text1 implies text2 using pattern matching."""
+        max_confidence = 0.0
+        
+        combined_text = f"{text1} {text2}"
+        
+        for category, patterns in self._implication_patterns.items():
+            for pattern, confidence in patterns:
+                if re.search(pattern, combined_text, re.IGNORECASE):
+                    max_confidence = max(max_confidence, confidence)
+                
+                # Also check individual texts for implication keywords
+                if re.search(pattern.replace('(.+?)', text2), text1, re.IGNORECASE):
+                    max_confidence = max(max_confidence, confidence * 0.8)
+        
+        return max_confidence
+
+    def _detect_contradiction_relationship(self, text1: str, text2: str) -> float:
+        """Detect if text1 contradicts text2 using pattern matching."""
+        max_confidence = 0.0
+        
+        combined_text = f"{text1} {text2}"
+        
+        for category, patterns in self._contradiction_patterns.items():
+            for pattern, confidence in patterns:
+                if re.search(pattern, combined_text, re.IGNORECASE):
+                    max_confidence = max(max_confidence, confidence)
+        
+        # Additional logic for negation detection
+        negation_words = {'not', 'no', 'never', 'none', 'nothing', 'nobody', 'nowhere'}
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+        
+        # Check if one text has negation and they share common concepts
+        has_negation1 = bool(words1.intersection(negation_words))
+        has_negation2 = bool(words2.intersection(negation_words))
+        
+        if has_negation1 != has_negation2:  # One has negation, other doesn't
+            # Remove negation words and check similarity
+            clean_words1 = words1 - negation_words
+            clean_words2 = words2 - negation_words
             
-        # Repeat symbol based on number of patterns
-        if count <= 3:
-            symbol = base_symbol * count
-        else:
-            symbol = f"{count}×{base_symbol}"
-            
-        # Add modifiers based on pattern strengths
-        avg_strength = sum(p.strength for p in patterns) / count
-        if avg_strength > 0.9:
-            symbol = f"★{symbol}★"
-        elif avg_strength > 0.7:
-            symbol = f"*{symbol}*"
-            
-        return symbol
+            if clean_words1.intersection(clean_words2):
+                overlap_ratio = len(clean_words1.intersection(clean_words2)) / max(len(clean_words1), len(clean_words2))
+                max_confidence = max(max_confidence, overlap_ratio * 0.7)
+        
+        return max_confidence
 
 # Remove duplicate function declarations and replace with single implementation
 def initialize_external_components():

@@ -111,11 +111,10 @@ class CosmicStructure:
 
 # Singleton pattern definition for primordial singularity
 singleton_pattern = AetherPattern(
-    core=bytes([1]*64),  # Simple initial core data
-    mutations=tuple(bytes([i]*64) for i in range(3)),  # Some mutation vectors
-    interactions={'combine': '1.0', 'transform': '0.8'},  # Basic interactions
+    core=np.array(list(bytes([1]*64))),  # Simple initial core data
+    mutation_vectors=[np.array(list(bytes([i]*64))) for i in range(3)],  # Some mutation vectors
+    interaction_protocols={'combine': '1.0', 'transform': '0.8'},  # Basic interactions
     encoding_type=EncodingType.BINARY,  # Binary encoding
-    recursion_level=0,  # Base recursion level
     metadata={
         'pattern_id': "singularity_prime",
         'complexity': 1,
@@ -123,7 +122,8 @@ singleton_pattern = AetherPattern(
         'density': 1e96,  # Near Planck density
         'temperature': 1e32,  # Planck temperature
         'entropy': 0,  # Initial zero entropy state
-        'symmetry_groups': ['E8', 'SU(5)', 'U(1)']  # Unified force symmetry groups
+        'symmetry_groups': ['E8', 'SU(5)', 'U(1)'],  # Unified force symmetry groups
+        'recursion_level': 0,  # Base recursion level
     }
 )
 
