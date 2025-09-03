@@ -48,6 +48,13 @@ try:
 except Exception as e:
     logger.warning(f"Failed to load quantum&physics.py module: {e}")
     logger.info("Using fallback implementation for quantum physics classes")
+    
+    # Forward declare fallback classes (will be assigned at end of file)
+    QuantumField = None
+    QuantumStateVector = None  
+    EthicalGravityManifold = None
+    PhysicsConstants = None
+    SymbolicOperators = None
 
 # WaveFunction implementation
 class WaveFunction:
@@ -3231,3 +3238,9 @@ def initialize(config):
     if verbose:
         logger.info("Verbose mode enabled for quantum_physics initialization")
     # ...existing initialization logic...
+
+# Export fallback classes at module level if they weren't loaded from quantum&physics.py  
+if 'quantum_physics_impl' not in sys.modules:
+    # Use the module-level fallback class definitions
+    # PhysicsConstants, QuantumField, etc. are defined above in this file
+    pass  # Classes are already available at module level

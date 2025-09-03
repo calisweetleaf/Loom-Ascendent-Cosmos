@@ -211,6 +211,8 @@ class Intervention:
     side_effect_risk: float     # 0.0 to 1.0
     timestamp: datetime
     parameters: Dict = field(default_factory=dict)
+    status: str = "planned"     # Status of the intervention: planned, applied, failed, etc.
+    actual_outcomes: List[str] = field(default_factory=list)  # Actual outcomes after application
     
     def to_dict(self):
         """Convert to dictionary representation"""
@@ -223,7 +225,9 @@ class Intervention:
             "expected_outcomes": self.expected_outcomes,
             "side_effect_risk": self.side_effect_risk,
             "timestamp": self.timestamp.isoformat(),
-            "parameters": self.parameters
+            "parameters": self.parameters,
+            "status": self.status,
+            "actual_outcomes": self.actual_outcomes
         }
 
 @dataclass

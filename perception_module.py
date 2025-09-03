@@ -11,6 +11,7 @@ from enum import Enum
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Set, Optional, Union, Any, Callable
 import numpy as np
+from scipy.signal import convolve2d
 
 import logging
 from collections import deque
@@ -447,14 +448,14 @@ class HarmonicProcessor:
         
         # Detect golden ratio emergence
         golden_ratio = 1.618
+        # Calculate actual_ratios once before the loop
+        actual_ratios = np.zeros(6)
+        for j in range(6):
+            if current[j] > 0.01:  # Avoid division by zero
+                actual_ratios[j] = current[j+1] / current[j]
+        
         golden_found = False
         for i in range(6):
-            # Calculate actual_ratios if not already defined
-            actual_ratios = np.zeros(6)
-            for j in range(6):
-                if current[j] > 0.01:  # Avoid division by zero
-                    actual_ratios[j] = current[j+1] / current[j]
-            
             if 1.5 < actual_ratios[i] < 1.7:
                 phi_proximity = 1.0 - abs(actual_ratios[i] - golden_ratio) / 0.2
                 if phi_proximity > 0.8:
@@ -2004,6 +2005,7 @@ class SensoryFilter:
         if channel in self.sensory_thresholds:
             idx = list(self.sensory_thresholds.keys()).index(channel)
             self.attention_weights[idx] = max(0.1, min(2.0, level))
+        return self
     
     def add_filter(self, channel: str, filter_name: str, filter_function: Callable):
         """
@@ -2383,7 +2385,6 @@ class HapticFieldGenerator:
             ]) * diffusion_rate
             
             # Apply diffusion
-            from scipy.signal import convolve2d
             diffused = convolve2d(temp_field, diffusion_kernel, mode='same', boundary='symm')
             
             # Combine original with diffused
@@ -2697,7 +2698,6 @@ class ChemicalPerceptionGenerator:
             rate = self.diffusion_rates[compound] * time_step
             
             # Apply convolution for diffusion
-            from scipy.signal import convolve2d
             diffused = convolve2d(
                 self.compound_fields[compound], 
                 kernel, 
