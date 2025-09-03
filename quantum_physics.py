@@ -111,6 +111,12 @@ class WaveFunction:
     def to_momentum_space(self):
         """Transform to momentum space representation using FFT"""
         if self.representation == 'position':
+            # Validate that psi is a proper numpy array
+            if self.psi is None:
+                raise ValueError("Wave function psi is not initialized")
+            if not isinstance(self.psi, np.ndarray):
+                raise TypeError(f"Wave function psi must be numpy array, got {type(self.psi)}")
+            
             # Use FFT to transform to momentum space
             self.psi_momentum = np.fft.fftn(self.psi)
             self.representation = 'momentum'
@@ -120,6 +126,12 @@ class WaveFunction:
     def to_position_space(self):
         """Transform to position space representation using inverse FFT"""
         if self.representation == 'momentum':
+            # Validate that psi_momentum is a proper numpy array
+            if self.psi_momentum is None:
+                raise ValueError("Momentum space wave function is not initialized")
+            if not isinstance(self.psi_momentum, np.ndarray):
+                raise TypeError(f"Momentum wave function must be numpy array, got {type(self.psi_momentum)}")
+            
             # Use inverse FFT to transform back to position space
             self.psi = np.fft.ifftn(self.psi_momentum)
             self.representation = 'position'
@@ -1722,7 +1734,7 @@ class WaveFunction:
                     vis_dims.append(d)
                 if len(vis_dims) == 3:
                     break
-                    
+            
             while len(vis_dims) < 3:
                 for d in range(self.dimensions):
                     if d not in vis_dims:
@@ -2483,18 +2495,6 @@ class SimulationManager:
         
         # Initialize Monte Carlo system
         self.monte_carlo = QuantumMonteCarlo(self.config)
-        
-        # Initialize AMR grid
-        self.amr_grid = AMRGrid(self.config)
-        
-        # Initialize Ethical Gravity Manifold
-        self.ethical_manifold = EthicalGravityManifold(self.config)
-        
-        # Initialize Temporal Framework
-        self.temporal_framework = TemporalFramework(self.config)
-        
-        # Initialize Paradox Resolver
-        self.paradox_resolver = ParadoxResolver(self.config)
         
         # Initialize Recursive Scaling
         self.recursive_scaling = RecursiveScaling(self.constants)
