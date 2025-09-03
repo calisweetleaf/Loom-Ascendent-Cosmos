@@ -2385,6 +2385,7 @@ class HapticFieldGenerator:
             ]) * diffusion_rate
             
             # Apply diffusion
+            from scipy.signal import convolve2d
             diffused = convolve2d(temp_field, diffusion_kernel, mode='same', boundary='symm')
             
             # Combine original with diffused
@@ -2698,6 +2699,7 @@ class ChemicalPerceptionGenerator:
             rate = self.diffusion_rates[compound] * time_step
             
             # Apply convolution for diffusion
+            from scipy.signal import convolve2d
             diffused = convolve2d(
                 self.compound_fields[compound], 
                 kernel, 
