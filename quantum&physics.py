@@ -1844,7 +1844,7 @@ class QuantumDynamics:
         if save_frequency is None:
             save_frequency = self.config.save_frequency
         
-        num_steps = int total_time / self.config.temporal_resolution)
+        num_steps = int(total_time / self.config.temporal_resolution)
         
         print(f"Running quantum simulation for {total_time} time units ({num_steps} steps)")
         

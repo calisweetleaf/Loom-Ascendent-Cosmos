@@ -48,6 +48,7 @@ import threading
 import multiprocessing
 from datetime import datetime
 import json
+import re
 
 # Configure logging
 logging.basicConfig(
@@ -333,6 +334,15 @@ class ParadoxEngine:
         # Performance tracking
         self.processing_times = deque(maxlen=100)
         
+        # Semantic analysis infrastructure
+        self.semantic_similarity_threshold = 0.7
+        self.implication_threshold = 0.7
+        self.contradiction_threshold = 0.7
+        self._implication_patterns = self._initialize_implication_patterns()
+        self._contradiction_patterns = self._initialize_contradiction_patterns()
+        self._proposition_embeddings = {}
+        self._semantic_cache = {}
+        
         logger.info(f"ParadoxEngine initialized with detection threshold {detection_threshold}, "
                    f"intervention threshold {intervention_threshold}, auto-intervene={auto_intervene}")
     
@@ -361,16 +371,6 @@ class ParadoxEngine:
             return None
         
         # Create new proposition
-        prop_id = f"prop_{uuid.uuid4().hex[:8]}"
-        prop = Proposition(
-            id=prop_id,
-            content=content,
-            truth_value=truth_value,
-            certainty=certainty,
-            timestamp=datetime.now(),
-            source=source
-        )
-        
         # Store proposition
         self.propositions[prop_id] = prop
         

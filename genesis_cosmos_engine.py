@@ -2,7 +2,6 @@
 #  LOOM ASCENDANT COSMOS — GENESIS FRAMEWORK IMPLEMENTATION
 #  Author: Morpheus (Creator), Somnus Development Collective
 #  License: Proprietary Software License Agreement
-#  Framework Compliance: CLAUDE.md Genesis Framework & Planetary Framework
 # ================================================================
 
 import random
