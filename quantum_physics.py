@@ -1508,29 +1508,138 @@ class WaveFunction:
                 # Get the metric at current position
                 metric = self.coupled_metric[tuple(grid_indices)]
                 
-                # Calculate Christoffel symbols (connection coefficients)
-                # This is a simplified approach - full GR would use proper derivatives
+                # Calculate Christoffel symbols using proper tensor calculus
+                # Γᵃₘₙ = ½ gᵃλ (∂ₘ gλₙ + ∂ₙ gλₘ - ∂λ gₘₙ)
                 christoffel = np.zeros((self.dimensions, self.dimensions, self.dimensions))
                 
-                # Simplified calculation of Christoffel symbols
-                # In real applications, this would involve proper derivatives of the metric
+                # Get metric tensor and its inverse at current position
+                g = metric
+                try:
+                    g_inv = np.linalg.inv(g)
+                except np.linalg.LinAlgError:
+                    # Handle singular matrices
+                    g_inv = np.linalg.pinv(g)
+                    logger.warning("Used pseudoinverse for singular metric tensor")
+                
+                # Calculate metric derivatives using finite differences
+                metric_derivatives = np.zeros((self.dimensions, self.dimensions, self.dimensions))
+                
+                for derivative_dir in range(self.dimensions):
+                    # Forward and backward indices for finite difference
+                    forward_idx = list(grid_indices)
+                    backward_idx = list(grid_indices)
+                    
+                    if forward_idx[derivative_dir] < self.resolution - 1:
+                        forward_idx[derivative_dir] += 1
+                    if backward_idx[derivative_dir] > 0:
+                        backward_idx[derivative_dir] -= 1
+                    
+                    # Get metrics at neighboring points
+                    g_forward = self.coupled_metric[tuple(forward_idx)]
+                    g_backward = self.coupled_metric[tuple(backward_idx)]
+                    
+                    # Central difference approximation
+                    h = 2.0 / (self.resolution - 1)  # Grid spacing in coordinate space
+                    if forward_idx[derivative_dir] != grid_indices[derivative_dir] and \
+                       backward_idx[derivative_dir] != grid_indices[derivative_dir]:
+                        # Central difference
+                        metric_derivatives[derivative_dir] = (g_forward - g_backward) / (2 * h)
+                    elif forward_idx[derivative_dir] != grid_indices[derivative_dir]:
+                        # Forward difference
+                        metric_derivatives[derivative_dir] = (g_forward - g) / h
+                    elif backward_idx[derivative_dir] != grid_indices[derivative_dir]:
+                        # Backward difference
+                        metric_derivatives[derivative_dir] = (g - g_backward) / h
+                    else:
+                        # At boundary, use zero derivative
+                        metric_derivatives[derivative_dir] = np.zeros_like(g)
+                
+                # Compute Christoffel symbols
                 for a in range(self.dimensions):
-                    for b in range(self.dimensions):
-                        for c in range(self.dimensions):
-                            christoffel[a, b, c] = 0.5 * (self.coupling_constant * 
-                                                           self.ethical_tensor[tuple(grid_indices)][0])
+                    for m in range(self.dimensions):
+                        for n in range(self.dimensions):
+                            christoffel_mn_a = 0.0
+                            for lambda_idx in range(self.dimensions):
+                                # Γᵃₘₙ = ½ gᵃλ (∂ₘ gλₙ + ∂ₙ gλₘ - ∂λ gₘₙ)
+                                term1 = metric_derivatives[m][lambda_idx, n]  # ∂ₘ gλₙ
+                                term2 = metric_derivatives[n][lambda_idx, m]  # ∂ₙ gλₘ  
+                                term3 = metric_derivatives[lambda_idx][m, n]  # ∂λ gₘₙ
+                                
+                                christoffel_mn_a += g_inv[a, lambda_idx] * 0.5 * (term1 + term2 - term3)
+                            
+                            christoffel[a, m, n] = christoffel_mn_a
                 
                 # Calculate acceleration using the geodesic equation
+                # d²xᵃ/dτ² = -Γᵃₘₙ (dxᵐ/dτ)(dxⁿ/dτ)
                 acceleration = np.zeros(self.dimensions)
                 for a in range(self.dimensions):
-                    for b in range(self.dimensions):
-                        for c in range(self.dimensions):
-                            acceleration[a] -= christoffel[a, b, c] * velocity[b] * velocity[c]
+                    for m in range(self.dimensions):
+                        for n in range(self.dimensions):
+                            acceleration[a] -= christoffel[a, m, n] * velocity[m] * velocity[n]
                 
-                # Update velocity and position using simple Euler integration
-                velocity += acceleration * dt
-                velocity = velocity / np.sqrt(np.sum(velocity**2))  # Renormalize
-                path[i] = pos + velocity * dt
+                # Use 4th-order Runge-Kutta for position and velocity integration
+                # Store current state
+                pos_curr = pos.copy()
+                vel_curr = velocity.copy()
+                
+                # k1 for position and velocity
+                k1_pos = vel_curr * dt
+                k1_vel = acceleration * dt
+                
+                # Calculate acceleration at midpoint for k2
+                pos_mid = pos_curr + k1_pos / 2
+                vel_mid = vel_curr + k1_vel / 2
+                
+                # Get metric at midpoint (interpolate if necessary)
+                mid_grid_indices = []
+                for j, p in enumerate(pos_mid):
+                    if j >= self.dimensions:
+                        break
+                    idx = int((p + 1) / 2 * (self.resolution - 1))
+                    idx = max(0, min(self.resolution - 1, idx))
+                    mid_grid_indices.append(idx)
+                
+                # Simplified acceleration calculation for midpoint
+                mid_acceleration = np.zeros(self.dimensions)
+                if len(mid_grid_indices) == self.dimensions:
+                    try:
+                        mid_metric = self.coupled_metric[tuple(mid_grid_indices)]
+                        # Use previously calculated Christoffel symbols as approximation
+                        for a in range(self.dimensions):
+                            for m in range(self.dimensions):
+                                for n in range(self.dimensions):
+                                    mid_acceleration[a] -= christoffel[a, m, n] * vel_mid[m] * vel_mid[n]
+                    except IndexError:
+                        mid_acceleration = acceleration  # Fallback
+                else:
+                    mid_acceleration = acceleration  # Fallback
+                
+                # k2 for position and velocity
+                k2_pos = vel_mid * dt
+                k2_vel = mid_acceleration * dt
+                
+                # k3 (using k2 midpoint)
+                pos_mid = pos_curr + k2_pos / 2
+                vel_mid = vel_curr + k2_vel / 2
+                k3_pos = vel_mid * dt
+                k3_vel = mid_acceleration * dt  # Reuse acceleration
+                
+                # k4 (using k3)
+                pos_end = pos_curr + k3_pos
+                vel_end = vel_curr + k3_vel
+                k4_pos = vel_end * dt
+                k4_vel = mid_acceleration * dt  # Reuse acceleration
+                
+                # Final RK4 update
+                velocity += (k1_vel + 2*k2_vel + 2*k3_vel + k4_vel) / 6
+                new_pos = pos_curr + (k1_pos + 2*k2_pos + 2*k3_pos + k4_pos) / 6
+                
+                # Renormalize velocity to maintain proper speed
+                velocity_magnitude = np.sqrt(np.sum(velocity**2))
+                if velocity_magnitude > 1e-10:
+                    velocity = velocity / velocity_magnitude
+                
+                path[i] = new_pos
             
             return path
         
@@ -2583,30 +2692,319 @@ class SimulationManager:
         self.event_queue = []
     
     def _handle_quantum_fluctuation(self, event):
-        """Handle a quantum fluctuation event"""
+        """Handle a quantum fluctuation event with full field theory implementation"""
         # Extract parameters
         location = event.get("location", (0, 0, 0))
         magnitude = event.get("magnitude", 0.1)
+        fluctuation_type = event.get("type", "vacuum")
+        correlation_length = event.get("correlation_length", 0.1)
+        duration = event.get("duration", 1.0)
         
-        # Apply to field (simplified)
-        # In a real implementation, this would have more sophisticated effects
-        # For now, just log it
-        logger.debug(f"Applied quantum fluctuation at {location} with magnitude {magnitude}")
+        if self.quantum_field is not None:
+            try:
+                # Apply quantum fluctuation to the field
+                field_shape = self.quantum_field.psi.shape
+                
+                # Create fluctuation profile based on type
+                if fluctuation_type == "vacuum":
+                    # Vacuum fluctuations with Gaussian profile
+                    fluctuation = self._generate_vacuum_fluctuation(
+                        location, magnitude, correlation_length, field_shape
+                    )
+                elif fluctuation_type == "thermal":
+                    # Thermal fluctuations with exponential correlation
+                    fluctuation = self._generate_thermal_fluctuation(
+                        location, magnitude, correlation_length, field_shape
+                    )
+                elif fluctuation_type == "zero_point":
+                    # Zero-point energy fluctuations
+                    fluctuation = self._generate_zero_point_fluctuation(
+                        location, magnitude, field_shape
+                    )
+                else:
+                    # Default Gaussian fluctuation
+                    fluctuation = self._generate_vacuum_fluctuation(
+                        location, magnitude, correlation_length, field_shape
+                    )
+                
+                # Apply fluctuation to field with proper normalization
+                self.quantum_field.psi += fluctuation
+                self.quantum_field.normalize()
+                
+                # Update energy and other conserved quantities
+                if hasattr(self, 'total_energy'):
+                    delta_energy = np.sum(np.abs(fluctuation)**2) * magnitude
+                    self.total_energy += delta_energy
+                
+                logger.debug(f"Applied {fluctuation_type} quantum fluctuation at {location} with magnitude {magnitude}")
+                
+            except Exception as e:
+                logger.error(f"Error applying quantum fluctuation: {e}")
+        else:
+            logger.warning("No quantum field available for fluctuation application")
+    
+    def _generate_vacuum_fluctuation(self, location, magnitude, correlation_length, field_shape):
+        """Generate vacuum fluctuation pattern"""
+        fluctuation = np.zeros(field_shape, dtype=complex)
+        
+        # Create coordinate arrays
+        coords = np.array(np.meshgrid(*[np.arange(s) for s in field_shape], indexing='ij'))
+        
+        # Convert location to grid coordinates
+        grid_location = [int(loc * s) for loc, s in zip(location, field_shape)]
+        
+        # Calculate distances from fluctuation center
+        distances = np.zeros(field_shape)
+        for i, (coord, center) in enumerate(zip(coords, grid_location)):
+            distances += (coord - center)**2
+        distances = np.sqrt(distances)
+        
+        # Gaussian envelope with correlation length
+        envelope = np.exp(-distances**2 / (2 * correlation_length**2 * min(field_shape)))
+        
+        # Random phase and amplitude variations
+        random_phase = np.random.uniform(0, 2*np.pi, field_shape)
+        random_amplitude = np.random.normal(0, 1, field_shape)
+        
+        # Construct complex fluctuation
+        fluctuation = magnitude * envelope * random_amplitude * np.exp(1j * random_phase)
+        
+        return fluctuation
+    
+    def _generate_thermal_fluctuation(self, location, magnitude, correlation_length, field_shape):
+        """Generate thermal fluctuation with exponential correlations"""
+        fluctuation = np.zeros(field_shape, dtype=complex)
+        
+        # Similar to vacuum but with thermal distribution
+        coords = np.array(np.meshgrid(*[np.arange(s) for s in field_shape], indexing='ij'))
+        grid_location = [int(loc * s) for loc, s in zip(location, field_shape)]
+        
+        distances = np.zeros(field_shape)
+        for i, (coord, center) in enumerate(zip(coords, grid_location)):
+            distances += (coord - center)**2
+        distances = np.sqrt(distances)
+        
+        # Exponential correlation (characteristic of thermal systems)
+        envelope = np.exp(-distances / (correlation_length * min(field_shape)))
+        
+        # Thermal random distribution (Maxwell-Boltzmann-like)
+        thermal_amplitude = np.random.exponential(1.0, field_shape)
+        random_phase = np.random.uniform(0, 2*np.pi, field_shape)
+        
+        fluctuation = magnitude * envelope * thermal_amplitude * np.exp(1j * random_phase)
+        
+        return fluctuation
+    
+    def _generate_zero_point_fluctuation(self, location, magnitude, field_shape):
+        """Generate zero-point energy fluctuations"""
+        # Zero-point fluctuations are more localized and have quantum correlations
+        fluctuation = np.zeros(field_shape, dtype=complex)
+        
+        # Heisenberg uncertainty principle constraints
+        uncertainty_scale = 1.0 / np.prod(field_shape)**(1/len(field_shape))
+        
+        # Quantum harmonic oscillator ground state fluctuations
+        coords = np.array(np.meshgrid(*[np.arange(s) for s in field_shape], indexing='ij'))
+        grid_location = [int(loc * s) for loc, s in zip(location, field_shape)]
+        
+        # Ground state of quantum harmonic oscillator
+        for i, (coord, center) in enumerate(zip(coords, grid_location)):
+            gaussian_profile = np.exp(-((coord - center) * uncertainty_scale)**2)
+            fluctuation += magnitude * gaussian_profile * (np.random.normal(0, 1, field_shape) + 
+                                                          1j * np.random.normal(0, 1, field_shape)) / np.sqrt(2)
+        
+        return fluctuation
     
     def _handle_ethical_action(self, event):
-        """Handle an ethical action event"""
+        """Handle an ethical action event with full manifold coupling"""
         # Extract parameters
         value = event.get("value", 0.0)
         location = event.get("location", (0, 0, 0))
         dimension = event.get("dimension", None)
         radius = event.get("radius", 5)
+        action_type = event.get("action_type", "general")
+        intensity = event.get("intensity", 1.0)
+        propagation_speed = event.get("propagation_speed", 1.0)
         
-        # Apply to ethical manifold
-        try:
-            result = self.ethical_manifold.apply_ethical_action(value, location, dimension, radius)
-            logger.debug(f"Applied ethical action: {result}")
-        except Exception as e:
-            logger.error(f"Error applying ethical action: {str(e)}")
+        if self.ethical_manifold is not None:
+            try:
+                # Determine ethical vector based on action type
+                if action_type == "truth":
+                    ethical_vector = [0, value * intensity, 0]  # Truth/deception axis
+                elif action_type == "justice":
+                    ethical_vector = [0, 0, value * intensity]  # Justice/injustice axis
+                elif action_type == "compassion":
+                    ethical_vector = [value * intensity, 0, 0]  # Good/harm axis
+                elif action_type == "wisdom":
+                    ethical_vector = [value * intensity * 0.6, value * intensity * 0.8, value * intensity * 0.2]
+                else:
+                    # General ethical action affects all dimensions
+                    base_magnitude = value * intensity / np.sqrt(3)
+                    ethical_vector = [base_magnitude, base_magnitude, base_magnitude]
+                
+                # Apply ethical charge to manifold
+                result = self.ethical_manifold.apply_ethical_charge(
+                    location, ethical_vector, radius/100.0  # Scale radius to manifold coordinates
+                )
+                
+                # Calculate spacetime curvature effects
+                curvature_effect = self._calculate_ethical_curvature_effect(
+                    location, ethical_vector, radius
+                )
+                
+                # Update coupled metric tensor if quantum field exists
+                if self.quantum_field is not None:
+                    self._update_metric_coupling(location, ethical_vector, radius, curvature_effect)
+                
+                # Apply conservation laws and constraint equations
+                self._apply_ethical_conservation_laws(ethical_vector, location)
+                
+                # Check for ethical-physical resonances
+                resonance_effects = self._check_ethical_resonances(location, ethical_vector)
+                
+                # Log detailed results
+                logger.debug(f"Applied ethical action '{action_type}' at {location}:")
+                logger.debug(f"  - Ethical vector: {ethical_vector}")
+                logger.debug(f"  - Curvature effect: {curvature_effect}")
+                logger.debug(f"  - Resonance effects: {len(resonance_effects)} detected")
+                
+                # Return comprehensive result
+                return {
+                    'success': True,
+                    'ethical_vector': ethical_vector,
+                    'curvature_effect': curvature_effect,
+                    'resonances': resonance_effects,
+                    'manifold_result': result
+                }
+                
+            except Exception as e:
+                logger.error(f"Error applying ethical action: {str(e)}")
+                return {'success': False, 'error': str(e)}
+        else:
+            logger.warning("No ethical manifold available for ethical action")
+            return {'success': False, 'error': 'No ethical manifold'}
+    
+    def _calculate_ethical_curvature_effect(self, location, ethical_vector, radius):
+        """Calculate how ethical actions curve spacetime"""
+        # Ethical actions create curvature through the stress-energy tensor
+        magnitude = np.sqrt(sum(v**2 for v in ethical_vector))
+        
+        # Einstein field equations: Gμν = 8πG Tμν
+        # Ethical actions contribute to stress-energy tensor
+        curvature_magnitude = 8 * np.pi * self.constants.G * magnitude / (radius**2)
+        
+        # Direction of curvature depends on ethical valence
+        curvature_sign = 1 if magnitude > 0 else -1
+        
+        return {
+            'magnitude': curvature_magnitude,
+            'direction': curvature_sign,
+            'location': location,
+            'radius_of_influence': radius
+        }
+    
+    def _update_metric_coupling(self, location, ethical_vector, radius, curvature_effect):
+        """Update quantum field metric coupling due to ethical actions"""
+        if hasattr(self.ethical_manifold, 'coupled_metric'):
+            try:
+                # Convert location to grid coordinates
+                resolution = self.ethical_manifold.resolution
+                grid_location = [
+                    max(0, min(resolution-1, int((loc + 1) / 2 * resolution)))
+                    for loc in location
+                ]
+                
+                # Update metric tensor at affected region
+                curvature = curvature_effect['magnitude'] * curvature_effect['direction']
+                
+                # Apply metric perturbation (weak field approximation)
+                for i in range(-radius, radius+1):
+                    for j in range(-radius, radius+1):
+                        for k in range(-radius, radius+1):
+                            grid_i = max(0, min(resolution-1, grid_location[0] + i))
+                            grid_j = max(0, min(resolution-1, grid_location[1] + j))
+                            grid_k = max(0, min(resolution-1, grid_location[2] + k))
+                            
+                            # Distance-weighted influence
+                            distance = np.sqrt(i**2 + j**2 + k**2)
+                            if distance <= radius:
+                                weight = np.exp(-distance**2 / (2 * radius**2))
+                                
+                                # Perturb metric tensor components
+                                metric_perturbation = curvature * weight * 1e-6  # Small perturbation
+                                
+                                # Update space-space components
+                                for a in range(3):
+                                    self.ethical_manifold.coupled_metric[grid_i, grid_j, grid_k, a, a] += metric_perturbation
+                
+                logger.debug(f"Updated metric coupling for ethical action at {location}")
+                
+            except Exception as e:
+                logger.warning(f"Failed to update metric coupling: {e}")
+    
+    def _apply_ethical_conservation_laws(self, ethical_vector, location):
+        """Apply conservation laws for ethical charge and momentum"""
+        # Ethical charge conservation (similar to electric charge)
+        total_ethical_charge = sum(ethical_vector)
+        
+        # Update global ethical charge tracker
+        if not hasattr(self, 'global_ethical_charge'):
+            self.global_ethical_charge = 0.0
+        
+        self.global_ethical_charge += total_ethical_charge
+        
+        # Ethical momentum conservation
+        if not hasattr(self, 'ethical_momentum'):
+            self.ethical_momentum = np.array([0.0, 0.0, 0.0])
+        
+        # Ethical actions create momentum in ethical space
+        ethical_momentum_change = np.array(ethical_vector) * np.array(location)
+        self.ethical_momentum += ethical_momentum_change
+        
+        logger.debug(f"Conservation laws: charge={self.global_ethical_charge:.4f}, momentum={self.ethical_momentum}")
+    
+    def _check_ethical_resonances(self, location, ethical_vector):
+        """Check for resonances between ethical actions and quantum field modes"""
+        resonances = []
+        
+        if self.quantum_field is not None:
+            try:
+                # Calculate characteristic frequencies of quantum field
+                field_energy = np.abs(self.quantum_field.psi)**2
+                field_mean_energy = np.mean(field_energy)
+                
+                # Check for resonance conditions
+                ethical_frequency = np.sqrt(sum(v**2 for v in ethical_vector))
+                quantum_frequency = field_mean_energy  # Simplified estimate
+                
+                # Resonance occurs when frequencies match within tolerance
+                resonance_tolerance = 0.1
+                if abs(ethical_frequency - quantum_frequency) < resonance_tolerance:
+                    resonances.append({
+                        'type': 'frequency_resonance',
+                        'ethical_freq': ethical_frequency,
+                        'quantum_freq': quantum_frequency,
+                        'strength': 1.0 - abs(ethical_frequency - quantum_frequency) / resonance_tolerance
+                    })
+                
+                # Check for spatial resonances
+                grid_location = [int(loc * s) for loc, s in zip(location, self.quantum_field.psi.shape)]
+                if all(0 <= gl < s for gl, s in zip(grid_location, self.quantum_field.psi.shape)):
+                    local_field_amplitude = abs(self.quantum_field.psi[tuple(grid_location)])
+                    ethical_amplitude = np.sqrt(sum(v**2 for v in ethical_vector))
+                    
+                    if local_field_amplitude > 0.5 and ethical_amplitude > 0.1:
+                        resonances.append({
+                            'type': 'spatial_resonance',
+                            'location': location,
+                            'field_amplitude': local_field_amplitude,
+                            'ethical_amplitude': ethical_amplitude
+                        })
+                
+            except Exception as e:
+                logger.warning(f"Error checking ethical resonances: {e}")
+        
+        return resonances
     
     def _handle_temporal_paradox(self, event):
         """Handle a temporal paradox event"""

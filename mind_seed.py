@@ -4,6 +4,7 @@
 #  License: Proprietary Software License Agreement (Somnus Development Collective)
 #  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
 # ================================================================
+import copy
 import math
 import random
 import uuid
@@ -752,7 +753,7 @@ class IdentityMatrix:
     intent generation. It is not static but evolves through experience and self-reflection.
     """
     
-    def __init__(self, core_attributes: Dict None):
+    def __init__(self, core_attributes: Dict = None):
         self.core_attributes = core_attributes or {
             "archetype_balance": {
                 "explorer": 0.7,
@@ -1220,11 +1221,13 @@ class TimelineProjection:
                 })
         
         # Exploration transitions (always available for explorer archetypes)
-        if identity.get("archetype_balance.explorer", 0) > 0.5:
+        explorer_value = identity.get("archetype_balance.explorer", 0)
+        # Ensure we have a numeric value for comparison and arithmetic
+        if isinstance(explorer_value, (int, float)) and explorer_value > 0.5:
             transitions.append({
                 "type": "exploration",
                 "target": "unknown",
-                "probability": identity.get("archetype_balance.explorer", 0) * 0.6,
+                "probability": float(explorer_value) * 0.6,
                 "impact": {"knowledge": 0.3, "complexity": 0.1},
                 "cost": {"time": 0.2, "resources": {"energy": -0.15}}
             })
