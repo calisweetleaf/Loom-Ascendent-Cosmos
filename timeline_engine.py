@@ -1157,13 +1157,74 @@ event_data = {'event_type': 'breath_pulse', 'timestamp': 0.0}
 # Custom exceptions for timeline-related issues
 class TimelineParadoxError(Exception):
     """Exception raised when a temporal paradox is detected in the timeline."""
+    
     def __init__(self, message="Temporal paradox detected in timeline", severity=None, 
-                affected_branches=None, timeline_point=None):
+                 affected_branches=None, timeline_point=None, paradox_type=None,
+                 causality_chain=None, resolution_attempts=0):
+        """
+        Initialize TimelineParadoxError with comprehensive paradox information.
+        
+        Args:
+            message: Error message describing the paradox
+            severity: Severity level (0.0 to 1.0)
+            affected_branches: List of timeline branch IDs affected
+            timeline_point: Temporal coordinates where paradox occurred
+            paradox_type: Type of paradox ('causal_loop', 'grandfather', 'bootstrap', 'consistency')
+            causality_chain: List of events forming the paradoxical chain
+            resolution_attempts: Number of previous resolution attempts
+        """
         self.message = message
-        self.severity = severity
+        self.severity = severity if severity is not None else 0.5
         self.affected_branches = affected_branches or []
         self.timeline_point = timeline_point
+        self.paradox_type = paradox_type or 'unknown'
+        self.causality_chain = causality_chain or []
+        self.resolution_attempts = resolution_attempts
+        self.detection_timestamp = time.time()
+        self.entropy_cost = self._calculate_entropy_cost()
         super().__init__(self.message)
+        
+    def _calculate_entropy_cost(self):
+        """Calculate the entropy cost of resolving this paradox."""
+        base_cost = 0.1 * self.severity
+        complexity_multiplier = 1.0 + (len(self.causality_chain) * 0.2)
+        attempt_penalty = 1.0 + (self.resolution_attempts * 0.3)
+        return base_cost * complexity_multiplier * attempt_penalty
+        
+    def get_resolution_strategy(self):
+        """Determine the optimal resolution strategy based on paradox characteristics."""
+        if self.paradox_type == 'causal_loop':
+            if self.severity > 0.8:
+                return 'timeline_branch'
+            else:
+                return 'event_dampening'
+        elif self.paradox_type == 'grandfather':
+            return 'causal_isolation'
+        elif self.paradox_type == 'bootstrap':
+            return 'origin_injection'
+        elif self.paradox_type == 'consistency':
+            return 'probability_redistribution'
+        else:
+            return 'generic_stabilization'
+            
+    def can_auto_resolve(self):
+        """Check if this paradox can be automatically resolved."""
+        return (self.severity < 0.6 and 
+                self.resolution_attempts < 3 and 
+                len(self.affected_branches) < 5)
+                
+    def get_affected_timespan(self):
+        """Calculate the timespan affected by this paradox."""
+        if not self.causality_chain:
+            return 0.0
+        
+        timestamps = [event.get('timestamp', 0) for event in self.causality_chain 
+                     if isinstance(event, dict) and 'timestamp' in event]
+        
+        if len(timestamps) < 2:
+            return 0.0
+            
+        return max(timestamps) - min(timestamps)
         
     def __str__(self):
         details = []
@@ -1173,6 +1234,8 @@ class TimelineParadoxError(Exception):
             details.append(f"Affected branches: {len(self.affected_branches)}")
         if self.timeline_point:
             details.append(f"Timeline point: {self.timeline_point}")
+        if self.paradox_type != 'unknown':
+            details.append(f"Type: {self.paradox_type}")
         
         if details:
             return f"{self.message} - {'; '.join(details)}"
@@ -1180,22 +1243,90 @@ class TimelineParadoxError(Exception):
 
 class QuantumDecoherenceError(Exception):
     """Exception raised when quantum coherence falls below critical threshold causing decoherence."""
+    
     def __init__(self, message="Quantum state coherence failure detected", coherence_value=None, 
-                affected_patterns=None, location=None):
+                 affected_patterns=None, location=None, decoherence_rate=None,
+                 entanglement_loss=None, field_distortion=None):
+        """
+        Initialize QuantumDecoherenceError with detailed quantum state information.
+        
+        Args:
+            message: Error message describing the decoherence
+            coherence_value: Current coherence level (0.0 to 1.0)
+            affected_patterns: List of pattern IDs experiencing decoherence
+            location: Spatial coordinates of decoherence epicenter
+            decoherence_rate: Rate of coherence loss per unit time
+            entanglement_loss: Amount of quantum entanglement lost
+            field_distortion: Measure of quantum field distortion
+        """
         self.message = message
-        self.coherence_value = coherence_value
+        self.coherence_value = coherence_value if coherence_value is not None else 0.0
         self.affected_patterns = affected_patterns or []
         self.location = location
+        self.decoherence_rate = decoherence_rate or 0.0
+        self.entanglement_loss = entanglement_loss or 0.0
+        self.field_distortion = field_distortion or 0.0
+        self.detection_timestamp = time.time()
+        self.propagation_speed = self._calculate_propagation_speed()
+        self.recovery_difficulty = self._assess_recovery_difficulty()
         super().__init__(self.message)
         
+    def _calculate_propagation_speed(self):
+        """Calculate how fast the decoherence is spreading."""
+        base_speed = 0.1  # Base propagation speed
+        rate_factor = self.decoherence_rate * 2.0
+        distortion_factor = self.field_distortion * 1.5
+        return base_speed + rate_factor + distortion_factor
+        
+    def _assess_recovery_difficulty(self):
+        """Assess how difficult it will be to recover from this decoherence."""
+        coherence_factor = (1.0 - self.coherence_value) * 2.0
+        pattern_factor = len(self.affected_patterns) * 0.1
+        entanglement_factor = self.entanglement_loss * 1.5
+        distortion_factor = self.field_distortion
+        
+        return min(1.0, coherence_factor + pattern_factor + entanglement_factor + distortion_factor)
+        
+    def get_critical_patterns(self):
+        """Identify patterns that are critically affected and need immediate attention."""
+        # In a real implementation, this would analyze pattern criticality
+        # For now, return first few patterns as critical
+        return self.affected_patterns[:min(3, len(self.affected_patterns))]
+        
+    def estimate_recovery_time(self):
+        """Estimate time required for quantum state recovery."""
+        base_time = 1.0  # Base recovery time in seconds
+        difficulty_multiplier = 1.0 + (self.recovery_difficulty * 3.0)
+        pattern_multiplier = 1.0 + (len(self.affected_patterns) * 0.2)
+        
+        return base_time * difficulty_multiplier * pattern_multiplier
+        
+    def get_stabilization_energy(self):
+        """Calculate energy required for quantum state stabilization."""
+        base_energy = 10.0  # Base energy units
+        coherence_deficit = (1.0 - self.coherence_value) * 50.0
+        entanglement_energy = self.entanglement_loss * 25.0
+        field_energy = self.field_distortion * 30.0
+        
+        return base_energy + coherence_deficit + entanglement_energy + field_energy
+        
+    def is_catastrophic(self):
+        """Check if this decoherence event is catastrophic and requires emergency measures."""
+        return (self.coherence_value < 0.1 or 
+                self.decoherence_rate > 0.5 or
+                len(self.affected_patterns) > 10 or
+                self.field_distortion > 0.8)
+                
     def __str__(self):
         details = []
         if self.coherence_value is not None:
-            details.append(f"Coherence value: {self.coherence_value:.6f}")
+            details.append(f"Coherence: {self.coherence_value:.6f}")
         if self.affected_patterns:
             details.append(f"Affected patterns: {len(self.affected_patterns)}")
         if self.location:
             details.append(f"Location: {self.location}")
+        if self.decoherence_rate > 0:
+            details.append(f"Rate: {self.decoherence_rate:.4f}/s")
         
         if details:
             return f"{self.message} - {'; '.join(details)}"
@@ -1203,425 +1334,235 @@ class QuantumDecoherenceError(Exception):
 
 class RealityFragmentationError(Exception):
     """Exception raised when reality begins to fragment due to incompatible timelines or quantum states."""
+    
     def __init__(self, message="Reality fragmentation detected", fragmentation_level=None,
-                affected_regions=None, causality_breaks=None):
+                 affected_regions=None, causality_breaks=None, dimensional_tears=None,
+                 coherence_barriers=None, integration_failures=None):
+        """
+        Initialize RealityFragmentationError with comprehensive fragmentation data.
+        
+        Args:
+            message: Error message describing the fragmentation
+            fragmentation_level: Level of fragmentation (0.0 to 1.0)
+            affected_regions: List of spatial regions experiencing fragmentation
+            causality_breaks: List of causality violations causing fragmentation
+            dimensional_tears: Tears in dimensional fabric
+            coherence_barriers: Barriers preventing reality integration
+            integration_failures: Failed attempts at reality integration
+        """
         self.message = message
-        self.fragmentation_level = fragmentation_level
+        self.fragmentation_level = fragmentation_level if fragmentation_level is not None else 0.0
         self.affected_regions = affected_regions or []
         self.causality_breaks = causality_breaks or []
+        self.dimensional_tears = dimensional_tears or []
+        self.coherence_barriers = coherence_barriers or []
+        self.integration_failures = integration_failures or []
+        self.detection_timestamp = time.time()
+        self.propagation_vectors = self._calculate_propagation_vectors()
+        self.repair_complexity = self._assess_repair_complexity()
         super().__init__(self.message)
         
+    def _calculate_propagation_vectors(self):
+        """Calculate how fragmentation is propagating through reality."""
+        vectors = []
+        for region in self.affected_regions:
+            if isinstance(region, dict) and 'center' in region and 'size' in region:
+                # Calculate propagation vector based on region characteristics
+                center = region['center']
+                size = region['size']
+                vector = {
+                    'origin': center,
+                    'magnitude': size * self.fragmentation_level,
+                    'direction': self._calculate_direction(center)
+                }
+                vectors.append(vector)
+        return vectors
+        
+    def _calculate_direction(self, center):
+        """Calculate propagation direction from a center point."""
+        if isinstance(center, (list, tuple)) and len(center) >= 3:
+            # Normalize the center coordinates to get direction
+            magnitude = sum(x**2 for x in center) ** 0.5
+            if magnitude > 0:
+                return [x / magnitude for x in center]
+        return [0, 0, 0]
+        
+    def _assess_repair_complexity(self):
+        """Assess the complexity of repairing this reality fragmentation."""
+        base_complexity = self.fragmentation_level
+        region_factor = len(self.affected_regions) * 0.1
+        causality_factor = len(self.causality_breaks) * 0.2
+        dimensional_factor = len(self.dimensional_tears) * 0.3
+        barrier_factor = len(self.coherence_barriers) * 0.15
+        failure_factor = len(self.integration_failures) * 0.25
+        
+        total_complexity = (base_complexity + region_factor + causality_factor + 
+                          dimensional_factor + barrier_factor + failure_factor)
+        
+        return min(1.0, total_complexity)
+        
+    def get_critical_regions(self):
+        """Identify regions that require immediate repair attention."""
+        if not self.affected_regions:
+            return []
+            
+        # Sort regions by severity (assuming regions have severity data)
+        critical_regions = []
+        for region in self.affected_regions:
+            if isinstance(region, dict):
+                severity = region.get('severity', 0.5)
+                if severity > 0.7:
+                    critical_regions.append(region)
+        
+        return sorted(critical_regions, key=lambda r: r.get('severity', 0), reverse=True)
+        
+    def estimate_repair_time(self):
+        """Estimate time required for reality repair."""
+        base_time = 5.0  # Base repair time in seconds
+        complexity_multiplier = 1.0 + (self.repair_complexity * 4.0)
+        region_multiplier = 1.0 + (len(self.affected_regions) * 0.3)
+        
+        return base_time * complexity_multiplier * region_multiplier
+        
+    def get_repair_energy_requirement(self):
+        """Calculate energy required for reality repair."""
+        base_energy = 50.0  # Base energy units
+        fragmentation_energy = self.fragmentation_level * 100.0
+        region_energy = len(self.affected_regions) * 20.0
+        dimensional_energy = len(self.dimensional_tears) * 75.0
+        
+        return base_energy + fragmentation_energy + region_energy + dimensional_energy
+        
+    def requires_emergency_containment(self):
+        """Check if this fragmentation requires emergency containment measures."""
+        return (self.fragmentation_level > 0.8 or
+                len(self.affected_regions) > 5 or
+                len(self.dimensional_tears) > 2 or
+                self.repair_complexity > 0.9)
+                
+    def get_containment_strategy(self):
+        """Determine optimal containment strategy for this fragmentation."""
+        if self.fragmentation_level > 0.9:
+            return 'reality_isolation'
+        elif len(self.dimensional_tears) > 0:
+            return 'dimensional_sealing'
+        elif len(self.causality_breaks) > 3:
+            return 'causal_reconstruction'
+        elif len(self.coherence_barriers) > 0:
+            return 'coherence_bridging'
+        else:
+            return 'gradual_integration'
+            
     def __str__(self):
         details = []
         if self.fragmentation_level is not None:
-            details.append(f"Fragmentation level: {self.fragmentation_level:.6f}")
+            details.append(f"Fragmentation: {self.fragmentation_level:.6f}")
         if self.affected_regions:
             details.append(f"Affected regions: {len(self.affected_regions)}")
         if self.causality_breaks:
             details.append(f"Causality breaks: {len(self.causality_breaks)}")
+        if self.dimensional_tears:
+            details.append(f"Dimensional tears: {len(self.dimensional_tears)}")
         
         if details:
             return f"{self.message} - {'; '.join(details)}"
         return self.message
 
-def initialize(timeline_engine=None):
-    """
-    Initialize the timeline engine and return the engine instance.
-    
-    Args:
-        timeline_engine: Optional existing timeline engine instance
-        
-    Returns:
-        The initialized timeline engine instance
-    """
-    logger = logging.getLogger("TimelineEngine")
-    logger.info("Initializing Timeline Engine...")
-    
-    # Create and return the engine instance
-    return TimelineEngine()
-
-import logging
-import time
-import numpy as np
-from enum import Enum, auto
-from typing import Dict, List, Tuple, Any, Callable, Optional
-
-class BreathPhase(Enum):
-    """Breath phases of the universe cycle"""
-    INHALE = auto()       # Expansion, possibility generation, superposition
-    HOLD_IN = auto()      # Stabilization, coherence maintenance
-    EXHALE = auto()       # Contraction, probability collapse, resolution
-    HOLD_OUT = auto()     # Void state, potential reset, quantum vacuum
-
-def initialize(**kwargs):
-    """
-    Initialize the Timeline Engine with specified parameters.
-    
-    Args:
-        **kwargs: Configuration parameters including:
-            - start_time: Starting time (default: current time)
-            - tick_rate: Number of ticks per second (default: 10)
-            - time_scale: Time scaling factor relative to real time (default: 1.0)
-            - breath_cycle_ticks: Number of ticks in a complete breath cycle (default: 100)
-            - entity_id: The ID of the entity using this timeline engine
-            
-    Returns:
-        Initialized TimelineEngine instance
-    """
-    logger = logging.getLogger("TimelineEngine")
-    logger.info("Initializing Timeline Engine...")
-    
-    # Extract configuration parameters with defaults
-    start_time = kwargs.get('start_time', time.time())
-    tick_rate = kwargs.get('tick_rate', 10)
-    time_scale = kwargs.get('time_scale', 1.0)
-    breath_cycle_ticks = kwargs.get('breath_cycle_ticks', 100)
-    entity_id = kwargs.get('entity_id', f"timeline_{int(start_time) % 10000}")
-    
-    # Create and configure timeline engine
-    timeline_engine = TimelineEngine(
-        start_time=start_time,
-        tick_rate=tick_rate,
-        time_scale=time_scale,
-        breath_cycle_ticks=breath_cycle_ticks,
-        entity_id=entity_id
-    )
-    
-    logger.info(f"Timeline Engine initialized with ID {entity_id}")
-    logger.info(f"Configuration: tick_rate={tick_rate}, time_scale={time_scale}, breath_cycle_ticks={breath_cycle_ticks}")
-    
-    return timeline_engine
-
+# Add additional methods to TimelineEngine class to support exception handling
 class TimelineEngine:
-    """
-    Manages the timeline and temporal events for the ORAMA Framework.
-    """
+    # ...existing code...
     
-    def __init__(self, start_time: float, tick_rate: int = 10, time_scale: float = 1.0, 
-                 breath_cycle_ticks: int = 100, entity_id: str = "main_timeline"):
+    def resolve_paradox(self, paradox_error=None):
         """
-        Initialize the Timeline Engine.
+        Resolve timeline paradoxes using advanced temporal mechanics.
         
         Args:
-            start_time: Starting time (epoch seconds)
-            tick_rate: Number of ticks per second
-            time_scale: Time scaling factor relative to real time
-            breath_cycle_ticks: Number of ticks in a complete breath cycle
-            entity_id: The ID of this timeline engine instance
+            paradox_error: Optional TimelineParadoxError instance to resolve
         """
-        self.start_time = start_time
-        self.tick_rate = tick_rate
-        self.time_scale = time_scale
-        self.breath_cycle_ticks = breath_cycle_ticks
-        self.entity_id = entity_id
-        
-        # Initialize timeline state
-        self.master_tick = 0
-        self.current_real_time = start_time
-        self.current_system_time = start_time
-        self.is_running = False
-        self.paused = False
-        
-        # Breath cycle configuration
-        self.breath_phase_duration = {
-            BreathPhase.INHALE: int(breath_cycle_ticks * 0.35),    # 35% of cycle
-            BreathPhase.HOLD_IN: int(breath_cycle_ticks * 0.15),   # 15% of cycle
-            BreathPhase.EXHALE: int(breath_cycle_ticks * 0.35),    # 35% of cycle
-            BreathPhase.HOLD_OUT: int(breath_cycle_ticks * 0.15),  # 15% of cycle
-        }
-        
-        # Initialize breath state
-        self.current_breath_phase = BreathPhase.INHALE
-        self.breath_phase_tick = 0
-        self.breath_cycle_count = 0
-        
-        # Event management
-        self.observers = []
-        self.scheduled_events = []
-        self.temporal_events = []
-        self.event_history = []
-        
-        # Initialize logger
-        self.logger = logging.getLogger(f"TimelineEngine_{entity_id}")
-        self.logger.info(f"Timeline Engine initialized at time {start_time}")
-        
-    def start(self):
-        """Start the timeline engine"""
-        if self.is_running:
-            self.logger.warning("Timeline Engine already running")
-            return
-        
-        self.is_running = True
-        self.paused = False
-        self.logger.info("Timeline Engine started")
-        
-    def stop(self):
-        """Stop the timeline engine"""
-        if not self.is_running:
-            self.logger.warning("Timeline Engine not running")
-            return
-        
-        self.is_running = False
-        self.logger.info("Timeline Engine stopped")
-        
-    def pause(self):
-        """Pause the timeline engine"""
-        if not self.is_running or self.paused:
-            self.logger.warning("Timeline Engine not running or already paused")
-            return
-        
-        self.paused = True
-        self.logger.info("Timeline Engine paused")
-        
-    def resume(self):
-        """Resume the timeline engine after pausing"""
-        if not self.is_running or not self.paused:
-            self.logger.warning("Timeline Engine not running or not paused")
-            return
-        
-        self.paused = False
-        self.logger.info("Timeline Engine resumed")
-        
-    def tick(self):
-        """
-        Advance the timeline by one tick.
-        
-        Returns:
-            Event data dictionary for the current tick
-        """
-        if not self.is_running or self.paused:
-            return None
-        
-        # Update tick count
-        self.master_tick += 1
-        
-        # Update time
-        tick_time_delta = 1.0 / self.tick_rate
-        self.current_real_time = time.time()
-        self.current_system_time += tick_time_delta * self.time_scale
-        
-        # Update breath cycle
-        self._update_breath_cycle()
-        
-        # Process scheduled events
-        events = self._process_events()
-        
-        # Create tick event data
-        tick_data = {
-            'type': 'tick',
-            'tick': self.master_tick,
-            'time': self.current_system_time,
-            'real_time': self.current_real_time,
-            'breath_phase': self.current_breath_phase.name,
-            'breath_progress': self._get_breath_progress(),
-            'breath_cycle': self.breath_cycle_count,
-            'events': events
-        }
-        
-        # Notify observers
-        self._notify_observers(tick_data)
-        
-        return tick_data
-    
-    def _update_breath_cycle(self):
-        """Update the breath cycle state based on current tick"""
-        # Increment breath phase tick
-        self.breath_phase_tick += 1
-        
-        # Check if we need to transition to next phase
-        current_phase_duration = self.breath_phase_duration[self.current_breath_phase]
-        
-        if self.breath_phase_tick >= current_phase_duration:
-            # Move to next phase
-            self.breath_phase_tick = 0
+        if paradox_error is None:
+            # Generic paradox resolution for all detected paradoxes
+            for timeline_idx in range(len(self.paradox_buffers)):
+                while self.paradox_buffers[timeline_idx]:
+                    paradox_data = self.paradox_buffers[timeline_idx].popleft()
+                    self._resolve_specific_paradox(paradox_data, timeline_idx)
+        else:
+            # Resolve specific paradox
+            strategy = paradox_error.get_resolution_strategy()
+            self._apply_paradox_resolution_strategy(paradox_error, strategy)
             
-            if self.current_breath_phase == BreathPhase.INHALE:
-                self.current_breath_phase = BreathPhase.HOLD_IN
-            elif self.current_breath_phase == BreathPhase.HOLD_IN:
-                self.current_breath_phase = BreathPhase.EXHALE
-            elif self.current_breath_phase == BreathPhase.EXHALE:
-                self.current_breath_phase = BreathPhase.HOLD_OUT
-            elif self.current_breath_phase == BreathPhase.HOLD_OUT:
-                self.current_breath_phase = BreathPhase.INHALE
-                # Completed a full breath cycle
-                self.breath_cycle_count += 1
+        logger.info("Paradox resolution completed")
+        
+    def _resolve_specific_paradox(self, paradox_data, timeline_idx):
+        """Resolve a specific paradox using its characteristics."""
+        paradox_type, event, parent = paradox_data
+        
+        if paradox_type == 'causal_loop':
+            self._break_causal_loop(event, timeline_idx)
+        elif paradox_type == 'orphan_parent':
+            self._restore_causal_parent(event, timeline_idx)
+        elif paradox_type == 'reverse_causality':
+            self._correct_temporal_ordering(event, timeline_idx)
+        else:
+            self._apply_generic_paradox_fix(event, timeline_idx)
             
-            # Log phase transition
-            self.logger.debug(f"Breath phase changed to {self.current_breath_phase.name}, cycle {self.breath_cycle_count}")
+    def _apply_paradox_resolution_strategy(self, paradox_error, strategy):
+        """Apply specific resolution strategy for a paradox error."""
+        if strategy == 'timeline_branch':
+            new_timeline = self.branch_timeline()
+            logger.info(f"Created timeline branch {new_timeline} for paradox resolution")
+        elif strategy == 'event_dampening':
+            self._dampen_paradox_events(paradox_error)
+        elif strategy == 'causal_isolation':
+            self._isolate_causal_chain(paradox_error)
+        elif strategy == 'origin_injection':
+            self._inject_origin_event(paradox_error)
+        elif strategy == 'probability_redistribution':
+            self._redistribute_event_probabilities(paradox_error)
+        else:
+            self._generic_paradox_stabilization(paradox_error)
             
-            # Create and notify about breath phase change event
-            breath_event = {
-                'type': 'breath_phase_change',
-                'phase': self.current_breath_phase.name,
-                'cycle': self.breath_cycle_count,
-                'time': self.current_system_time
-            }
+    def _break_causal_loop(self, event, timeline_idx):
+        """Break a causal loop by weakening the strongest causal link."""
+        if event.causal_parents:
+            # Remove the most recent parent to break the loop
+            event.causal_parents = event.causal_parents[:-1]
+            logger.debug(f"Broke causal loop for event {event.event_type}")
             
-            self._notify_observers(breath_event)
-    
-    def _get_breath_progress(self):
-        """Get the progress within the current breath phase (0.0 to 1.0)"""
-        current_phase_duration = self.breath_phase_duration[self.current_breath_phase]
-        if current_phase_duration == 0:
-            return 0.0
+    def _restore_causal_parent(self, event, timeline_idx):
+        """Restore a missing causal parent by creating a substitute event."""
+        substitute_event = TemporalEvent(
+            timestamp=event.timestamp - self.temporal_resolution,
+            event_type=f"substitute_{event.event_type}",
+            quantum_state=event.quantum_state * 0.9,
+            ethical_vectors=event.ethical_vectors,
+            causal_parents=[],
+            recursion_depth=event.recursion_depth
+        )
         
-        return self.breath_phase_tick / current_phase_duration
-    
-    def _process_events(self):
-        """Process scheduled temporal events for the current tick"""
-        current_events = []
-        remaining_events = []
+        # Schedule the substitute event
+        heapq.heappush(self.event_horizons[timeline_idx], substitute_event)
         
-        # Check for events scheduled for this tick
-        for event in self.scheduled_events:
-            if event['tick'] <= self.master_tick:
-                current_events.append(event)
-                # Add to history
-                self.event_history.append(event)
-            else:
-                remaining_events.append(event)
+        # Update the original event's parents
+        event.causal_parents = [substitute_event]
+        logger.debug(f"Created substitute parent for event {event.event_type}")
         
-        # Update scheduled events list
-        self.scheduled_events = remaining_events
-        
-        # Process current events
-        for event in current_events:
-            self._notify_observers(event)
+    def _correct_temporal_ordering(self, event, timeline_idx):
+        """Correct reverse causality by adjusting event timestamp."""
+        if event.causal_parents:
+            latest_parent_time = max(p.timestamp for p in event.causal_parents)
+            event.timestamp = latest_parent_time + self.temporal_resolution
+            logger.debug(f"Corrected temporal ordering for event {event.event_type}")
             
-        return current_events
-    
-    def schedule_event(self, event_type: str, tick_delay: int, data: Dict[str, Any] = None):
-        """
-        Schedule an event to occur after a specified number of ticks.
-        
-        Args:
-            event_type: The type of event
-            tick_delay: Number of ticks in the future to schedule the event
-            data: Additional event data
+    def _apply_generic_paradox_fix(self, event, timeline_idx):
+        """Apply a generic fix for unclassified paradoxes."""
+        # Reduce quantum state magnitude to dampen paradox effects
+        if event.quantum_state is not None:
+            event.quantum_state = event.quantum_state * 0.8
             
-        Returns:
-            The scheduled event object
-        """
-        event_data = data.copy() if data else {}
-        event_data.update({
-            'type': event_type,
-            'tick': self.master_tick + tick_delay,
-            'scheduled_time': self.current_system_time + (tick_delay / self.tick_rate * self.time_scale),
-            'creation_tick': self.master_tick
-        })
-        
-        self.scheduled_events.append(event_data)
-        self.logger.debug(f"Scheduled {event_type} event for tick {event_data['tick']}")
-        
-        return event_data
-    
-    def create_temporal_event(self, event_type: str, data: Dict[str, Any] = None):
-        """
-        Create an immediate temporal event and notify observers.
-        
-        Args:
-            event_type: The type of event
-            data: Additional event data
+        # Reduce recursion depth if too high
+        if event.recursion_depth > 3:
+            event.recursion_depth = 3
             
-        Returns:
-            The created event object
-        """
-        event_data = data.copy() if data else {}
-        event_data.update({
-            'type': event_type,
-            'tick': self.master_tick,
-            'time': self.current_system_time,
-        })
-        
-        self.temporal_events.append(event_data)
-        self.event_history.append(event_data)
-        
-        # Notify observers
-        self._notify_observers(event_data)
-        
-        self.logger.debug(f"Created and processed immediate {event_type} event")
-        
-        return event_data
-    
-    def register_observer(self, observer_callback: Callable[[Dict[str, Any]], None]):
-        """
-        Register an observer to receive timeline events.
-        
-        Args:
-            observer_callback: Function to call with event data
-        """
-        if observer_callback not in self.observers:
-            self.observers.append(observer_callback)
-            self.logger.debug(f"Registered new observer, total: {len(self.observers)}")
-    
-    def unregister_observer(self, observer_callback: Callable[[Dict[str, Any]], None]):
-        """
-        Unregister an observer.
-        
-        Args:
-            observer_callback: Previously registered observer function
-        """
-        if observer_callback in self.observers:
-            self.observers.remove(observer_callback)
-            self.logger.debug(f"Unregistered observer, remaining: {len(self.observers)}")
-    
-    def _notify_observers(self, event_data: Dict[str, Any]):
-        """
-        Notify all observers about an event.
-        
-        Args:
-            event_data: Event data to send to observers
-        """
-        for observer in self.observers:
-            try:
-                observer(event_data)
-            except Exception as e:
-                self.logger.error(f"Error in observer callback: {str(e)}")
-    
-    def get_current_time(self):
-        """Get the current system time"""
-        return self.current_system_time
-    
-    def get_current_breath_state(self):
-        """
-        Get the current breath cycle state.
-        
-        Returns:
-            Dictionary with breath state information
-        """
-        return {
-            'phase': self.current_breath_phase.name,
-            'progress': self._get_breath_progress(),
-            'cycle': self.breath_cycle_count,
-            'phase_tick': self.breath_phase_tick,
-            'phase_duration': self.breath_phase_duration[self.current_breath_phase]
-        }
-    
-    def create_paradox_event(self, severity: float, description: str, 
-                          location: Tuple[float, float, float, float] = None, 
-                          affected_entities: List[str] = None):
-        """
-        Create a temporal paradox event.
-        
-        Args:
-            severity: Paradox severity (0.0 to 1.0)
-            description: Description of the paradox
-            location: 4D spacetime coordinates of the paradox
-            affected_entities: Entities affected by the paradox
-            
-        Returns:
-            The created paradox event
-        """
-        if location is None:
-            location = (0, 0, 0, self.current_system_time)
-            
-        paradox_data = {
-            'severity': severity,
-            'description': description,
-            'location': location,
-            'affected_entities': affected_entities or [],
-            'resolution_status': 'unresolved'
-        }
-        
-        # Create and return the event
-        return self.create_temporal_event('temporal_paradox', paradox_data)
+        logger.debug(f"Applied generic paradox fix to event {event.event_type}")
+
+    # ...existing code...

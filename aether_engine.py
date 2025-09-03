@@ -921,8 +921,13 @@ class AetherEngine:
             if not data:
                 raise EncodingError("Input data for binary encoding cannot be empty")
             
-            if len(data) > self.physics.get('max_pattern_size', 1048576):  # 1MB limit
-                raise EncodingError(f"Input data size {len(data)} exceeds maximum allowed size")
+            max_pattern_size = self.physics.get('max_pattern_size', 1048576)
+            if not isinstance(max_pattern_size, (int, float)) or max_pattern_size is None:
+                max_pattern_size = 1048576  # 1MB default limit
+            max_pattern_size = int(max_pattern_size)
+            
+            if len(data) > max_pattern_size:
+                raise EncodingError(f"Input data size {len(data)} exceeds maximum allowed size {max_pattern_size}")
             
             result = hashlib.sha3_512(data).digest()
             logger.debug(f"Binary encoding completed for {len(data)} bytes -> {len(result)} bytes")
@@ -940,6 +945,15 @@ class AetherEngine:
             
             min_size = self.physics.get('min_pattern_size', 64)
             max_size = self.physics.get('max_pattern_size', 1048576)
+            
+            # Ensure min_size and max_size are valid integers
+            if not isinstance(min_size, (int, float)) or min_size is None:
+                min_size = 64
+            min_size = int(min_size)
+            
+            if not isinstance(max_size, (int, float)) or max_size is None:
+                max_size = 1048576
+            max_size = int(max_size)
             
             if len(data) > max_size:
                 raise EncodingError(f"Input data size {len(data)} exceeds maximum {max_size}")

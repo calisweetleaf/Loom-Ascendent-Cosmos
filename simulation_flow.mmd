@@ -1,0 +1,142 @@
+sequenceDiagram
+participant RealityKernel
+participant CosmicScrollManager
+participant Observer
+RealityKernel->>CosmicScrollManager: register_observer(_handle_reality_kernel_event)
+loop Each simulation tick
+    RealityKernel->>CosmicScrollManager: tick()
+    CosmicScrollManager-->>RealityKernel: notify_observers(event_data)
+    RealityKernel->>RealityKernel: _handle_reality_kernel_event(event_data)
+    alt event_type == 'tick_completed'
+        RealityKernel->>RealityKernel: _integrate_cosmic_scroll_results(results)
+    end
+end
+
+sequenceDiagram
+participant Engine as AetherEngine
+participant Pattern1 as AetherPattern
+participant Pattern2 as AetherPattern
+Engine->>Engine: _handle_combine(Pattern1, Pattern2)
+Engine->>Engine: _handle_entangle(Pattern1, Pattern2)
+Engine->>Engine: _handle_transform(Pattern1, Pattern2)
+Engine->>Engine: _handle_cascade(Pattern1, Pattern2)
+Engine->>Engine: _handle_resonate(Pattern1, Pattern2)
+Engine->>Engine: _handle_annihilate(Pattern1, Pattern2)
+Engine->>Engine: _handle_catalyze(Pattern1, Pattern2)
+Engine-->>Pattern1: returns new/modified pattern
+
+classDiagram
+class Motif {
+  +motif_id: str
+  +name: str
+  +category: MotifCategory
+  +attributes: Dict[str, float]
+  +resonance_frequency: float
+  +creation_time: float
+  +activity_level: float
+  +calculate_resonance(current_tick: int): float
+  +apply_influence(target_attributes: Dict[str, float], strength: float): Dict[str, float]
+}
+class Entity {
+  +entity_id: str
+  +name: str
+  +entity_type: EntityType
+  +properties: Dict[str, Any]
+  +motifs: List[str]
+  +creation_time: float
+  +last_interaction: float
+  +add_motif(motif_id: str): None
+  +remove_motif(motif_id: str): bool
+}
+class Event {
+  +event_id: str
+  +event_type: EventType
+  +description: str
+  +entities: List[str]
+  +properties: Dict[str, Any]
+  +motifs: List[str]
+  +timestamp: float
+  +add_motif(motif_id: str): None
+}
+class MetabolicProcess {
+  +process_id: str
+  +name: str
+  +process_type: MetabolicProcessType
+  +entities: List[str]
+  +rate: float
+  +efficiency: float
+  +active: bool
+  +resources_consumed: Dict[str, float]
+  +products_generated: Dict[str, float]
+  +process(delta_time: float): Dict[str, Any]
+}
+class CosmicScroll {
+  +patterns: Dict[str, Dict[str, Any>]
+  +active_threads: Dict[str, bool]
+  +pattern_density_history: deque
+  +last_density_calculation: float
+  +thread_priorities: defaultdict(float)
+  +thread_interactions: defaultdict(list)
+  +add_pattern(pattern_id: str, pattern_data: Dict[str, Any]): bool
+  +get_pattern(pattern_id: str): Optional[Dict[str, Any]]
+  +activate_thread(thread_id: str, priority: float): bool
+  +calculate_symbolic_density(): float
+}
+class CosmicScrollManager {
+  +cosmic_scroll: CosmicScroll
+  +entities: Dict[str, Entity]
+  +motifs: Dict[str, Motif]
+  +events: List[Event]
+  +metabolic_processes: Dict[str, MetabolicProcess]
+  +current_breath_phase: BreathPhase
+  +breath_cycle_time: float
+  +breath_frequency: float
+  +observers: List[Callable]
+  +metrics: dict
+  +simulation_time: float
+  +tick_count: int
+  +register_observer(callback: Callable): None
+  +notify_observers(event_data: Dict[str, Any]): None
+  +tick(delta_time: float): Dict[str, Any]
+  +create_entity(...): str
+  +create_motif(...): str
+  +create_metabolic_process(...): str
+  +associate_motif_with_entity(...): bool
+  +get_entity_motifs(...): List[Dict[str, Any]]
+  +get_simulation_state(): Dict[str, Any]
+}
+Motif <|-- MotifCategory
+Entity <|-- EntityType
+Event <|-- EventType
+MetabolicProcess <|-- MetabolicProcessType
+CosmicScrollManager --> CosmicScroll
+CosmicScrollManager --> Entity
+CosmicScrollManager --> Motif
+CosmicScrollManager --> Event
+CosmicScrollManager --> MetabolicProcess
+Entity --> Motif
+Event --> Motif
+MetabolicProcess --> Entity
+CosmicScroll --> Pattern
+
+classDiagram
+class AetherPattern {
+  +core: bytes
+  +mutations: tuple
+  +interactions: dict
+  +encoding_type: EncodingType
+  +recursion_level: int
+  +metadata: dict
+  +pattern_id: str
+  +complexity: float
+}
+class AetherEngine {
+  +_handle_combine(pattern1: AetherPattern, pattern2: AetherPattern): AetherPattern
+  +_handle_entangle(pattern1: AetherPattern, pattern2: AetherPattern): AetherPattern
+  +_handle_transform(pattern1: AetherPattern, pattern2: AetherPattern): AetherPattern
+  +_handle_cascade(pattern1: AetherPattern, pattern2: AetherPattern): AetherPattern
+  +_handle_resonate(pattern1: AetherPattern, pattern2: AetherPattern): AetherPattern
+  +_handle_annihilate(pattern1: AetherPattern, pattern2: AetherPattern): AetherPattern
+  +_handle_catalyze(pattern1: AetherPattern, pattern2: AetherPattern): AetherPattern
+}
+AetherEngine --> AetherPattern
