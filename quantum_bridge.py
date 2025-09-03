@@ -506,7 +506,6 @@ class CollapseAdapter:
         }
         
         logger.info(f"Initialized CollapseAdapter for field shape {field_shape}")
-    
     def interpret_collapse(self, 
                           before_state: np.ndarray, 
                           after_state: np.ndarray, 
@@ -768,7 +767,7 @@ class CollapseAdapter:
         
         # Generate narrative for dominant pattern
         base_narrative = narrative_templates.get(
-            dominant_pattern, 
+            dominant_pattern if dominant_pattern is not None else "complex_distribution", 
             "The unfolding pattern suggests multiple interpretations and possibilities."
         )
         

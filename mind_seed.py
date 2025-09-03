@@ -753,7 +753,7 @@ class IdentityMatrix:
     intent generation. It is not static but evolves through experience and self-reflection.
     """
     
-    def __init__(self, core_attributes: Dict = None):
+    def __init__(self, core_attributes: Optional[Dict] = None):
         self.core_attributes = core_attributes or {
             "archetype_balance": {
                 "explorer": 0.7,
@@ -1299,9 +1299,9 @@ class TimelineProjection:
         # Check for factors that influence resource trends
         if "last_transition" in state:
             last_transition = state["last_transition"]
-            if last_transition["type"] == "resource_acquisition" and last_transition["target"] == resource:
+            if last_transition.get("type") == "resource_acquisition" and last_transition.get("target") == resource:
                 base_trend = 0.1  # Positive trend after acquisition
-            elif last_transition["type"] == "resource_investment" and last_transition["target"] == resource:
+            elif last_transition.get("type") == "resource_investment" and last_transition.get("target") == resource:
                 base_trend = -0.05  # Slight negative trend after investment
         
         return base_trend
@@ -1316,10 +1316,11 @@ class TimelineProjection:
             current_strength = state["relationships"][entity]
             
             # Strong relationships are more stable
-            if current_strength > 0.8:
-                stability += 0.2
-            elif current_strength < 0.3:
-                stability -= 0.3
+            if isinstance(current_strength, (int, float)):
+                if current_strength > 0.8:
+                    stability += 0.2
+                elif current_strength < 0.3:
+                    stability -= 0.3
         
         return max(0.0, min(1.0, stability))
     
@@ -1331,7 +1332,8 @@ class TimelineProjection:
         if "resources" in state:
             energy = state["resources"].get("energy", 0.5)
             focus = state["resources"].get("focus", 0.5)
-            base_rate *= (energy + focus)
+            if isinstance(energy, (int, float)) and isinstance(focus, (int, float)):
+                base_rate *= (energy + focus)
         
         # Adjust based on archetype affinity
         dominant_archetype = identity.dominant_archetype()
@@ -1372,15 +1374,17 @@ class TimelineProjection:
         # More relationships increase opportunity density
         if "relationships" in state:
             relationship_count = len(state["relationships"])
-            avg_strength = np.mean(list(state["relationships"].values())) if relationship_count > 0 else 0
+            numeric_values = [v for v in state["relationships"].values() if isinstance(v, (int, float))]
+            avg_strength = float(np.mean(numeric_values)) if numeric_values else 0.0
             density += (relationship_count * 0.05) + (avg_strength * 0.3)
         
         # More resources increase opportunity density
         if "resources" in state:
-            resource_abundance = np.mean([v for v in state["resources"].values() if isinstance(v, (int, float))])
+            numeric_resources = [v for v in state["resources"].values() if isinstance(v, (int, float))]
+            resource_abundance = float(np.mean(numeric_resources)) if numeric_resources else 0.0
             density += resource_abundance * 0.2
         
-        return min(1.0, density)
+        return float(min(1.0, density))
     
     def _calculate_archetype_affinity(self, archetype: str, action_type: str) -> float:
         """Calculate how much an archetype is inclined toward a type of action."""
@@ -1411,7 +1415,10 @@ class TimelineProjection:
     
     def _apply_stochastic_variations(self, state: Dict, volatility: float) -> None:
         """Apply random variations to state based on environmental volatility."""
-        variation_strength = volatility * 0.1  # Scale down the variation
+        if not isinstance(volatility, (int, float)):
+            volatility = 0.3
+            
+        variation_strength = float(volatility) * 0.1  # Scale down the variation
         
         # Apply variations to numerical values
         for category, items in state.items():
@@ -1419,12 +1426,12 @@ class TimelineProjection:
                 for item, value in items.items():
                     if isinstance(value, (int, float)) and 0 <= value <= 1:
                         variation = np.random.normal(0, variation_strength)
-                        new_value = max(0.0, min(1.0, value + variation))
+                        new_value = max(0.0, min(1.0, float(value) + float(variation)))
                         state[category][item] = new_value
 
     def _collect_leaf_nodes(self, node: Dict, projections: List[Dict]) -> None:
         """Collect all leaf nodes (end states) from the timeline tree."""
-        if not node["children"]:
+        if not node.get("children", []):
             # This is a leaf node
             projection = {
                 "final_state": node["state"],
@@ -1444,46 +1451,11 @@ class TimelineProjection:
         current = node
         
         # Walk back up the tree to collect transitions
-        while "transition" in current:
-            path.insert(0, current["transition"])
-            # Note: This is a simplified implementation
-            # A full implementation would maintain parent references
-            break  # For now, just include the immediate transition
+        if "transition" in current:
+            path.append(current["transition"])
             
         return path
 
-    def _evolve_state(self, state: Dict, identity: IdentityMatrix) -> Dict:
-        """Evolve a state into a possible future state using structured transition models."""
-        # Analyze the current state
-        analysis = self._analyze_state(state, identity)
-        
-        # Generate possible transitions
-        possible_transitions = self._generate_transitions(analysis, identity)
-        
-        # Select the most probable transition
-        if possible_transitions:
-            # Weight transitions by probability
-            weights = [t["probability"] for t in possible_transitions]
-            total_weight = sum(weights)
-            
-            if total_weight > 0:
-                # Select transition based on weighted probability
-                selected_transition = np.random.choice(
-                    possible_transitions,
-                    p=[w/total_weight for w in weights]
-                )
-            else:
-                selected_transition = possible_transitions[0]
-            
-            # Apply the selected transition
-            evolved_state = self._apply_transition(state, selected_transition, identity)
-        else:
-            # No transitions available, apply minimal change
-            evolved_state = copy.deepcopy(state)
-            evolved_state["timestamp"] = datetime.now().isoformat()
-            evolved_state["evolution_type"] = "stasis"
-        
-        return evolved_state
 def initialize(**kwargs):
     """
     Initialize the mind seed module and return core objects needed for cognitive processes.
@@ -1527,6 +1499,34 @@ def initialize(**kwargs):
     initial_phase = kwargs.get('initial_phase', 0.0)
     breath_cycle = BreathCycle(initial_phase=initial_phase, cycle_length=breath_cycle_length)
     logger.info(f"Breath Cycle initialized with phase {initial_phase}, length {breath_cycle_length}")
+    
+    # Initialize narrative manifold
+    narrative = NarrativeManifold()
+    logger.info("Narrative Manifold initialized")
+    
+    # Initialize timeline projection
+    branching_factor = kwargs.get('branching_factor', 3)
+    max_depth = kwargs.get('max_depth', 5)
+    timeline = TimelineProjection(branching_factor=branching_factor, max_depth=max_depth)
+    logger.info(f"Timeline Projection initialized with branching factor {branching_factor}")
+    
+    # Initialize recursive simulator
+    simulator = RecursiveSimulator(max_depth=recursion_depth)
+    logger.info(f"Recursive Simulator initialized with max depth {recursion_depth}")
+    
+    # Create and return the mind components dictionary
+    mind_components = {
+        'memory': memory,
+        'identity': identity,
+        'breath_cycle': breath_cycle,
+        'narrative': narrative,
+        'timeline': timeline,
+        'simulator': simulator,
+        'entity_id': entity_id
+    }
+    
+    logger.info("Mind Seed Module initialization complete")
+    return mind_components
     
     # Initialize narrative manifold
     narrative = NarrativeManifold()
