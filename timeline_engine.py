@@ -335,7 +335,7 @@ class TimelineEngine:
         if not isinstance(ethical_dimensions, int):
             raise ValueError(f"ethical_dimensions must be integer, got {type(ethical_dimensions)}")
         if not (1 <= ethical_dimensions <= 10):
-            raise ValueError(f"ethical_dimensions must be 1-10, got {ethical_dimensions}")
+            ValueError(f"ethical_dimensions must be 1-10, got {ethical_dimensions}")
         
         # Validate parallel timelines
         if not isinstance(parallel_timelines, int):
@@ -364,7 +364,7 @@ class TimelineEngine:
     def process_tick(self, 
                      inputs: Dict, 
                      rcf_operator: Callable,
-                     timeline_idx: int = None) -> Dict:
+                     timeline_idx: Optional[int] = None) -> Dict:
         """
         Execute one temporal iteration with RCF integration
         
@@ -477,7 +477,7 @@ class TimelineEngine:
 
     def schedule_event(self, 
                        event: Dict | TemporalEvent, 
-                       timeline_idx: int = None,
+                       timeline_idx: Optional[int] = None,
                        recursion_depth: int = 0) -> TemporalEvent:
         """
         Add event to horizon queue with recursion context
@@ -554,7 +554,7 @@ class TimelineEngine:
     def create_recursive_loop(self, 
                               entry_event: Dict | TemporalEvent, 
                               exit_condition: Callable,
-                              timeline_idx: int = None,
+                              timeline_idx: Optional[int] = None,
                               max_iterations: int = 100) -> List[TemporalEvent]:
         """
         Implement bounded temporal loop (Symbolic Operator ⟲t)
@@ -602,7 +602,7 @@ class TimelineEngine:
         self.recursion_stacks[timeline].pop()
         return generated_events
 
-    def branch_timeline(self, branch_point_event: Dict | TemporalEvent = None) -> int:
+    def branch_timeline(self, branch_point_event: Optional[Dict | TemporalEvent] = None) -> int:
         """
         Create a new timeline branch from the current state
         
@@ -758,7 +758,7 @@ class TimelineEngine:
             or a string identifier for the observer
         """
         self.observers.append(callback)
-        if hasattr(callback, '__name__'):
+        if callable(callback) and hasattr(callback, '__name__'):
             logger.info(f"Observer registered: {callback.__name__}")
         else:
             logger.info(f"Observer registered: {callback}")
@@ -810,7 +810,7 @@ class TimelineEngine:
         logger.debug(f"Engine state: {state}")
         return state
 
-    def temporal_injection(self, event: TemporalEvent, timeline_idx: int = None) -> None:
+    def temporal_injection(self, event: TemporalEvent, timeline_idx: Optional[int] = None) -> None:
         """
         Temporal Injection (→t): Creates a new event at a specified timepoint.
         """
@@ -818,7 +818,7 @@ class TimelineEngine:
         heapq.heappush(self.event_horizons[timeline], event)
         logger.info(f"Injected event {event.event_type} at t={event.timestamp:.2f} on timeline {timeline}")
 
-    def causal_binding(self, parent_event: TemporalEvent, child_event: TemporalEvent, timeline_idx: int = None) -> None:
+    def causal_binding(self, parent_event: TemporalEvent, child_event: TemporalEvent, timeline_idx: Optional[int] = None) -> None:
         """
         Causal Binding (∞t): Establishes fixed relationships between events.
         """
@@ -831,7 +831,7 @@ class TimelineEngine:
         self.timestreams[timeline][parent_id].append(child_id)
         logger.info(f"Bound event {parent_event.event_type} to {child_event.event_type} on timeline {timeline}")
 
-    def breath_synchronization(self, timeline_idx: int = None) -> Dict[str, Any]:
+    def breath_synchronization(self, timeline_idx: Optional[int] = None) -> Dict[str, Any]:
         """
         Breath Synchronization (≈t): Aligns events to breath cycles per CLAUDE.md specifications.
         
@@ -967,7 +967,7 @@ class TimelineEngine:
         
         logger.debug(f"Aligned {len(aligned_events)} events to breath phase {breath_phase:.3f} on timeline {timeline_idx}")
 
-    def recursive_closure(self, entry_event: TemporalEvent, exit_condition: Callable, timeline_idx: int = None) -> List[TemporalEvent]:
+    def recursive_closure(self, entry_event: TemporalEvent, exit_condition: Callable, timeline_idx: Optional[int] = None) -> List[TemporalEvent]:
         """
         Recursive Closure (⟲t): Marks bounded temporal loops with consistent entry/exit states.
         """
@@ -991,7 +991,7 @@ class TimelineEngine:
         self.recursion_stacks[timeline].pop()
         return generated_events
 
-    def enforce_boundary_conditions(self, event: TemporalEvent, timeline_idx: int = None) -> TemporalEvent:
+    def enforce_boundary_conditions(self, event: TemporalEvent, timeline_idx: Optional[int] = None) -> Optional[TemporalEvent]:
         """
         Enforce boundary conditions on an event.
         """

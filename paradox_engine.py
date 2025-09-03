@@ -35,6 +35,7 @@ import uuid
 import warnings
 import copy
 import os
+import random  # Add missing import
 from typing import Dict, List, Set, Tuple, Any, Optional, Union, Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -1066,59 +1067,36 @@ class ParadoxEngine:
                 
         return None
 
-# Implement initialize function
-def initialize(initialized_components=None, *args, **kwargs):
-    """
-    Initialize and return a ParadoxEngine instance.
-    
-    Args:
-        initialized_components: Dictionary of already initialized components
-        *args, **kwargs: Additional arguments to pass to ParadoxEngine constructor
+    def _generate_interventions(self, pattern: Pattern):
+        """
+        Generate interventions for a given pattern based on its type and characteristics.
+        """
+        intervention_type = None
+        priority = 0.0
+        description = ""
+        expected_outcomes = []
+        side_effect_risk = 0.3
         
-    Returns:
-        Initialized ParadoxEngine instance
-    """
-    logger.info("Initializing Paradox Engine...")
-    
-    # Filter out incompatible arguments before passing to ParadoxEngine
-    filtered_kwargs = {k: v for k, v in kwargs.items() if k != 'initialized_components'}
-    
-    # Create a new ParadoxEngine
-    engine = ParadoxEngine(*args, **filtered_kwargs)
-    
-    # Connect to other components if available
-    if initialized_components:
-        if 'timeline_engine' in initialized_components:
-            timeline = initialized_components['timeline_engine']
-            logger.info("Connecting Paradox Engine to Timeline Engine...")
-            # Add connection code here
-
-        if 'mind_seed' in initialized_components:
-            mind = initialized_components['mind_seed']
-            logger.info("Connecting Paradox Engine to Mind Seed...")
-            # Add connection code here
+        if pattern.pattern_type == PatternType.LOOP:
+            intervention_type = InterventionType.LOOP_BREAKER
+            priority = pattern.strength * 0.9
+            description = "Break logical implication loop"
+            expected_outcomes = ["Loop broken", "Circular reasoning eliminated"]
+            side_effect_risk = 0.3
             
-    logger.info("Paradox Engine initialization complete")
-    return engine
-
-def initialize_timeline_engine():
-    from timeline_engine import TimelineEngine, TemporalEvent, TemporalBranch
-    # Use TimelineEngine as needed
-
-
-def initialize_quantum_physics():
-    from quantum_physics import QuantumField, PhysicsConstants
-    # Use QuantumField as needed
-
-
-def initialize_aether_engine():
-    from aether_engine import AetherPattern, AetherSpace, PhysicsConstraints
-    # Use AetherPattern as needed
-
-
-def initialize_planetary_kernel():
-    from planetary_reality_kernel import PlanetaryRealityKernel
-    # Use PlanetaryRealityKernel as needed
+        elif pattern.pattern_type == PatternType.CONTRADICTION:
+            intervention_type = InterventionType.CONTRADICTION_RESOLVER
+            priority = pattern.strength * 0.95
+            description = "Resolve logical contradiction"
+            expected_outcomes = ["Contradiction resolved", "Consistent belief state"]
+            side_effect_risk = 0.4
+            
+        elif pattern.pattern_type == PatternType.RECURSION:
+            intervention_type = InterventionType.RECURSION_LIMITER
+            priority = pattern.strength * 0.8
+            description = "Limit recursive depth"
+            expected_outcomes = ["Recursion depth limited", "Infinite loops prevented"]
+            nesting_level = pattern.features.get("nesting_level", 1)
             side_effect_risk = 0.5 + (nesting_level * 0.1)
             
         elif pattern.pattern_type == PatternType.DIVERGENCE:
@@ -1176,7 +1154,7 @@ def initialize_planetary_kernel():
             # Connect intervention to pattern
             self.knowledge_graph.add_edge(intervention_id, pattern.id, 
                                          relationship="addresses")
-    
+
     def _calculate_cycle_coherence(self, cycle: List[str]) -> float:
         """
         Calculate the coherence of a loop/cycle.
@@ -1290,6 +1268,28 @@ def initialize_planetary_kernel():
         # Add modifiers based on pattern strengths
         avg_strength = sum(p.strength for p in patterns) / count
         if avg_strength > 0.9:
+            symbol = f"★{symbol}★"
+        elif avg_strength > 0.7:
+            symbol = f"*{symbol}*"
+            
+        return symbol
+
+# Remove duplicate function declarations and replace with single implementation
+def initialize_external_components():
+    """Initialize external component connections (placeholder)"""
+    try:
+        # These would normally connect to actual external modules
+        # For now, just log the attempt
+        logger.info("External component initialization attempted")
+        return {
+            'timeline_engine': None,
+            'quantum_physics': None, 
+            'aether_engine': None,
+            'planetary_kernel': None
+        }
+    except ImportError as e:
+        logger.warning(f"Could not import external components: {e}")
+        return {}
             symbol = f"★{symbol}★"
         elif avg_strength > 0.7:
             symbol = f"*{symbol}*"

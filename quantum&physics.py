@@ -274,6 +274,98 @@ class QuantumField:
         interaction = 0.5 * self.config.coupling * np.sum(np.abs(self.psi)**4) * self.lattice_spacing**self.config.spatial_dim
         
         return kinetic + potential_energy + interaction
+    
+    def apply_unified_field_equation(self, dt: float) -> None:
+        """
+        Implement the Quantum-Ethical Unified Field Equation:
+        ∇²Φ(x,t) = δ²Φ(x,t)/δt² + η∇·[ξ(x,t)Φ(x,t)] + V(x,t)Φ(x,t)
+        """
+        # Compute Laplacian (∇²Φ)
+        laplacian = self._compute_laplacian()
+        
+        # Compute second time derivative (δ²Φ/δt²)
+        time_deriv = self._compute_time_derivatives()
+        
+        # Compute ethical force term (η∇·[ξ(x,t)Φ(x,t)])
+        ethical_term = self._ethical_divergence_term()
+        
+        # Compute potential term (V(x,t)Φ(x,t))
+        potential_term = self.potential * self.psi
+        
+        # Combine terms according to the unified equation
+        d_psi = laplacian - time_deriv - ethical_term - potential_term
+        
+        # Update field
+        self.psi = self.psi + dt * d_psi
+        
+        # Enforce normalization (conservation)
+        self._enforce_normalization()
+
+    def _compute_laplacian(self):
+        """Compute Laplacian of the field"""
+        return self.laplacian.dot(self.psi.reshape(-1)).reshape(self.grid_shape)
+
+    def _compute_time_derivatives(self):
+        """Compute second time derivative of field"""
+        # For now, use a simplified approach
+        # In a more advanced implementation, we would track previous states
+        if self.previous_psi is None:
+            self.previous_psi = self.psi.copy()
+            self.previous_previous_psi = self.psi.copy()
+            return np.zeros_like(self.psi)
+        
+        # Finite difference approximation of second derivative
+        dt = self.config.temporal_resolution
+        second_deriv = (self.psi - 2 * self.previous_psi + self.previous_previous_psi) / (dt**2)
+        
+        # Update history
+        self.previous_previous_psi = self.previous_psi.copy()
+        self.previous_psi = self.psi.copy()
+        
+        return second_deriv
+
+    def _ethical_divergence_term(self):
+        """Compute the ethical force term: η∇·[ξ(x,t)Φ(x,t)]"""
+        if self.ethical_tensor is None:
+            # Initialize ethical tensor if not present
+            ethical_dim = getattr(self.config, 'ethical_dim', 5)
+            self.ethical_tensor = np.zeros((ethical_dim, *self.grid_shape))
+        
+        # Initialize result
+        result = np.zeros_like(self.psi)
+        
+        # For each ethical dimension
+        for dim in range(self.ethical_tensor.shape[0]):
+            # Compute ethical field * psi
+            ethical_field_psi = self.ethical_tensor[dim] * self.psi
+            
+            # Compute divergence
+            div = np.sum(np.gradient(ethical_field_psi), axis=0)
+            
+            # Add to result with coupling constant
+            result += self.ethical_coupling * div
+        
+        return result
+
+    def _enforce_normalization(self):
+        """Ensure the wavefunction remains normalized"""
+        norm = np.sqrt(np.sum(np.abs(self.psi)**2) * self.lattice_spacing**self.config.spatial_dim)
+        if norm > 0:
+            self.psi = self.psi / norm
+
+    def set_ethical_tensor(self, ethical_tensor):
+        """Set the ethical force tensor field"""
+        if ethical_tensor.shape[1:] != self.grid_shape:
+            raise ValueError(f"Ethical tensor shape {ethical_tensor.shape} doesn't match field shape {self.grid_shape}")
+        
+        self.ethical_tensor = ethical_tensor
+        
+        # Log ethical field properties
+        ethical_magnitude = np.mean(np.abs(ethical_tensor))
+        ethical_gradient = np.mean([np.mean(np.abs(np.gradient(ethical_tensor[dim]))) 
+                                  for dim in range(ethical_tensor.shape[0])])
+        
+        print(f"Ethical tensor set with magnitude {ethical_magnitude:.4f}, gradient {ethical_gradient:.4f}")
 
 # -------------------------------------------------------------------------
 # Quantum Coherence
@@ -1479,7 +1571,7 @@ class QuantumStateVector:
         # Get Bloch coordinates
         x, y, z = self.to_bloch_vector(qubit)
         
-        # Create figure
+        # Create figure with 3D projection
         fig = plt.figure(figsize=(8, 8))
         ax = fig.add_subplot(111, projection='3d')
         
@@ -1488,7 +1580,13 @@ class QuantumStateVector:
         sphere_x = np.cos(u) * np.sin(v)
         sphere_y = np.sin(u) * np.sin(v)
         sphere_z = np.cos(v)
-        ax.plot_wireframe(sphere_x, sphere_y, sphere_z, color="lightgray", alpha=0.2)
+        
+        # Use plot_surface instead of plot_wireframe for better compatibility
+        try:
+            ax.plot_wireframe(sphere_x, sphere_y, sphere_z, color="lightgray", alpha=0.2)
+        except AttributeError:
+            # Fallback to plot_surface if plot_wireframe is not available
+            ax.plot_surface(sphere_x, sphere_y, sphere_z, color="lightgray", alpha=0.2, shade=False)
         
         # Draw coordinate axes
         ax.quiver(-1.3, 0, 0, 2.6, 0, 0, color='gray', arrow_length_ratio=0.05, linewidth=0.5)
@@ -1746,7 +1844,7 @@ class QuantumDynamics:
         if save_frequency is None:
             save_frequency = self.config.save_frequency
         
-        num_steps = int(total_time / self.config.temporal_resolution)
+        num_steps = int total_time / self.config.temporal_resolution)
         
         print(f"Running quantum simulation for {total_time} time units ({num_steps} steps)")
         
