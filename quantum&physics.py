@@ -132,6 +132,12 @@ class QuantumField:
 
         # Quantum coherence
         self.coherence = QuantumCoherence(config.grid_resolution)
+        
+        # Initialize ethical components
+        self.ethical_tensor = None
+        self.ethical_coupling = getattr(config, 'ethical_coupling', 0.1)
+        self.previous_psi = None
+        self.previous_previous_psi = None
     
     def _init_hamiltonian(self):
         """Initialize the Hamiltonian operator using sparse matrices and memory-efficient approach"""
@@ -1036,7 +1042,7 @@ def _compute_time_derivatives(self):
     """Compute second time derivative of field"""
     # For now, use a simplified approach
     # In a more advanced implementation, we would track previous states
-    if not hasattr(self, 'previous_psi'):
+    if self.previous_psi is None:
         self.previous_psi = self.psi.copy()
         self.previous_previous_psi = self.psi.copy()
         return np.zeros_like(self.psi)
@@ -1053,11 +1059,10 @@ def _compute_time_derivatives(self):
 
 def _ethical_divergence_term(self):
     """Compute the ethical force term: η∇·[ξ(x,t)Φ(x,t)]"""
-    if not hasattr(self, 'ethical_tensor'):
+    if self.ethical_tensor is None:
         # Initialize ethical tensor if not present
         ethical_dim = getattr(self.config, 'ethical_dim', 5)
         self.ethical_tensor = np.zeros((ethical_dim, *self.grid_shape))
-        self.ethical_coupling = getattr(self.config, 'ethical_coupling', 0.1)
     
     # Initialize result
     result = np.zeros_like(self.psi)
@@ -1094,202 +1099,6 @@ def set_ethical_tensor(self, ethical_tensor):
                               for dim in range(ethical_tensor.shape[0])])
     
     print(f"Ethical tensor set with magnitude {ethical_magnitude:.4f}, gradient {ethical_gradient:.4f}")
-
-# -------------------------------------------------------------------------
-# Universal Recursion Support
-# -------------------------------------------------------------------------
-class RecursiveScaling:
-    """
-    Implements recursive scale invariance for physical laws
-    across different recursion depths
-    """
-    
-    def __init__(self, constants):
-        self.constants = constants
-        self.base_constants = self._store_base_constants()
-        self.current_recursion_depth = 0
-        
-    def _store_base_constants(self):
-        """Store original constants for reference"""
-        return {
-            'G': self.constants.G,
-            'hbar': self.constants.hbar,
-            'c': self.constants.c,
-            'eps0': self.constants.eps0,
-            'k_B': self.constants.k_B,
-            'alpha': self.constants.alpha,
-            'm_e': self.constants.m_e,
-            'l_p': self.constants.l_p,
-            't_p': self.constants.t_p,
-            'm_p': self.constants.m_p
-        }
-    
-    def scale_to_recursion_depth(self, depth):
-        """
-        Scale physical constants according to recursion depth
-        
-        Different recursion depths may require adjusted constants
-        to maintain consistent physical laws
-        """
-        self.current_recursion_depth = depth
-        
-        # Scale factor depends on recursion depth
-        # For deeper recursion (smaller scales), constants adjust accordingly
-        scale_factor = 10.0 ** (-depth)  # Example scaling law
-        
-        # Apply scaling to relevant constants
-        # Some constants scale differently than others
-        self.constants.G = self.base_constants['G'] * scale_factor
-        self.constants.l_p = self.base_constants['l_p'] * scale_factor
-        self.constants.t_p = self.base_constants['t_p'] * scale_factor
-        self.constants.m_p = self.base_constants['m_p'] / scale_factor
-        
-        # Some constants remain invariant across scales
-        # For example, c and hbar might be universal across recursion depths
-        
-        print(f"Scaled constants to recursion depth {depth}, scale factor {scale_factor:.2e}")
-        return self.constants
-    
-    def get_planck_scale_at_depth(self):
-        """Get current Planck scale values at this recursion depth"""
-        return {
-            'length': self.constants.l_p,
-            'time': self.constants.t_p,
-            'mass': self.constants.m_p
-        }
-
-# -------------------------------------------------------------------------
-# Ethical Gravity Manifold
-# -------------------------------------------------------------------------
-class EthicalGravityManifold:
-    """
-    Topological representation of moral force landscape
-    Implements the 'Ethical Tensors' axiom from Genesis Framework
-    """
-    
-    def __init__(self, config, dimensions=3):
-        self.config = config
-        self.dimensions = dimensions  # Number of ethical dimensions
-        self.grid_shape = (config.grid_resolution,) * config.spatial_dim
-        
-        # Initialize ethical tensor field
-        self.ethical_tensor = np.zeros((dimensions, *self.grid_shape))
-        
-        # Initial values from config
-        if hasattr(config, 'ethical_init'):
-            for d in range(min(dimensions, len(config.ethical_init))):
-                # Start with uniform field with configured base values
-                self.ethical_tensor[d].fill(config.ethical_init[d])
-        
-        # Coupling constants
-        self.coupling = getattr(config, 'ethical_coupling', 0.1)
-        
-        # Ethical field curvature (topological properties)
-        self.curvature = np.zeros((dimensions, *self.grid_shape))
-        
-        # Initialize with some random fluctuations for non-uniform starting state
-        self._add_ethical_fluctuations(0.05)
-    
-    def _add_ethical_fluctuations(self, magnitude=0.1):
-        """Add fluctuations to create a non-uniform ethical landscape"""
-        for d in range(self.dimensions):
-            fluctuations = np.random.normal(0, magnitude, self.grid_shape)
-            self.ethical_tensor[d] += fluctuations
-    
-    def apply_ethical_action(self, value, location, ethical_dimension=None, radius=5):
-        """
-        Apply an ethical action, creating a moral "gravity well"
-        
-        Args:
-            value: Ethical weight of the action (-1 to 1 scale)
-            location: Position in space where action occurred
-            ethical_dimension: Which dimension to affect (None for all)
-            radius: Area of effect radius
-        """
-        # Convert location to grid coordinates
-        grid_loc = tuple(min(self.grid_shape[i]-1, max(0, int(location[i] * self.grid_shape[i]))) 
-                        for i in range(min(len(location), len(self.grid_shape))))
-        
-        # Create Gaussian distribution centered at the action
-        indices = np.indices(self.grid_shape)
-        gaussian = np.ones(self.grid_shape)
-        
-        for i, idx in enumerate(indices):
-            if i < len(grid_loc):
-                gaussian *= np.exp(-0.5 * ((idx - grid_loc[i]) / radius)**2)
-        
-        # Normalize to ensure ethical weight conservation
-        gaussian = gaussian / np.sum(gaussian) * value * 10.0  # Scale factor for visibility
-        
-        # Apply to ethical tensor
-        if ethical_dimension is not None and ethical_dimension < self.dimensions:
-            # Apply to specific dimension
-            self.ethical_tensor[ethical_dimension] += gaussian
-        else:
-            # Distribute across all dimensions
-            for d in range(self.dimensions):
-                self.ethical_tensor[d] += gaussian * (1.0 / self.dimensions)
-        
-        # Update curvature after applying action
-        self._update_curvature()
-        
-        return {
-            'action_value': value,
-            'affected_region': grid_loc,
-            'radius': radius,
-            'max_effect': np.max(gaussian)
-        }
-    
-    def _update_curvature(self):
-        """Update the curvature tensor of the ethical manifold"""
-        for d in range(self.dimensions):
-            # Compute Laplacian as measure of curvature
-            grad = np.gradient(self.ethical_tensor[d])
-            self.curvature[d] = sum(np.gradient(g) for g in grad)
-    
-    def propagate_ethical_effects(self, timestep):
-        """
-        Propagate ethical effects through the manifold
-        This simulates how moral actions spread through the system
-        """
-        # Simple diffusion model for ethical propagation
-        for d in range(self.dimensions):
-            # Compute Laplacian
-            laplacian = sum(np.gradient(np.gradient(self.ethical_tensor[d], axis=i), axis=i) 
-                           for i in range(len(self.grid_shape)))
-            
-            # Update using diffusion equation
-            diffusion_rate = 0.1
-            self.ethical_tensor[d] += diffusion_rate * timestep * laplacian
-        
-        # Re-update curvature after propagation
-        self._update_curvature()
-    
-    def get_ethical_force(self, location):
-        """Get ethical force vector at a specific location"""
-        # Convert location to grid coordinates
-        grid_loc = tuple(min(self.grid_shape[i]-1, max(0, int(location[i] * self.grid_shape[i]))) 
-                        for i in range(min(len(location), len(self.grid_shape))))
-        
-        # Compute gradient (force) at location
-        force_vector = []
-        for d in range(self.dimensions):
-            grad = np.gradient(self.ethical_tensor[d])
-            # Extract gradient at location
-            dimension_force = [g[grid_loc] for g in grad]
-            force_vector.append(dimension_force)
-        
-        # Scale by coupling constant
-        force_vector = np.array(force_vector) * self.coupling
-        
-        return force_vector
-# Bind the new methods to the QuantumField class
-QuantumField.apply_unified_field_equation = apply_unified_field_equation
-QuantumField._compute_laplacian = _compute_laplacian
-QuantumField._compute_time_derivatives = _compute_time_derivatives
-QuantumField._ethical_divergence_term = _ethical_divergence_term
-QuantumField._enforce_normalization = _enforce_normalization
-QuantumField.set_ethical_tensor = set_ethical_tensor
 
 # -------------------------------------------------------------------------
 # Quantum State Vector Implementation

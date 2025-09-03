@@ -224,23 +224,63 @@ class WaveFunction:
             return result
     
     def apply_operator(self, operator):
-        """Apply an operator to the wave function"""
-        if callable(operator):
-            # Function-based operator
-            if self.representation == 'position':
-                self.psi = operator(self.psi)
+        """Apply an operator to the wave function with advanced error handling and optimization"""
+        try:
+            if callable(operator):
+                # Function-based operator (differential, potential, etc.)
+                if self.representation == 'position':
+                    # Apply directly to position representation
+                    self.psi = operator(self.psi)
+                else:
+                    # Apply to momentum representation
+                    self.psi_momentum = operator(self.psi_momentum)
+                    
             else:
-                self.psi_momentum = operator(self.psi_momentum)
-        else:
-            # Matrix-based operator
-            if self.representation == 'position':
-                self.psi = operator.dot(self.psi)
-            else:
-                self.psi_momentum = operator.dot(self.psi_momentum)
-        
-        # Normalize after operator application
-        self.normalize()
-        logger.debug("Applied operator to wave function")
+                # Matrix-based operator
+                if hasattr(operator, 'toarray'):
+                    # Handle sparse matrices efficiently
+                    if self.representation == 'position':
+                        psi_flat = self.psi.flatten()
+                        result_flat = operator.dot(psi_flat)
+                        self.psi = result_flat.reshape(self.psi.shape)
+                    else:
+                        psi_momentum_flat = self.psi_momentum.flatten()
+                        result_flat = operator.dot(psi_momentum_flat)
+                        self.psi_momentum = result_flat.reshape(self.psi_momentum.shape)
+                else:
+                    # Dense matrix operator
+                    if self.representation == 'position':
+                        psi_flat = self.psi.flatten()
+                        if operator.shape[1] != len(psi_flat):
+                            raise ValueError(f"Operator shape {operator.shape} incompatible with wave function size {len(psi_flat)}")
+                        result_flat = operator.dot(psi_flat)
+                        self.psi = result_flat.reshape(self.psi.shape)
+                    else:
+                        psi_momentum_flat = self.psi_momentum.flatten()
+                        if operator.shape[1] != len(psi_momentum_flat):
+                            raise ValueError(f"Operator shape {operator.shape} incompatible with wave function size {len(psi_momentum_flat)}")
+                        result_flat = operator.dot(psi_momentum_flat)
+                        self.psi_momentum = result_flat.reshape(self.psi_momentum.shape)
+            
+            # Check for numerical stability
+            max_amplitude = np.max(np.abs(self.psi if self.representation == 'position' else self.psi_momentum))
+            if max_amplitude > 1e10:
+                logger.warning(f"Large amplitude detected after operator application: {max_amplitude}")
+            elif max_amplitude < 1e-10:
+                logger.warning(f"Very small amplitude detected after operator application: {max_amplitude}")
+            
+            # Normalize after operator application (preserves quantum probability)
+            self.normalize()
+            logger.debug("Successfully applied operator to wave function")
+            
+        except Exception as e:
+            logger.error(f"Error applying operator: {e}")
+            # Try to recover by checking operator properties
+            if hasattr(operator, 'shape'):
+                logger.error(f"Operator shape: {operator.shape}")
+            if hasattr(self, 'psi'):
+                logger.error(f"Wave function shape: {self.psi.shape}")
+            raise RuntimeError(f"Failed to apply operator: {e}")
     
     def evolve(self, hamiltonian, dt):
         """Evolve wave function using advanced numerical integration methods"""
@@ -989,33 +1029,100 @@ class WaveFunction:
             return True
             
         def adapt_grid(self, field_data):
-            """Automatically adapt the grid based on field gradients"""
-            # Apply refinement criteria to identify regions that need refinement
+            """Automatically adapt the grid using advanced refinement criteria"""
+            # Multi-scale gradient analysis for better refinement detection
             
-            # Calculate gradient magnitude
+            # Calculate multiple gradient measures
             grad_x, grad_y, grad_z = np.gradient(field_data)
             gradient_mag = np.sqrt(grad_x**2 + grad_y**2 + grad_z**2)
             
-            # Find regions with high gradients
-            high_gradient = gradient_mag > self.refinement_threshold * np.max(gradient_mag)
+            # Calculate Laplacian for detecting fine structure
+            laplacian = np.zeros_like(field_data)
+            for i in range(1, field_data.shape[0]-1):
+                for j in range(1, field_data.shape[1]-1):
+                    for k in range(1, field_data.shape[2]-1):
+                        laplacian[i,j,k] = (field_data[i+1,j,k] + field_data[i-1,j,k] + 
+                                           field_data[i,j+1,k] + field_data[i,j-1,k] + 
+                                           field_data[i,j,k+1] + field_data[i,j,k-1] - 
+                                           6*field_data[i,j,k])
             
-            # Identify connected regions (simplified approach)
-            from scipy import ndimage
-            labeled_regions, num_regions = ndimage.label(high_gradient)
+            # Calculate Hessian determinant for curvature analysis
+            hessian_det = np.zeros_like(field_data)
+            for i in range(1, field_data.shape[0]-1):
+                for j in range(1, field_data.shape[1]-1):
+                    for k in range(1, field_data.shape[2]-1):
+                        # Second derivatives
+                        fxx = field_data[i+1,j,k] - 2*field_data[i,j,k] + field_data[i-1,j,k]
+                        fyy = field_data[i,j+1,k] - 2*field_data[i,j,k] + field_data[i,j-1,k]
+                        fzz = field_data[i,j,k+1] - 2*field_data[i,j,k] + field_data[i,j,k-1]
+                        # Mixed derivatives (approximation)
+                        fxy = 0.25 * (field_data[i+1,j+1,k] - field_data[i+1,j-1,k] - 
+                                     field_data[i-1,j+1,k] + field_data[i-1,j-1,k])
+                        fxz = 0.25 * (field_data[i+1,j,k+1] - field_data[i+1,j,k-1] - 
+                                     field_data[i-1,j,k+1] + field_data[i-1,j,k-1])
+                        fyz = 0.25 * (field_data[i,j+1,k+1] - field_data[i,j+1,k-1] - 
+                                     field_data[i,j-1,k+1] + field_data[i,j-1,k-1])
+                        
+                        # Hessian matrix determinant (simplified 3x3 determinant)
+                        hessian_det[i,j,k] = abs(fxx * (fyy * fzz - fyz**2) - 
+                                                fxy * (fxy * fzz - fxz * fyz) + 
+                                                fxz * (fxy * fyz - fyy * fxz))
             
-            # Process each region
+            # Combine criteria with adaptive thresholds
+            gradient_threshold = np.percentile(gradient_mag, 85)  # Top 15% of gradients
+            laplacian_threshold = np.percentile(np.abs(laplacian), 90)  # Top 10% of Laplacians
+            curvature_threshold = np.percentile(hessian_det, 80)  # Top 20% of curvatures
+            
+            # Multi-criteria refinement mask
+            high_gradient = gradient_mag > gradient_threshold
+            high_laplacian = np.abs(laplacian) > laplacian_threshold
+            high_curvature = hessian_det > curvature_threshold
+            
+            # Combine criteria (regions need at least 2/3 criteria satisfied)
+            refinement_mask = (high_gradient.astype(int) + 
+                              high_laplacian.astype(int) + 
+                              high_curvature.astype(int)) >= 2
+            
+            # Advanced connected component analysis with morphological operations
+            from scipy import ndimage, morphology
+            
+            # Apply morphological closing to connect nearby regions
+            structure = morphology.ball(2)  # 3D connectivity structure
+            closed_mask = ndimage.binary_closing(refinement_mask, structure=structure)
+            
+            # Find connected components
+            labeled_regions, num_regions = ndimage.label(closed_mask)
+            
+            # Filter regions by size and strength
+            regions_to_refine = []
             for region_id in range(1, num_regions + 1):
-                # Get the bounding box of this region
                 region_mask = (labeled_regions == region_id)
-                x_indices, y_indices, z_indices = np.where(region_mask)
+                region_size = np.sum(region_mask)
                 
-                if len(x_indices) > 0:
+                # Skip very small regions
+                if region_size < 8:  # Less than 2x2x2 voxels
+                    continue
+                
+                # Calculate region strength (average of refinement criteria)
+                region_gradient = np.mean(gradient_mag[region_mask])
+                region_laplacian = np.mean(np.abs(laplacian[region_mask]))
+                region_curvature = np.mean(hessian_det[region_mask])
+                
+                # Weighted refinement score
+                refinement_score = (0.4 * region_gradient/np.max(gradient_mag) + 
+                                   0.3 * region_laplacian/np.max(np.abs(laplacian)) + 
+                                   0.3 * region_curvature/np.max(hessian_det))
+                
+                # Only refine regions with high refinement scores
+                if refinement_score > 0.6:
+                    x_indices, y_indices, z_indices = np.where(region_mask)
+                    
                     x_min, x_max = np.min(x_indices), np.max(x_indices) + 1
                     y_min, y_max = np.min(y_indices), np.max(y_indices) + 1
                     z_min, z_max = np.min(z_indices), np.max(z_indices) + 1
                     
-                    # Add padding
-                    padding = 1
+                    # Adaptive padding based on region size
+                    padding = max(1, int(np.log2(region_size)))
                     x_min = max(0, x_min - padding)
                     y_min = max(0, y_min - padding)
                     z_min = max(0, z_min - padding)
@@ -1023,11 +1130,21 @@ class WaveFunction:
                     y_max = min(field_data.shape[1], y_max + padding)
                     z_max = min(field_data.shape[2], z_max + padding)
                     
-                    # Refine this region
                     region = (x_min, x_max, y_min, y_max, z_min, z_max)
-                    self.refine_region(region)
+                    regions_to_refine.append((region, refinement_score))
             
-            logger.info(f"Adapted grid: identified {num_regions} regions for refinement")
+            # Sort regions by refinement score and refine the most important ones first
+            regions_to_refine.sort(key=lambda x: x[1], reverse=True)
+            refined_count = 0
+            
+            for region, score in regions_to_refine:
+                if refined_count < 10:  # Limit number of simultaneous refinements
+                    self.refine_region(region)
+                    refined_count += 1
+                else:
+                    break
+            
+            logger.info(f"Advanced grid adaptation: analyzed {num_regions} candidates, refined {refined_count} regions")
             
             return num_regions
             
