@@ -436,7 +436,7 @@ class SymbolicQuantumState:
         self.field_state = np.zeros(self.field_shape, dtype=complex)
         self.field_potential = np.zeros(self.field_shape)
         self.symbol_resonance = np.zeros(self.field_shape)
-        self.meaning_potential = np.zeros(self.field_shape)
+        self.meaning_potential = np.zeros(field_shape)
         
         # Reset tracking variables
         self.coherence = 1.0
@@ -474,15 +474,9 @@ class SymbolicQuantumState:
             'vacuum_fluctuation_amplitude': vacuum_amplitude,
             'reset_timestamp': np.random.randint(0, 1000000)  # Simulation timestamp
         }
-        logger.info(f"Quantum state reset: {previous_energy:.6f} -> {info['new_energy']:.6f}")
-        return info
+        logger.info(f"Quantum state reset: {previous_energy:.6f} -> {reset_info['new_energy']:.6f}")
+        return reset_info
 
-    def _normalize_field_state(self):
-        """Normalize the quantum field state"""
-        norm = np.sqrt(np.sum(np.abs(self.field_state)**2))
-        if norm > 0:
-            self.field_state = self.field_state / norm
-    
     def evolve(self, dt: float, breath_phase: BreathPhase, phase_progress: float) -> Dict[str, Any]:
         """Evolve the quantum state with symbolic influences for one time step
         
@@ -774,7 +768,7 @@ class CollapseAdapter:
         
         # Return the maximum symmetry score found
         symmetry_score = max(scores) if scores else 0.0
-        return max(0.0, min(1.0, float(symmetry_score)))
+        return float(max(0.0, min(1.0, symmetry_score)))
 
     def _check_reflection_symmetry(self, density: np.ndarray) -> float:
         """Check reflection symmetry across all axes
@@ -902,7 +896,7 @@ class CollapseAdapter:
         
         for i, idx in enumerate(indices):
             weighted_sum = np.sum(idx * density)
-            center_of_mass.append(weighted_sum / total_mass)
+            center_of_mass.append(weighted_sum / total)
         
         # Check if center of mass is close to geometric center
         geometric_center = [s / 2.0 for s in density.shape]

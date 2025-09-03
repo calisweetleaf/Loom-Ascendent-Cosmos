@@ -114,17 +114,17 @@ def main():
     try:
         viz_dir = setup_visualization_directory()
         config = SimulationConfig()
-        config.grid_resolution = 128  # Use grid_resolution instead of grid_size
+        config.grid_resolution = 8  # Further reduced to 8 to fit in 16GB RAM
         config.spatial_dim = 3
         config.temporal_resolution = 1e-30
-        config.ethical_dim = 3
+        config.ethical_dim = 3  # Reduced to match num_dimensions
         config.recursion_limit = 2
         config.conservation_tolerance = 1e-4
         config.use_gpu = False
         config.debug_mode = True
         config.vacuum_energy = 1e-9
         config.ethical_coupling = 0.2
-        config.ethical_init = [0.7, 0.5, 0.8]
+        config.ethical_init = [0.7, 0.5, 0.8]  # Reduced to match ethical_dim
         config = ensure_physics_constants(config)
         logger.info("Initializing Genesis Cosmos Engine components...")
         constants = PhysicsConstants()
@@ -132,14 +132,14 @@ def main():
             breath_frequency=1.0,
             max_recursion_depth=config.recursion_limit,
             num_dimensions=config.spatial_dim + 1,
-            ethical_dimensions=config.ethical_dim,
+            ethical_dimensions=min(config.ethical_dim, config.spatial_dim + 1),
             parallel_timelines=1,
             auto_stabilize=True
         )
         quantum_field = QuantumField(config)
         monte_carlo_simulator = QuantumMonteCarlo(config)
         paradox_resolver = ParadoxResolver(config)
-        ethical_manifold = EthicalGravityManifold(config, dimensions=config.ethical_dim)
+        ethical_manifold = EthicalGravityManifold(config)
         temporal_framework = TemporalFramework(config)
         temporal_framework.register_timeline(timeline)
         aether_space = AetherSpace(dimensions=config.spatial_dim + 1)
@@ -200,8 +200,8 @@ def main():
             if step % 5 == 0:
                 ethical_action_value = 0.2 * np.sin(breath_phase) + intent['ethical_weights']['harmony']
                 location = intent['focus_point'][:3]
-                ethical_manifold.apply_ethical_action(ethical_action_value, location)
-                ethical_manifold.propagate_ethical_effects(config.temporal_resolution * 10)
+                ethical_manifold.apply_ethical_charge(location, [ethical_action_value] * config.ethical_dim, 0.1)
+                # ethical_manifold.propagate_ethical_effects(config.temporal_resolution * 10)
                 quantum_field.set_ethical_tensor(ethical_manifold.ethical_tensor)
             if step % 10 == 0:
                 paradox_data = {

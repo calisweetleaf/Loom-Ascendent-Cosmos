@@ -8,7 +8,9 @@ from timeline_engine import TimelineEngine, TemporalEvent
 from quantum_physics import QuantumField, QuantumMonteCarlo, PhysicsConstants
 import heapq
 import matplotlib.pyplot as plt
-from sci
+
+# Configure logging
+logger = logging.getLogger("UniverseEngine")
 
 @dataclass
 class SimulationConfig:
@@ -1053,7 +1055,7 @@ class UniverseEngine:
         # Create alternate universe state for the new branch
         # This is a simplified implementation
     
-    def _handle_aether_event(self, event_data: Dict[str, Any]) -> None:
+    def _handle_aether_event(self, event_data: Dict[str, Any], timeline_idx: int = 0) -> None:
         """Handle events from the aether engine"""
         event_type = event_data.get('type', 'unknown')
         

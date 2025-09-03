@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 # ===== FRAMEWORK CONSTANTS =====
-# Physical constants from Planetary Framework (CLAUDE.md compliance)
+# Physical constants from Planetary Framework 
 G = 6.67430e-11         # Gravitational constant m³ kg⁻¹ s⁻²
 C = 299792458           # Speed of light m/s
 H = 6.62607015e-34      # Planck constant J⋅s

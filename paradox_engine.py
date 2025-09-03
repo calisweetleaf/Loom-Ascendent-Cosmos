@@ -27,6 +27,8 @@ Version: 1.5
 import numpy as np
 import scipy as sp
 from scipy import stats
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 import networkx as nx
 import math
 import logging
@@ -342,6 +344,16 @@ class ParadoxEngine:
         self._contradiction_patterns = self._initialize_contradiction_patterns()
         self._proposition_embeddings = {}
         self._semantic_cache = {}
+        
+        # Initialize TF-IDF vectorizer for semantic analysis
+        self._tfidf_vectorizer = TfidfVectorizer(
+            max_features=1000,
+            stop_words='english',
+            ngram_range=(1, 2),
+            min_df=1,
+            max_df=0.95
+        )
+        self._tfidf_fitted = False
         
         logger.info(f"ParadoxEngine initialized with detection threshold {detection_threshold}, "
                    f"intervention threshold {intervention_threshold}, auto-intervene={auto_intervene}")
@@ -1495,3 +1507,13 @@ def initialize_aether_engine():
 def initialize_planetary_kernel():
     from planetary_reality_kernel import PlanetaryRealityKernel
     # Use PlanetaryRealityKernel as needed
+
+def _generate_symbolic_representation_standalone(patterns):
+    """Standalone version of symbolic representation generator"""
+    # This function is properly indented at module level
+    if not patterns:
+        return "∅"
+    
+    # Basic implementation for fallback
+    pattern_types = [str(p.pattern_type) for p in patterns]
+    return f"⟨{'|'.join(pattern_types[:3])}⟩"
