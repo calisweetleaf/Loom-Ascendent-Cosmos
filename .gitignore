@@ -95,3 +95,6 @@ build/
 *.recursion
 remaining_Scroll_Modules.md
 QWEN.md
+test_python_doctor.py
+.gitignore
+python_doctor_config.py

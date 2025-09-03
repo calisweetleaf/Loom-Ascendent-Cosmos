@@ -753,8 +753,6 @@ class PerceptionEngine:
     def render_frame(self, quantum_states: Dict, time_tensors: List) -> Dict:
         """Generate comprehensive multisensory perceptual frame"""
         frame_start_time = time.time()
-        self.frame
-        frame_start_time = time.time()
         self.frame_count += 1
         
         # Process perception through pipeline
@@ -1531,3 +1529,11 @@ class QuantumEntanglementNetwork:
         }
     
     def import_state(self, state: Dict):
+        """Import entanglement network state from persistence data"""
+        try:
+            self.entanglement_matrix = np.array(state['entanglement_matrix'])
+            self.entity_indices = state['entity_indices']
+            self.next_index = state['next_index']
+            logger.info("Entanglement network state imported successfully")
+        except Exception as e:
+            logger.error(f"Error importing entanglement network state: {e}")

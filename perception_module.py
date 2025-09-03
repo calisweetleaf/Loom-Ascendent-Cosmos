@@ -2508,6 +2508,129 @@ class HapticFieldGenerator:
         
         return sample
 
+class PerceptualBuffer:
+    """
+    A buffer that holds and integrates multi-sensory perceptual data.
+    """
+    
+    def __init__(self, visual=None, auditory=None, tactile=None, olfactory=None, 
+                taste=None, proprioception=None, electromagnetic=None, temporal=None):
+        self.visual = visual
+        self.auditory = auditory
+        self.tactile = tactile
+        self.olfactory = olfactory
+        self.taste = taste
+        self.proprioception = proprioception
+        self.electromagnetic = electromagnetic
+        self.temporal = temporal
+        self.integration_weights = {
+            'visual': 0.3,
+            'auditory': 0.2,
+            'tactile': 0.2,
+            'olfactory': 0.1,
+            'taste': 0.05,
+            'proprioception': 0.05,
+            'electromagnetic': 0.05,
+            'temporal': 0.05
+        }
+    
+    def integrate(self) -> Dict[str, Any]:
+        """
+        Integrate all sensory modalities into a unified perception.
+        
+        Returns:
+            Integrated perception data
+        """
+        # Calculate which senses are active
+        active_senses = {}
+        for sense in self.integration_weights:
+            if getattr(self, sense) is not None:
+                active_senses[sense] = getattr(self, sense)
+        
+        if not active_senses:
+            return {'coherence': 0.0, 'integrated': None}
+        
+        # Normalize weights for active senses
+        active_weights = {sense: self.integration_weights[sense] for sense in active_senses}
+        weight_sum = sum(active_weights.values())
+        
+        if weight_sum > 0:
+            normalized_weights = {k: v/weight_sum for k, v in active_weights.items()}
+        else:
+            equal_weight = 1.0 / len(active_senses)
+            normalized_weights = {k: equal_weight for k in active_senses}
+        
+        # Calculate cross-modal coherence
+        coherence_matrix = self._calculate_coherence_matrix(active_senses)
+        overall_coherence = np.mean(coherence_matrix) if coherence_matrix.size > 0 else 1.0
+        
+        # Return integrated result
+        return {
+            'modalities': active_senses,
+            'weights': normalized_weights,
+            'coherence': float(overall_coherence),
+            'coherence_matrix': coherence_matrix.tolist() if coherence_matrix.size > 0 else [],
+            'dominant_modality': max(normalized_weights.items(), key=lambda x: x[1])[0] if normalized_weights else None
+        }
+    
+    def _calculate_coherence_matrix(self, active_senses: Dict[str, Any]) -> np.ndarray:
+        """
+        Calculate coherence between each pair of sensory modalities.
+        
+        Returns:
+            Coherence matrix as numpy array
+        """
+        senses = list(active_senses.keys())
+        n_senses = len(senses)
+        
+        if n_senses <= 1:
+            return np.ones((1, 1))
+        
+        coherence = np.ones((n_senses, n_senses))
+        
+        # Calculate coherence for each pair
+        for i in range(n_senses):
+            for j in range(i+1, n_senses):
+                sense1 = senses[i]
+                sense2 = senses[j]
+                
+                # Calculate cross-modal coherence
+                c = self._cross_modal_coherence(sense1, sense2)
+                coherence[i, j] = c
+                coherence[j, i] = c
+        
+        return coherence
+    
+    def _cross_modal_coherence(self, sense1: str, sense2: str) -> float:
+        """
+        Calculate coherence between two sensory modalities.
+        Higher value means more consistent information across modalities.
+        
+        Returns:
+            Coherence value between 0 and 1
+        """
+        # Default high coherence
+        base_coherence = 0.8
+        
+        # In a full implementation, would compare actual data
+        # For example, checking if visual object positions align with sounds
+        
+        # Basic implementation just returns fixed values for each combination
+        coherence_map = {
+            ('visual', 'auditory'): 0.7,
+            ('visual', 'tactile'): 0.8,
+            ('auditory', 'tactile'): 0.6,
+            ('olfactory', 'taste'): 0.9,
+            ('visual', 'olfactory'): 0.5,
+            ('visual', 'electromagnetic'): 0.7,
+            ('proprioception', 'tactile'): 0.9,
+            ('temporal', 'auditory'): 0.8
+        }
+        
+        # Get coherence value if defined, otherwise use default
+        pair = tuple(sorted([sense1, sense2]))
+        return coherence_map.get(pair, base_coherence)
+
 class ChemicalPerceptionGenerator:
     """
     Generates chemical perception data for smell and taste.
@@ -2525,15 +2648,27 @@ class ChemicalPerceptionGenerator:
     
     def add_chemical_source(self, compound: str, position: Tuple[float, float], 
                           intensity: float = 1.0, radius: float = 0.2):
-        """Add a chemical compound source at a specific position."""
+        """
+        Add a chemical compound source at a specific position.
+        
+        Args:
+            compound: Name of the chemical compound
+            position: (x, y) normalized position
+            intensity: Chemical intensity (0-1)
+            radius: Spread radius
+        """
         if compound not in self.compounds:
             return
             
+        # Convert to grid coordinates
         x = int(position[0] * self.resolution)
         y = int(position[1] * self.resolution)
+        
+        # Ensure within bounds
         x = max(0, min(x, self.resolution - 1))
         y = max(0, min(y, self.resolution - 1))
         
+        # Create Gaussian distribution around point
         sigma = radius * self.resolution
         for i in range(self.resolution):
             for j in range(self.resolution):
@@ -2541,66 +2676,549 @@ class ChemicalPerceptionGenerator:
                 contribution = intensity * np.exp(-(distance**2) / (2 * sigma**2))
                 self.compound_fields[compound][i, j] += contribution
         
+        # Clip values to 0-1 range
         self.compound_fields[compound] = np.clip(self.compound_fields[compound], 0, 1)
     
+    def diffuse_chemicals(self, time_step: float = 0.1):
+        """
+        Simulate chemical diffusion over time.
+        
+        Args:
+            time_step: Time step for diffusion simulation
+        """
+        # Simple diffusion kernel
+        kernel = np.array([
+            [0.05, 0.1, 0.05],
+            [0.1, 0.4, 0.1],
+            [0.05, 0.1, 0.05]
+        ])
+        
+        for compound in self.compounds:
+            rate = self.diffusion_rates[compound] * time_step
+            
+            # Apply convolution for diffusion
+            from scipy.signal import convolve2d
+            diffused = convolve2d(
+                self.compound_fields[compound], 
+                kernel, 
+                mode='same', 
+                boundary='symm'
+            )
+            
+            # Mix original with diffused based on rate
+            self.compound_fields[compound] = (
+                (1 - rate) * self.compound_fields[compound] + rate * diffused
+            )
+            
+            # Apply some decay
+            self.compound_fields[compound] *= 0.99
+    
     def sample_at_position(self, position: Tuple[float, float]) -> Dict[str, float]:
-        """Sample chemical compounds at a specific position."""
+        """
+        Sample chemical compounds at a specific position.
+        
+        Args:
+            position: (x, y) normalized position
+            
+        Returns:
+            Dictionary of compound intensities
+        """
+        # Convert to grid coordinates
         x = int(position[0] * self.resolution)
         y = int(position[1] * self.resolution)
+        
+        # Ensure within bounds
         x = max(0, min(x, self.resolution - 1))
         y = max(0, min(y, self.resolution - 1))
         
+        # Sample all compounds
         result = {}
         for compound in self.compounds:
             intensity = float(self.compound_fields[compound][y, x])
-            if intensity > 0.01:
+            if intensity > 0.01:  # Only include detectable amounts
                 result[compound] = intensity
+                
         return result
+    
+    def get_dominant_compounds(self, threshold: float = 0.1) -> List[Tuple[str, float]]:
+        """
+        Get list of dominant compounds across the entire field.
+        
+        Args:
+            threshold: Minimum intensity threshold
+            
+        Returns:
+            List of (compound, intensity) tuples, sorted by intensity
+        """
+        result = []
+        
+        for compound in self.compounds:
+            max_intensity = np.max(self.compound_fields[compound])
+            if max_intensity > threshold:
+                result.append((compound, float(max_intensity)))
+                
+        # Sort by intensity, highest first
+        return sorted(result, key=lambda x: x[1], reverse=True)
 
 class TastePerceptionGenerator(ChemicalPerceptionGenerator):
-    """Specialized generator for taste perception."""
+    """
+    Specialized generator for taste perception.
+    """
     
     def __init__(self, resolution: int = 8):
         super().__init__(resolution=resolution, compounds=[
             "sweet", "sour", "salty", "bitter", "umami",
             "creamy", "spicy", "astringent", "cooling", "metallic"
         ])
+        # Taste-specific properties
         self.texture_field = np.zeros((resolution, resolution))
-        self.temperature_field = np.ones((resolution, resolution)) * 0.5
+        self.temperature_field = np.ones((resolution, resolution)) * 0.5  # neutral temp
+    
+    def set_taste_texture(self, texture_type: str, intensity: float = 0.7):
+        """
+        Set texture component of taste.
+        
+        Args:
+            texture_type: e.g., "smooth", "grainy", "fizzy"
+            intensity: Texture intensity
+        """
+        # Different patterns for different textures
+        if texture_type == "smooth":
+            self.texture_field = np.ones((self.resolution, self.resolution)) * 0.1 * intensity
+        elif texture_type == "grainy":
+            self.texture_field = np.random.rand(self.resolution, self.resolution) * intensity
+        elif texture_type == "fizzy":
+            self.texture_field = (np.random.rand(self.resolution, self.resolution) > 0.7) * intensity
+        else:
+            # Default random texture
+            self.texture_field = np.random.rand(self.resolution, self.resolution) * 0.5 * intensity
+    
+    def set_temperature(self, temperature: float):
+        """
+        Set temperature component of taste perception.
+        
+        Args:
+            temperature: 0 (cold) to 1 (hot)
+        """
+        self.temperature_field = np.ones((self.resolution, self.resolution)) * temperature
+    
+    def get_taste_perception(self, position: Tuple[float, float] = None) -> Dict[str, Any]:
+        """
+        Get complete taste perception.
+        
+        Args:
+            position: Optional position to sample, if None returns whole perception
+            
+        Returns:
+            Dictionary with taste components
+        """
+        if position is not None:
+            # Sample at specific position
+            compounds = self.sample_at_position(position)
+            
+            # Convert to grid coordinates
+            x = int(position[0] * self.resolution)
+            y = int(position[1] * self.resolution)
+            
+            # Ensure within bounds
+            x = max(0, min(x, self.resolution - 1))
+            y = max(0, min(y, self.resolution - 1))
+            
+            texture = float(self.texture_field[y, x])
+            temperature = float(self.temperature_field[y, x])
+            
+            return {
+                'compounds': compounds,
+                'texture': texture,
+                'temperature': temperature
+            }
+        else:
+            # Return whole field
+            return {
+                'compound_fields': {c: self.compound_fields[c].tolist() for c in self.compounds},
+                'texture_field': self.texture_field.tolist(),
+                'temperature_field': self.temperature_field.tolist(),
+                'dominant_taste': self.get_dominant_compounds(threshold=0.2)
+            }
 
 class ProprioceptionGenerator:
-    """Generates proprioception (sense of body position and movement) data."""
+    """
+    Generates proprioception (sense of body position and movement) data.
+    """
     
     def __init__(self, joint_count: int = 12, muscle_count: int = 24):
         self.joint_count = joint_count
         self.muscle_count = muscle_count
-        self.joint_positions = np.random.rand(joint_count, 3) * 0.2 + 0.4
+        
+        # Joint positions in 3D space (normalized 0-1)
+        self.joint_positions = np.random.rand(joint_count, 3) * 0.2 + 0.4  # centered positions
+        
+        # Joint angles (radians)
         self.joint_angles = np.zeros(joint_count)
+        
+        # Muscle tension (0-1)
         self.muscle_tension = np.zeros(muscle_count)
-        self.balance = 1.0
-        self.orientation = np.array([0.0, 0.0, 1.0])
+        
+        # Muscle-joint connections (which muscles affect which joints)
+        self.muscle_joint_map = {}
+        for m in range(muscle_count):
+            # Each muscle affects 1-3 joints
+            joint_count = np.random.randint(1, 4)
+            affected_joints = np.random.choice(joint_count, joint_count, replace=False)
+            self.muscle_joint_map[m] = list(affected_joints)
+        
+        # Balance and orientation
+        self.balance = 1.0  # 0 = unbalanced, 1 = perfectly balanced
+        self.orientation = np.array([0.0, 0.0, 1.0])  # up vector
+        
+        # Movement and acceleration
         self.velocity = np.zeros(3)
         self.acceleration = np.zeros(3)
+    
+    def update_joint_angles(self, joint_updates: Dict[int, float]):
+        """
+        Update angles for specific joints.
+        
+        Args:
+            joint_updates: Dictionary mapping joint index to new angle
+        """
+        for idx, angle in joint_updates.items():
+            if 0 <= idx < self.joint_count:
+                self.joint_angles[idx] = angle
+    
+    def update_muscle_tension(self, muscle_updates: Dict[int, float]):
+        """
+        Update tension for specific muscles.
+        
+        Args:
+            muscle_updates: Dictionary mapping muscle index to new tension
+        """
+        for idx, tension in muscle_updates.items():
+            if 0 <= idx < self.muscle_count:
+                self.muscle_tension[idx] = max(0.0, min(1.0, tension))
+    
+    def update_balance(self, balance_factor: float, orientation: List[float] = None):
+        """
+        Update balance and orientation.
+        
+        Args:
+            balance_factor: Balance value (0-1)
+            orientation: Optional new orientation vector
+        """
+        self.balance = max(0.0, min(1.0, balance_factor))
+        
+        if orientation is not None and len(orientation) == 3:
+            # Normalize orientation vector
+            norm = np.sqrt(sum(o*o for o in orientation))
+            if norm > 0:
+                self.orientation = np.array(orientation) / norm
+    
+    def update_motion(self, velocity: List[float] = None, acceleration: List[float] = None):
+        """
+        Update motion parameters.
+        
+        Args:
+            velocity: Optional new velocity vector
+            acceleration: Optional new acceleration vector
+        """
+        if velocity is not None and len(velocity) == 3:
+            self.velocity = np.array(velocity)
+            
+        if acceleration is not None and len(acceleration) == 3:
+            self.acceleration = np.array(acceleration)
+    
+    def integrate_movement(self, dt: float = 0.1):
+        """
+        Integrate movement over time step.
+        
+        Args:
+            dt: Time step size
+        """
+        # Update velocity based on acceleration
+        self.velocity += self.acceleration * dt
+        
+        # Update positions based on velocity
+        self.joint_positions += np.array([self.velocity * dt for _ in range(self.joint_count)])
+        
+        # Keep joints within bounds
+        self.joint_positions = np.clip(self.joint_positions, 0.0, 1.0)
+        
+        # Update angles based on muscle tension
+        for m in range(self.muscle_count):
+            tension = self.muscle_tension[m]
+            for joint_idx in self.muscle_joint_map.get(m, []):
+                # Simple model: tension affects joint angle
+                angle_change = (tension - 0.5) * 0.1 * dt
+                self.joint_angles[joint_idx] += angle_change
+                
+        # Simulate balance changes
+        if np.random.random() < 0.1:  # Occasional balance perturbation
+            self.balance *= 0.9 + 0.1 * np.random.random()
+    
+    def get_proprioception_data(self) -> Dict[str, Any]:
+        """
+        Get complete proprioception data.
+        
+        Returns:
+            Dictionary with all proprioception components
+        """
+        return {
+            'joint_positions': self.joint_positions.tolist(),
+            'joint_angles': self.joint_angles.tolist(),
+            'muscle_tension': self.muscle_tension.tolist(),
+            'balance': float(self.balance),
+            'orientation': self.orientation.tolist(),
+            'velocity': self.velocity.tolist(),
+            'acceleration': self.acceleration.tolist()
+        }
 
 class ElectromagneticPerceptionGenerator:
-    """Generates electromagnetic perception data (magnetic fields, radiation, etc.)"""
+    """
+    Generates electromagnetic perception data (magnetic fields, radiation, etc.)
+    """
     
     def __init__(self, resolution: int = 16, field_dimensions: int = 3):
         self.resolution = resolution
         self.field_dimensions = field_dimensions
+        
+        # Magnetic field (3D vector field)
         self.magnetic_field = np.zeros((resolution, resolution, 3))
+        
+        # Electric field (3D vector field)
         self.electric_field = np.zeros((resolution, resolution, 3))
+        
+        # Radiation field (scalar field)
         self.radiation_field = np.zeros((resolution, resolution))
+        
+        # EM frequency bands (radio, microwave, IR, visible, UV, X-ray, gamma)
+        self.frequency_bands = {
+            'radio': np.zeros((resolution, resolution)),
+            'microwave': np.zeros((resolution, resolution)),
+            'infrared': np.zeros((resolution, resolution)),
+            'visible': np.zeros((resolution, resolution)),
+            'ultraviolet': np.zeros((resolution, resolution)),
+            'xray': np.zeros((resolution, resolution)),
+            'gamma': np.zeros((resolution, resolution))
+        }
+    
+    def add_magnetic_dipole(self, position: Tuple[float, float], 
+                          moment: Tuple[float, float, float],
+                          strength: float = 1.0):
+        """
+        Add a magnetic dipole at a specific position.
+        
+        Args:
+            position: (x, y) normalized position
+            moment: (mx, my, mz) dipole moment vector
+            strength: Field strength multiplier
+        """
+        # Convert to grid coordinates
+        center_x = int(position[0] * self.resolution)
+        center_y = int(position[1] * self.resolution)
+        
+        # Normalize moment vector
+        moment_norm = np.sqrt(sum(m*m for m in moment))
+        if moment_norm > 0:
+            moment = tuple(m/moment_norm for m in moment)
+        
+        # Generate grid coordinates
+        x_coords, y_coords = np.meshgrid(
+            np.arange(self.resolution),
+            np.arange(self.resolution)
+        )
+        
+        # Calculate distance vectors
+        r_x = (x_coords - center_x) / self.resolution
+        r_y = (y_coords - center_y) / self.resolution
+        
+        # Calculate distance from center
+        r_squared = r_x**2 + r_y**2
+        r_squared = np.maximum(r_squared, 0.0001)  # Avoid division by zero
+        r = np.sqrt(r_squared)
+        
+        # Calculate dipole field at each point
+        field = np.zeros((self.resolution, self.resolution, 3))
+        
+        # Simplified dipole field calculation
+        for i in range(self.resolution):
+            for j in range(self.resolution):
+                if i == center_y and j == center_x:
+                    continue  # Skip the dipole position
+                    
+                # Direction vector
+                rx = (j - center_x) / self.resolution
+                ry = (i - center_y) / self.resolution
+                r_mag = np.sqrt(rx**2 + ry**2)
+                
+                if r_mag < 0.001:
+                    continue  # Too close to source
+                    
+                # Unit direction vector
+                rx /= r_mag
+                ry /= r_mag
+                
+                # 3D position (z=0 plane)
+                r_vec = [rx, ry, 0]
+                
+                # Dipole field calculation
+                dot_product = sum(m*r for m, r in zip(moment, r_vec))
+                
+                for d in range(3):
+                    field[i, j, d] = (3 * r_vec[d] * dot_product - moment[d]) / (r_mag**3)
+        
+        # Scale field and add to existing field
+        field *= strength
+        self.magnetic_field += field
+    
+    def add_electric_charge(self, position: Tuple[float, float], charge: float):
+        """
+        Add an electric charge at a specific position.
+        
+        Args:
+            position: (x, y) normalized position
+            charge: Charge value (positive or negative)
+        """
+        # Convert to grid coordinates
+        center_x = int(position[0] * self.resolution)
+        center_y = int(position[1] * self.resolution)
+        
+        # Generate grid coordinates
+        x_coords, y_coords = np.meshgrid(
+            np.arange(self.resolution),
+            np.arange(self.resolution)
+        )
+        
+        # Calculate distance vectors
+        r_x = (x_coords - center_x) / self.resolution
+        r_y = (y_coords - center_y) / self.resolution
+        
+        # Calculate distance from center
+        r_squared = r_x**2 + r_y**2
+        r_squared = np.maximum(r_squared, 0.0001)  # Avoid division by zero
+        r = np.sqrt(r_squared)
+        
+        # Calculate Coulomb field at each point
+        field = np.zeros((self.resolution, self.resolution, 3))
+        
+        for i in range(self.resolution):
+            for j in range(self.resolution):
+                if i == center_y and j == center_x:
+                    continue  # Skip the charge position
+                
+                # Direction vector
+                rx = (j - center_x) / self.resolution
+                ry = (i - center_y) / self.resolution
+                r_mag = np.sqrt(rx**2 + ry**2)
+                
+                if r_mag < 0.001:
+                    continue  # Too close to source
+                
+                # Electric field points away from positive charge
+                field[i, j, 0] = rx / r_mag / r_squared
+                field[i, j, 1] = ry / r_mag / r_squared
+                field[i, j, 2] = 0  # Planar field
+        
+        # Scale by charge (sign determines direction)
+        field *= charge
+        
+        # Add to existing field
+        self.electric_field += field
+    
+    def add_radiation_source(self, position: Tuple[float, float], 
+                            intensity: float = 1.0,
+                            spectrum: Dict[str, float] = None):
+        """
+        Add a radiation source at a specific position.
+        
+        Args:
+            position: (x, y) normalized position
+            intensity: Overall intensity
+            spectrum: Intensity distribution across frequency bands
+        """
+        # Default uniform spectrum
+        if spectrum is None:
+            spectrum = {band: 1.0 for band in self.frequency_bands}
+        
+        # Convert to grid coordinates
+        x = int(position[0] * self.resolution)
+        y = int(position[1] * self.resolution)
+        
+        # Add radiation to scalar field with inverse square falloff
+        for i in range(self.resolution):
+            for j in range(self.resolution):
+                distance = np.sqrt(((i - y) / self.resolution)**2 + 
+                                  ((j - x) / self.resolution)**2)
+                
+                if distance < 0.001:
+                    # Avoid division by zero at source
+                    value = intensity * 10
+                else:
+                    # Inverse square law
+                    value = intensity / (distance**2)
+                
+                # Add to radiation field
+                self.radiation_field[i, j] += value
+                
+                # Add to each frequency band based on spectrum
+                for band, band_intensity in spectrum.items():
+                    if band in self.frequency_bands:
+                        self.frequency_bands[band][i, j] += value * band_intensity
+        
+        # Clip values
+        self.radiation_field = np.clip(self.radiation_field, 0, 10)
+        for band in self.frequency_bands:
+            self.frequency_bands[band] = np.clip(self.frequency_bands[band], 0, 10)
+    
+    def get_electromagnetic_perception(self, position: Tuple[float, float] = None) -> Dict[str, Any]:
+        """
+        Get complete electromagnetic perception.
+        
+        Args:
+            position: Optional position to sample, if None returns whole perception
+            
+        Returns:
+            Dictionary with electromagnetic components
+        """
+        if position is not None:
+            # Convert to grid coordinates
+            x = int(position[0] * self.resolution)
+            y = int(position[1] * self.resolution)
+            
+            # Ensure within bounds
+            x = max(0, min(x, self.resolution - 1))
+            y = max(0, min(y, self.resolution - 1))
+            
+            # Sample at specific position
+            sample = {
+                'magnetic': self.magnetic_field[y, x].tolist(),
+                'electric': self.electric_field[y, x].tolist(),
+                'radiation': float(self.radiation_field[y, x]),
+                'frequencies': {band: float(self.frequency_bands[band][y, x]) 
+                               for band in self.frequency_bands}
+            }
+            return sample
+        else:
+            # Return whole field (could be large - might want to downsample)
+            return {
+                'magnetic_field': self.magnetic_field.tolist(),
+                'electric_field': self.electric_field.tolist(),
+                'radiation_field': self.radiation_field.tolist(),
+                'frequency_bands': {band: self.frequency_bands[band].tolist() 
+                                   for band in self.frequency_bands}
+            }
 
 class TemporalPerceptionGenerator:
-    """Generates perception of time, including flow rate, continuity, and temporal anomalies."""
+    """
+    Generates perception of time, including flow rate, continuity, and temporal anomalies.
+    """
     
     def __init__(self, history_length: int = 200):
         self.history_length = history_length
         self.current_time = 0.0
-        self.flow_rate = 1.0
+        self.flow_rate = 1.0  # 1.0 = normal time flow
+        self.previous_timestamps = np.zeros(history_length)
         self.time_dilation = 1.0
-        self.continuity = 1.0
+        self.continuity = 1.0  # 1.0 = perfectly continuous
         self.temporal_direction = 1  # 1 = forward, -1 = backward
         self.temporal_loops = []  # Timestamps where loops occur
         self.jitter = 0.0  # Random variation in time flow

@@ -125,6 +125,7 @@ class QuantumBreathAdapter:
         self.ethical_dimensions = ethical_dimensions
         self.current_phase = BreathPhase.INHALE
         self.phase_duration = 0
+        self.phase_progress = 0.0  # added explicit initialization
         
         # Phase-dependent coherence factors
         self.coherence_factors = {
@@ -245,12 +246,11 @@ class SymbolicQuantumState:
         
         # Add ethical influence to manifold
         for i, value in enumerate(ethical_vector[:self.ethical_dimensions]):
-            if i < self.ethical_dimensions:
-                # Create Gaussian influence pattern
-                influence_pattern = self._create_gaussian_influence(
-                    center_idx, archetype.influence_radius, value
-                )
-                self.ethical_manifold_data[i] += influence_pattern
+            # removed redundant if check
+            influence_pattern = self._create_gaussian_influence(
+                center_idx, archetype.influence_radius, value
+            )
+            self.ethical_manifold_data[i] += influence_pattern
         
         # CRITICAL FIX: Apply immediate field modulation to the quantum state
         field_modulation = archetype.to_field_modulation(self.field_shape)
@@ -277,33 +277,15 @@ class SymbolicQuantumState:
         logger.info(f"Added archetype '{archetype.name}' with ethical vector {ethical_vector}, field effect magnitude: {np.linalg.norm(field_modulation):.6f}")
     
     def _create_gaussian_influence(self, center: Tuple[int, ...], radius: float, intensity: float) -> np.ndarray:
-        """Create a Gaussian influence pattern around a center point
-        
-        Args:
-            center: Center position
-            radius: Influence radius
-            intensity: Influence intensity
-            
-        Returns:
-            Gaussian influence pattern
-        """
         pattern = np.zeros(self.field_shape)
         indices = np.indices(self.field_shape)
-        
-        # Calculate distance from center
         distance = np.zeros(self.field_shape)
-        for i, idx in enumerate(indices):
-            if i < len(center):
-                distance += ((idx - center[i]) / self.field_shape[i])**2
-        
+        for i, idx in enumerate(indices[:len(center)]):
+            distance += ((idx - center[i]) / self.field_shape[i])**2
         distance = np.sqrt(distance)
-        
-        # Create Gaussian pattern
-        sigma = radius * 0.3
-        pattern = intensity * np.exp(-0.5 * (distance / sigma)**2)
-        
-        return pattern
-    
+        sigma = max(1e-9, radius * 0.3)
+        return intensity * np.exp(-0.5 * (distance / sigma)**2)
+
     def apply_symbolic_meaning(self, symbol: str, position: Tuple[float, ...], intensity: float = 1.0) -> Dict[str, Any]:
         """Apply symbolic meaning to influence the quantum field
         
@@ -323,12 +305,11 @@ class SymbolicQuantumState:
         
         # Create a Gaussian pattern around the position
         indices = np.indices(self.field_shape)
-        for i, idx in enumerate(indices):
-            if i < len(grid_pos):
-                resonance += np.exp(-0.5 * ((idx - grid_pos[i]) / (self.field_shape[i] * 0.1))**2)
-        
-        # Normalize and scale by intensity
-        resonance = resonance / np.max(resonance) * intensity
+        for i, idx in enumerate(indices[:len(grid_pos)]):
+            resonance += np.exp(-0.5 * ((idx - grid_pos[i]) / (self.field_shape[i] * 0.1))**2)
+        peak = np.max(resonance)
+        if peak > 0:
+            resonance = resonance / peak * intensity
         
         # Different symbols create different patterns
         symbol_hash = hash(symbol) % 1000 / 1000.0
@@ -382,12 +363,11 @@ class SymbolicQuantumState:
         indices = np.indices(self.field_shape)
         
         # Create a focused region of influence
-        for i, idx in enumerate(indices):
-            if i < len(grid_focus):
-                intent_field += np.exp(-0.5 * ((idx - grid_focus[i]) / (self.field_shape[i] * 0.15))**2)
-        
-        # Normalize the field
-        intent_field = intent_field / np.max(intent_field) * intensity
+        for i, idx in enumerate(indices[:len(grid_focus)]):
+            intent_field += np.exp(-0.5 * ((idx - grid_focus[i]) / (self.field_shape[i] * 0.15))**2)
+        peak = np.max(intent_field)
+        if peak > 0:
+            intent_field = intent_field / peak * intensity
         
         # Apply different effects based on intent type
         effect_description = ""
@@ -424,12 +404,10 @@ class SymbolicQuantumState:
         
         # Apply ethical influence through manifold
         for i, value in enumerate(ethical_vector[:self.ethical_dimensions]):
-            if i < self.ethical_dimensions:
-                # Add ethical influence at focus point
-                influence_pattern = self._create_gaussian_influence(
-                    grid_focus, 0.2 * intensity, value
-                )
-                self.ethical_manifold_data[i] += influence_pattern
+            influence_pattern = self._create_gaussian_influence(
+                grid_focus, 0.2 * intensity, value
+            )
+            self.ethical_manifold_data[i] += influence_pattern
         
         logger.info(f"Applied intent '{intent_type}' at {focus_point} with intensity {intensity:.2f}")
         
@@ -447,118 +425,489 @@ class SymbolicQuantumState:
         norm = np.sqrt(np.sum(np.abs(self.field_state)**2))
         if norm > 0:
             self.field_state = self.field_state / norm
-    
-    def evolve(self, dt: float, breath_phase: BreathPhase, phase_progress: float) -> Dict[str, Any]:
-        """Evolve the quantum state with symbolic influences for one time step
+
+    def reset_quantum_state(self, maintain_archetypes: bool = True) -> Dict[str, Any]:
+        """Reset the quantum state to initial conditions
         
         Args:
-            dt: Time step
-            breath_phase: Current breath phase
-            phase_progress: Progress through the phase (0.0 to 1.0)
+            maintain_archetypes: Whether to keep existing archetypes
             
         Returns:
-            State information dictionary
+            Reset information dictionary
         """
-        # Update breath phase
-        self.breath_adapter.set_breath_phase(breath_phase, phase_progress)
+        # Store previous state information for comparison
+        previous_energy = float(np.sum(np.abs(self.field_state)**2))
+        previous_coherence = self.coherence
+        previous_archetype_count = len(self.archetypes)
         
-        # Apply archetype influences
-        for archetype in self.archetypes:
-            modulation = archetype.to_field_modulation(self.field_shape)
-            self.field_state = self.field_state * modulation
-            self._normalize_field_state()
+        # Reset core quantum field components
+        self.field_state = np.zeros(self.field_shape, dtype=complex)
+        self.field_potential = np.zeros(self.field_shape)
+        self.symbol_resonance = np.zeros(self.field_shape)
+        self.meaning_potential = np.zeros(self.field_shape)
         
-        # Apply symbolic resonance to field evolution
-        symbolic_potential = self.symbol_resonance * 0.1
-        self.field_potential += symbolic_potential
-          # Update coherence based on field properties with proper bounds
-        field_density = np.abs(self.field_state)**2 + 1e-10  # Prevent division by zero
-        normalized_density = field_density / np.sum(field_density)
-        entropy = -np.sum(normalized_density * np.log(normalized_density + 1e-10))
-        # Properly bounded coherence calculation
-        max_entropy = np.log(np.prod(self.field_shape))
-        normalized_entropy = entropy / max_entropy if max_entropy > 0 else 0
-        self.coherence = float(np.clip(1.0 - normalized_entropy, 0.0, 1.0))
+        # Reset tracking variables
+        self.coherence = 1.0
+        self.symbolic_entanglement = 0.0
+        self.collapse_threshold = 0.7
         
-        # Create ethical tensor from manifold data
-        ethical_tensor = self.ethical_manifold_data.copy()
-        
-        # Modulate ethical tensor based on breath phase
-        ethical_tensor = self.breath_adapter.modulate_ethical_tensor(ethical_tensor)          # Apply ethical forces to quantum field with more significant changes
-        for i in range(self.ethical_dimensions):
-            # Increase the influence factor for more detectable evolution
-            self.field_state += 0.1 * ethical_tensor[i] * self.field_state * (1.0 + np.random.normal(0, 0.05))
-        
-        # Add some chaotic evolution to prevent hardcoded appearance
-        random_evolution = np.random.normal(0, 0.02, self.field_shape) + 1j * np.random.normal(0, 0.02, self.field_shape)
-        self.field_state += random_evolution
-        
+        # Initialize with quantum vacuum fluctuations
+        vacuum_amplitude = 0.01
+        vacuum_real = np.random.normal(0, vacuum_amplitude, self.field_shape)
+        vacuum_imag = np.random.normal(0, vacuum_amplitude, self.field_shape)
+        self.field_state = vacuum_real + 1j * vacuum_imag
         self._normalize_field_state()
         
-        # Check for potential collapse (based on breath phase)
-        collapsed = False
-        collapse_probability = 1.0 - self.coherence  # Higher incoherence = higher collapse probability
-        if self.breath_adapter.should_collapse_state(collapse_probability):
-            # Perform simplified collapse
-            collapsed = True
-            # Reset to a stable state
-            self.field_state = np.zeros(self.field_shape, dtype=complex)
-            center = tuple(dim // 2 for dim in self.field_shape)
-            self.field_state[center] = 1.0
-            logger.debug(f"Quantum state collapsed during {breath_phase} phase")
+        # Conditionally reset ethical manifold and archetypes
+        if not maintain_archetypes:
+            self.ethical_manifold_data = np.zeros((self.ethical_dimensions,) + self.field_shape)
+            self.archetypes.clear()
+        else:
+            # Re-apply archetype influences to the reset field
+            for archetype in self.archetypes:
+                field_modulation = archetype.to_field_modulation(self.field_shape)
+                amplitude_effect = 1.0 + 0.05 * field_modulation * archetype.intensity
+                self.field_state = self.field_state * amplitude_effect
+                self._normalize_field_state()
         
-        # Update meaning potential based on field density and symbolic resonance
-        self.meaning_potential = np.abs(self.field_state)**2 * (1.0 + self.symbol_resonance * 0.5)
+        # Reset breath adapter to initial state
+        self.breath_adapter = QuantumBreathAdapter(self.field_shape[0], self.ethical_dimensions)
         
-        # Return the current state information
-        return {
-            'coherence': float(self.coherence),
-            'breath_phase': breath_phase.name,
-            'phase_progress': phase_progress,
-            'collapsed': collapsed,
-            'field_energy': float(np.sum(np.abs(self.field_state)**2)),
-            'ethical_influence': float(np.mean(np.abs(ethical_tensor))),
-            'meaning_density': float(np.mean(self.meaning_potential))
+        reset_info = {
+            'previous_energy': previous_energy,
+            'previous_coherence': previous_coherence,
+            'archetypes_maintained': maintain_archetypes,
+            'archetype_count': previous_archetype_count if maintain_archetypes else 0,
+            'new_energy': float(np.sum(np.abs(self.field_state)**2)),
+            'vacuum_fluctuation_amplitude': vacuum_amplitude,
+            'reset_timestamp': np.random.randint(0, 1000000)  # Simulation timestamp
         }
-    
-    def get_observation(self) -> Dict[str, Any]:
-        """Get current quantum state observation
         
+        logger.info(f"Quantum state reset: energy {previous_energy:.6f} -> {reset_info['new_energy']:.6f}")
+        return reset_info
+
+    def measure_quantum_property(self, property_type: str, region: Optional[Tuple[slice, ...]] = None) -> Dict[str, Any]:
+        """Measure specific quantum properties of the field
+        
+        Args:
+            property_type: Type of property to measure ('energy', 'coherence', 'entanglement', 'phase', 'momentum')
+            region: Optional region to measure (tuple of slices)
+            
         Returns:
-            Complete observation dictionary
+            Measurement results dictionary
         """
-        # Calculate quantum probability field
-        probability_field = np.abs(self.field_state)**2
+        # Define measurement region
+        if region is None:
+            measurement_field = self.field_state
+            measurement_region = "full_field"
+        else:
+            measurement_field = self.field_state[region]
+            measurement_region = f"region_{region}"
         
-        # Calculate entanglement with symbolic layer
-        field_flat = probability_field.flatten()
-        meaning_flat = self.meaning_potential.flatten()
+        measurement_results = {
+            'property_type': property_type,
+            'measurement_region': measurement_region,
+            'field_shape': measurement_field.shape,
+            'measurement_uncertainty': np.random.normal(0, 0.001)  # Quantum measurement uncertainty
+        }
         
-        # Normalize both fields
-        field_flat = field_flat / (np.sum(field_flat) + 1e-10)
-        meaning_flat = meaning_flat / (np.sum(meaning_flat) + 1e-10)
+        if property_type == 'energy':
+            # Calculate various energy components
+            kinetic_energy = np.sum(np.abs(measurement_field)**2)
+            potential_energy = np.sum(self.field_potential[region] if region else self.field_potential)
+            
+            # Calculate energy density distribution
+            energy_density = np.abs(measurement_field)**2
+            energy_variance = np.var(energy_density)
+            energy_skewness = self._calculate_skewness(energy_density.flatten())
+            
+            measurement_results.update({
+                'total_energy': float(kinetic_energy + potential_energy),
+                'kinetic_energy': float(kinetic_energy),
+                'potential_energy': float(potential_energy),
+                'energy_density_mean': float(np.mean(energy_density)),
+                'energy_density_variance': float(energy_variance),
+                'energy_density_skewness': float(energy_skewness),
+                'peak_energy_location': tuple(np.unravel_index(np.argmax(energy_density), energy_density.shape))
+            })
+            
+        elif property_type == 'coherence':
+            # Multi-faceted coherence measurement
+            spatial_coherence = self._calculate_spatial_coherence(measurement_field)
+            temporal_coherence = self.coherence  # From evolution tracking
+            
+            # Phase coherence analysis
+            phase_field = np.angle(measurement_field)
+            phase_variance = np.var(phase_field)
+            phase_coherence = np.exp(-phase_variance)
+            
+            measurement_results.update({
+                'spatial_coherence': float(spatial_coherence),
+                'temporal_coherence': float(temporal_coherence),
+                'phase_coherence': float(phase_coherence),
+                'overall_coherence': float((spatial_coherence + temporal_coherence + phase_coherence) / 3),
+                'phase_variance': float(phase_variance),
+                'coherence_length': self._estimate_coherence_length(measurement_field)
+            })
+            
+        elif property_type == 'entanglement':
+            # Quantum entanglement measurement with symbolic layer
+            field_entropy = self._calculate_field_entropy(measurement_field)
+            symbolic_correlation = self._calculate_symbolic_field_correlation(measurement_field, region)
+            
+            # Bipartite entanglement estimation
+            if len(measurement_field.shape) >= 2:
+                bipartite_entanglement = self._calculate_bipartite_entanglement(measurement_field)
+            else:
+                bipartite_entanglement = 0.0
+            
+            measurement_results.update({
+                'field_entropy': float(field_entropy),
+                'symbolic_correlation': float(symbolic_correlation),
+                'bipartite_entanglement': float(bipartite_entanglement),
+                'entanglement_measure': float(self.symbolic_entanglement),
+                'von_neumann_entropy': self._calculate_von_neumann_entropy(measurement_field)
+            })
+            
+        elif property_type == 'phase':
+            # Comprehensive phase analysis
+            phase_field = np.angle(measurement_field)
+            phase_gradient = self._calculate_phase_gradient(phase_field)
+            phase_circulation = self._calculate_phase_circulation(phase_field)
+            
+            # Topological phase properties
+            winding_number = self._calculate_winding_number(phase_field)
+            phase_singularities = self._detect_phase_singularities(phase_field)
+            
+            measurement_results.update({
+                'mean_phase': float(np.mean(phase_field)),
+                'phase_variance': float(np.var(phase_field)),
+                'phase_gradient_magnitude': float(np.mean(np.abs(phase_gradient))),
+                'phase_circulation': float(phase_circulation),
+                'winding_number': int(winding_number),
+                'singularity_count': len(phase_singularities),
+                'singularity_locations': phase_singularities
+            })
+            
+        elif property_type == 'momentum':
+            # Quantum momentum measurement via phase gradients
+            momentum_field = self._calculate_momentum_field(measurement_field)
+            momentum_magnitude = np.abs(momentum_field)
+            
+            # Momentum distribution statistics
+            momentum_mean = np.mean(momentum_magnitude)
+            momentum_variance = np.var(momentum_magnitude)
+            momentum_peak_location = np.unravel_index(np.argmax(momentum_magnitude), momentum_magnitude.shape)
+            
+            measurement_results.update({
+                'momentum_field_shape': momentum_field.shape,
+                'mean_momentum_magnitude': float(momentum_mean),
+                'momentum_variance': float(momentum_variance),
+                'peak_momentum_location': tuple(momentum_peak_location),
+                'momentum_distribution_entropy': float(self._calculate_entropy(momentum_magnitude)),
+                'uncertainty_product': self._calculate_position_momentum_uncertainty(measurement_field)
+            })
+            
+        else:
+            # Unknown property type
+            measurement_results.update({
+                'error': f"Unknown property type: {property_type}",
+                'available_properties': ['energy', 'coherence', 'entanglement', 'phase', 'momentum']
+            })
+        
+        logger.debug(f"Measured quantum property '{property_type}' in region '{measurement_region}'")
+        return measurement_results
+
+    def _calculate_skewness(self, data: np.ndarray) -> float:
+        """Calculate skewness of data distribution"""
+        if len(data) < 3:
+            return 0.0
+        
+        mean = np.mean(data)
+        std = np.std(data)
+        
+        if std == 0:
+            return 0.0
+        
+        # Calculate third moment (skewness)
+        third_moment = np.mean(((data - mean) / std)**3)
+        return float(third_moment)
+
+    def _calculate_spatial_coherence(self, field: np.ndarray) -> float:
+        """Calculate spatial coherence of the quantum field"""
+        # Use correlation-based coherence measure
+        field_flat = field.flatten()
+        
+        # Calculate autocorrelation at various spatial separations
+        coherence_sum = 0.0
+        sample_points = min(100, len(field_flat) // 2)
+        
+        for separation in range(1, sample_points):
+            if separation < len(field_flat):
+                correlation = np.corrcoef(field_flat[:-separation], field_flat[separation:])[0, 1]
+                if not np.isnan(correlation):
+                    coherence_sum += abs(correlation) * np.exp(-separation / sample_points)
+        
+        return coherence_sum / sample_points if sample_points > 0 else 0.0
+
+    def _estimate_coherence_length(self, field: np.ndarray) -> float:
+        """Estimate the coherence length of the quantum field"""
+        # Simple coherence length estimation based on field correlation decay
+        if len(field.shape) < 2:
+            return 1.0
+        
+        center = tuple(s // 2 for s in field.shape)
+        reference_value = field[center]
+        
+        # Calculate correlation as function of distance from center
+        distances = []
+        correlations = []
+        
+        for offset in range(1, min(field.shape) // 2):
+            if offset < field.shape[0] and offset < field.shape[1]:
+                test_points = [
+                    (center[0] + offset, center[1]),
+                    (center[0] - offset, center[1]),
+                    (center[0], center[1] + offset),
+                    (center[0], center[1] - offset)
+                ]
+                
+                valid_correlations = []
+                for point in test_points:
+                    if all(0 <= point[i] < field.shape[i] for i in range(len(point))):
+                        correlation = abs(np.conj(reference_value) * field[point])
+                        valid_correlations.append(correlation)
+                
+                if valid_correlations:
+                    distances.append(offset)
+                    correlations.append(np.mean(valid_correlations))
+        
+        # Find where correlation drops to 1/e
+        coherence_threshold = np.abs(reference_value) / np.e
+        coherence_length = 1.0
+        
+        for i, corr in enumerate(correlations):
+            if corr < coherence_threshold:
+                coherence_length = distances[i] if i < len(distances) else 1.0
+                break
+        
+        return float(coherence_length)
+
+    def _calculate_symbolic_field_correlation(self, field: np.ndarray, region: Optional[Tuple[slice, ...]] = None) -> float:
+        """Calculate correlation between quantum field and symbolic meaning potential"""
+        field_density = np.abs(field)**2
+        
+        if region is not None:
+            meaning_region = self.meaning_potential[region]
+        else:
+            meaning_region = self.meaning_potential
+        
+        # Ensure compatible shapes
+        if field_density.shape != meaning_region.shape:
+            # Resize or crop to match
+            min_shape = tuple(min(field_density.shape[i], meaning_region.shape[i]) for i in range(len(field_density.shape)))
+            field_density = field_density[:min_shape[0], :min_shape[1] if len(min_shape) > 1 else ...]
+            meaning_region = meaning_region[:min_shape[0], :min_shape[1] if len(min_shape) > 1 else ...]
         
         # Calculate correlation
-        correlation = np.corrcoef(field_flat, meaning_flat)[0, 1]
-        self.symbolic_entanglement = max(0, correlation) if not np.isnan(correlation) else 0
+        field_flat = field_density.flatten()
+        meaning_flat = meaning_region.flatten()
         
-        # Create complete observation
-        observation = {
-            'probability_field': probability_field,
-            'field_energy': float(np.sum(np.abs(self.field_state)**2)),
-            'field_entropy': float(-np.sum(probability_field * np.log(probability_field + 1e-10))),
-            'coherence': self.coherence,
-            'symbolic_entanglement': self.symbolic_entanglement,
-            'ethical_fields': [self.ethical_manifold_data[i] for i in range(self.ethical_dimensions)],
-            'meaning_potential': self.meaning_potential,
-            'breath_phase_effects': {
-                'phase': self.breath_adapter.current_phase.name,
-                'coherence_factor': self.breath_adapter.coherence_factors[self.breath_adapter.current_phase],
-                'collapse_threshold': self.breath_adapter.collapse_thresholds[self.breath_adapter.current_phase]
-            }
-        }
+        if len(field_flat) == 0 or len(meaning_flat) == 0:
+            return 0.0
         
-        return observation
+        correlation_matrix = np.corrcoef(field_flat, meaning_flat)
+        correlation = correlation_matrix[0, 1] if not np.isnan(correlation_matrix[0, 1]) else 0.0
+        
+        return float(abs(correlation))
+
+    def _calculate_bipartite_entanglement(self, field: np.ndarray) -> float:
+        """Calculate bipartite entanglement between field regions"""
+        if len(field.shape) < 2:
+            return 0.0
+        
+        # Split field into two regions
+        mid_point = field.shape[0] // 2
+        region_a = field[:mid_point, :]
+        region_b = field[mid_point:, :]
+        
+        # Calculate density matrices for each region
+        rho_a = np.abs(region_a)**2
+        rho_b = np.abs(region_b)**2
+        
+        # Normalize
+        rho_a = rho_a / (np.sum(rho_a) + 1e-10)
+        rho_b = rho_b / (np.sum(rho_b) + 1e-10)
+        
+        # Calculate von Neumann entropy for each region
+        entropy_a = -np.sum(rho_a * np.log(rho_a + 1e-10))
+        entropy_b = -np.sum(rho_b * np.log(rho_b + 1e-10))
+        
+        # Combined system entropy
+        rho_combined = np.abs(field)**2
+        rho_combined = rho_combined / (np.sum(rho_combined) + 1e-10)
+        entropy_combined = -np.sum(rho_combined * np.log(rho_combined + 1e-10))
+        
+        # Entanglement measure (simplified)
+        entanglement = entropy_a + entropy_b - entropy_combined
+        return max(0.0, float(entanglement))
+
+    def _calculate_field_entropy(self, field: np.ndarray) -> float:
+        """Calculate quantum field entropy"""
+        probability_density = np.abs(field)**2
+        probability_density = probability_density / (np.sum(probability_density) + 1e-10)
+        
+        # Shannon entropy
+        entropy = -np.sum(probability_density * np.log(probability_density + 1e-10))
+        return float(entropy)
+
+    def _calculate_von_neumann_entropy(self, field: np.ndarray) -> float:
+        """Calculate von Neumann entropy (quantum generalization of Shannon entropy)"""
+        # For a pure state, von Neumann entropy is zero
+        # For mixed states, we approximate using field density
+        density_matrix = np.outer(field.flatten(), np.conj(field.flatten()))
+        eigenvalues = np.real(np.linalg.eigvals(density_matrix))
+        eigenvalues = eigenvalues[eigenvalues > 1e-10]  # Remove near-zero eigenvalues
+        
+        if len(eigenvalues) == 0:
+            return 0.0
+        
+        von_neumann_entropy = -np.sum(eigenvalues * np.log(eigenvalues))
+        return float(von_neumann_entropy)
+
+    def _calculate_phase_gradient(self, phase_field: np.ndarray) -> np.ndarray:
+        """Calculate gradient of phase field"""
+        gradients = []
+        
+        for axis in range(len(phase_field.shape)):
+            gradient = np.gradient(phase_field, axis=axis)
+            gradients.append(gradient)
+        
+        # Calculate magnitude of gradient vector
+        gradient_magnitude = np.zeros_like(phase_field)
+        for grad in gradients:
+            gradient_magnitude += grad**2
+        
+        return np.sqrt(gradient_magnitude)
+
+    def _calculate_phase_circulation(self, phase_field: np.ndarray) -> float:
+        """Calculate phase circulation around field boundary"""
+        if len(phase_field.shape) < 2:
+            return 0.0
+        
+        # Calculate circulation around field boundary
+        height, width = phase_field.shape[:2]
+        
+        # Top edge (left to right)
+        top_circulation = np.sum(np.diff(phase_field[0, :]))
+        
+        # Right edge (top to bottom)
+        right_circulation = np.sum(np.diff(phase_field[:, -1]))
+        
+        # Bottom edge (right to left)
+        bottom_circulation = -np.sum(np.diff(phase_field[-1, :]))
+        
+        # Left edge (bottom to top)
+        left_circulation = -np.sum(np.diff(phase_field[:, 0]))
+        
+        total_circulation = top_circulation + right_circulation + bottom_circulation + left_circulation
+        return float(total_circulation)
+
+    def _calculate_winding_number(self, phase_field: np.ndarray) -> int:
+        """Calculate topological winding number of phase field"""
+        if len(phase_field.shape) < 2:
+            return 0
+        
+        # Calculate winding number by integrating phase around closed loops
+        circulation = self._calculate_phase_circulation(phase_field)
+        winding_number = int(np.round(circulation / (2 * np.pi)))
+        
+        return winding_number
+
+    def _detect_phase_singularities(self, phase_field: np.ndarray) -> List[Tuple[int, ...]]:
+        """Detect phase singularities (vortices) in the field"""
+        if len(phase_field.shape) < 2:
+            return []
+        
+        singularities = []
+        height, width = phase_field.shape[:2]
+        
+        # Look for rapid phase changes that indicate singularities
+        for i in range(1, height - 1):
+            for j in range(1, width - 1):
+                # Calculate phase differences around a small loop
+                phases = [
+                    phase_field[i-1, j],
+                    phase_field[i, j-1],
+                    phase_field[i+1, j],
+                    phase_field[i, j+1]
+                ]
+                
+                # Calculate total phase change around loop
+                total_change = 0
+                for k in range(len(phases)):
+                    phase_diff = phases[(k+1) % len(phases)] - phases[k]
+                    
+                    # Handle phase wrapping
+                    while phase_diff > np.pi:
+                        phase_diff -= 2 * np.pi
+                    while phase_diff < -np.pi:
+                        phase_diff += 2 * np.pi
+                    
+                    total_change += phase_diff
+                
+                # If total change is close to ±2π, we have a singularity
+                if abs(abs(total_change) - 2 * np.pi) < 0.5:
+                    singularities.append((i, j))
+        
+        return singularities
+
+    def _calculate_momentum_field(self, field: np.ndarray) -> np.ndarray:
+        """Calculate momentum field from quantum field via phase gradients"""
+        phase_field = np.angle(field)
+        
+        # Momentum is proportional to phase gradient (ℏ∇φ)
+        momentum_components = []
+        
+        for axis in range(len(field.shape)):
+            phase_gradient = np.gradient(phase_field, axis=axis)
+            momentum_components.append(phase_gradient)
+        
+        # Calculate momentum magnitude
+        momentum_magnitude = np.zeros_like(phase_field)
+        for component in momentum_components:
+            momentum_magnitude += component**2
+        
+        return np.sqrt(momentum_magnitude) * 1.054571817e-34  # ℏ (reduced Planck constant)
+
+    def _calculate_position_momentum_uncertainty(self, field: np.ndarray) -> float:
+        """Calculate position-momentum uncertainty product (Heisenberg uncertainty)"""
+        # Position uncertainty
+        probability_density = np.abs(field)**2
+        probability_density = probability_density / (np.sum(probability_density) + 1e-10)
+        
+        # Calculate position expectation values and variances
+        indices = np.indices(field.shape)
+        position_variances = []
+        
+        for axis in range(len(field.shape)):
+            pos_expectation = np.sum(indices[axis] * probability_density)
+            pos_squared_expectation = np.sum(indices[axis]**2 * probability_density)
+            position_variance = pos_squared_expectation - pos_expectation**2
+            position_variances.append(max(position_variance, 1e-10))
+        
+        # Momentum uncertainty (from phase gradients)
+        momentum_field = self._calculate_momentum_field(field)
+        momentum_variance = np.var(momentum_field)
+        
+        # Calculate uncertainty product for first dimension
+        position_uncertainty = np.sqrt(position_variances[0])
+        momentum_uncertainty = np.sqrt(momentum_variance)
+        
+        uncertainty_product = position_uncertainty * momentum_uncertainty
+        heisenberg_limit = 1.054571817e-34 / 2  # ℏ/2
+        
+        return float(uncertainty_product / heisenberg_limit)  # Normalized to Heisenberg limit
 
 # ================================================================
 # COLLAPSE ADAPTER CLASS
@@ -610,7 +959,6 @@ class CollapseAdapter:
         
         # Calculate collapse magnitude
         collapse_magnitude = np.max(np.abs(density_change))
-          # Calculate pattern metrics
         collapsed_pattern = self._identify_pattern(after_density)
         entropy_change = self._calculate_entropy(after_density) - self._calculate_entropy(before_density)
         ethical_alignment = self._calculate_ethical_alignment(tuple(int(x) for x in collapse_idx), ethical_tensor)
@@ -669,6 +1017,11 @@ class CollapseAdapter:
         
         return interpretation
     
+    def reset_history(self) -> None:
+        """Reset only narrative collapse history."""
+        self.collapse_history.clear()
+        self.current_collapse_interpretation = {}
+
     def _identify_pattern(self, density: np.ndarray) -> str:
         """Identify the pattern type in the collapsed density"""
         # Check for centered peak
@@ -734,8 +1087,9 @@ class CollapseAdapter:
         scores.append(point_score)
         
         # Return the maximum symmetry score found
-        return max(scores) if scores else 0.0
-    
+        symmetry_score = max(scores) if scores else 0.0
+        return max(0.0, min(1.0, float(symmetry_score)))
+
     def _check_reflection_symmetry(self, density: np.ndarray) -> float:
         """Check reflection symmetry across all axes
         
@@ -802,9 +1156,8 @@ class CollapseAdapter:
         indices = np.indices(density.shape)
         distances = np.zeros(density.shape)
         
-        for i, idx in enumerate(indices):
-            if i < len(center):
-                distances += ((idx - center[i]) / density.shape[i])**2
+        for i, idx in enumerate(indices[:len(center)]):
+            distances += ((idx - center[i]) / density.shape[i])**2
         
         distances = np.sqrt(distances)
         
@@ -853,9 +1206,8 @@ class CollapseAdapter:
         Returns:
             Point symmetry score
         """
-        # Calculate center of mass manually (avoid scipy dependency)
-        total_mass = np.sum(density)
-        if total_mass == 0:
+        total = np.sum(density)
+        if total == 0:
             return 0.0
         
         # Calculate center of mass
@@ -937,73 +1289,150 @@ class CollapseAdapter:
         
         # Kurtosis (subtract 3 for excess kurtosis)
         return fourth_moment - 3.0
-# ================================================================
-# UTILITY FUNCTIONS
-# ================================================================
-
-def create_ethical_tensor(field_shape: Tuple[int, ...], 
-                         ethical_dimensions: int = DEFAULT_ETHICAL_DIMENSIONS) -> np.ndarray:
-    """Create an initialized ethical tensor
     
-    Args:
-        field_shape: Shape of the field
-        ethical_dimensions: Number of ethical dimensions
+    def _calculate_entropy(self, density: np.ndarray) -> float:
+        """Calculate entropy of a probability density distribution
         
-    Returns:
-        Initialized ethical tensor
-    """
-    return np.zeros((ethical_dimensions,) + field_shape)
-
-def apply_ethical_force(field_state: np.ndarray, 
-                       ethical_tensor: np.ndarray, 
-                       coupling_constant: float = 0.1) -> np.ndarray:
-    """Apply ethical forces to a quantum field state
-    
-    Args:
-        field_state: Current field state
-        ethical_tensor: Ethical tensor
-        coupling_constant: Coupling strength
+        Args:
+            density: Probability density array
+            
+        Returns:
+            Shannon entropy value
+        """
+        # Normalize density to ensure it sums to 1
+        normalized_density = density / (np.sum(density) + 1e-10)
         
-    Returns:
-        Modified field state
-    """
-    modified_state = field_state.copy()
-    
-    for i in range(ethical_tensor.shape[0]):
-        # Apply ethical force as a modulation
-        ethical_field = ethical_tensor[i]
-        modified_state += coupling_constant * ethical_field * field_state
-    
-    # Normalize
-    norm = np.sqrt(np.sum(np.abs(modified_state)**2))
-    if norm > 0:
-        modified_state = modified_state / norm
-    
-    return modified_state
-
-def analyze_ethical_distribution(ethical_tensor: np.ndarray) -> Dict[str, Any]:
-    """Analyze the distribution of ethical forces
-    
-    Args:
-        ethical_tensor: Ethical tensor to analyze
+        # Add small epsilon to prevent log(0)
+        normalized_density = normalized_density + 1e-10
         
-    Returns:
-        Analysis results dictionary
-    """
-    analysis = {}
+        # Calculate Shannon entropy
+        entropy = -np.sum(normalized_density * np.log(normalized_density))
+        
+        return float(entropy)
     
-    for i, dimension in enumerate(ETHICAL_DIMENSIONS):
-        if i < ethical_tensor.shape[0]:
-            field = ethical_tensor[i]
-            analysis[dimension] = {
-                'mean': float(np.mean(field)),
-                'std': float(np.std(field)),
-                'min': float(np.min(field)),
-                'max': float(np.max(field)),
-                'total_magnitude': float(np.sum(np.abs(field)))
-            }
+    def _calculate_ethical_alignment(self, position: Tuple[int, ...], ethical_tensor: np.ndarray) -> Dict[str, float]:
+        alignment = {}
+        
+        for i, dimension in enumerate(ETHICAL_DIMENSIONS):
+            if i < ethical_tensor.shape[0]:
+                # Get ethical value at position
+                ethical_value = ethical_tensor[i][position]
+                
+                # Calculate alignment strength (absolute value normalized)
+                max_value = np.max(np.abs(ethical_tensor[i]))
+                if max_value > 0:
+                    alignment[dimension] = float(np.abs(ethical_value) / max_value)
+                else:
+                    alignment[dimension] = 0.0
+        
+        return alignment
     
-    return analysis
+    def _vector_similarity(self, vector1: List[float], vector2: List[float]) -> float:
+        """Calculate similarity between two vectors using cosine similarity
+        
+        Args:
+            vector1: First vector
+            vector2: Second vector
+            
+        Returns:
+            Cosine similarity value (0.0 to 1.0)
+        """
+        # Convert to numpy arrays and ensure same length
+        v1 = np.array(vector1)
+        v2 = np.array(vector2)
+        
+        min_length = min(len(v1), len(v2))
+        v1 = v1[:min_length]
+        v2 = v2[:min_length]
+        
+        # Calculate cosine similarity
+        dot_product = np.dot(v1, v2)
+        norm1 = np.linalg.norm(v1)
+        norm2 = np.linalg.norm(v2)
+        
+        if norm1 > 0 and norm2 > 0:
+            similarity = dot_product / (norm1 * norm2)
+            # Return absolute similarity (0.0 to 1.0)
+            return abs(float(similarity))
+        
+        return 0.0
+    
+    def _generate_narrative_implications(self, 
+                                       pattern_type: str, 
+                                       ethical_alignment: Dict[str, float], 
+                                       entropy_change: float, 
+                                       breath_phase: BreathPhase) -> List[str]:
+        """Generate narrative implications based on collapse characteristics
+        
+        Args:
+            pattern_type: Type of collapse pattern
+            ethical_alignment: Ethical alignment values
+            entropy_change: Change in entropy
+            breath_phase: Current breath phase
+            
+        Returns:
+            List of narrative implication strings
+        """
+        implications = []
+        
+        # Pattern-based implications
+        if pattern_type == "centered_peak":
+            implications.append("Focus of attention crystallizes a singular outcome")
+            if entropy_change < -0.5:
+                implications.append("Reality consolidates around a point of certainty")
+        
+        elif pattern_type == "scattered_peaks":
+            implications.append("Multiple possibilities manifest simultaneously")
+            if entropy_change > 0.5:
+                implications.append("Complexity emerges from quantum superposition")
+        
+        elif pattern_type == "symmetric_distribution":
+            implications.append("Balance and harmony emerge in the collapse")
+            implications.append("Universal principles assert their influence")
+        
+        elif pattern_type == "sudden_peak":
+            implications.append("Unexpected revelation breaks through uncertainty")
+            implications.append("A hidden truth suddenly becomes manifest")
+        
+        # Ethical-based implications
+        dominant_ethics = [k for k, v in ethical_alignment.items() if v > 0.7]
+        
+        if "good_harm" in dominant_ethics:
+            implications.append("Ethical imperative toward beneficial outcomes")
+        
+        if "truth_deception" in dominant_ethics:
+            implications.append("Authenticity and transparency guide manifestation")
+        
+        if "fairness_bias" in dominant_ethics:
+            implications.append("Justice and equity influence the outcome")
+        
+        if "liberty_constraint" in dominant_ethics:
+            implications.append("Freedom and autonomy shape the result")
+        
+        if "care_harm" in dominant_ethics:
+            implications.append("Compassion and empathy direct the collapse")
+        
+        # Entropy-based implications
+        if entropy_change < -1.0:
+            implications.append("Order emerges from chaos")
+        elif entropy_change > 1.0:
+            implications.append("New complexity unfolds from simplicity")
+        
+        # Breath phase implications
+        if breath_phase == BreathPhase.INHALE:
+            implications.append("New potential breathes into existence")
+        elif breath_phase == BreathPhase.HOLD_IN:
+            implications.append("Stabilized energy holds the pattern in place")
+        elif breath_phase == BreathPhase.EXHALE:
+            implications.append("Manifested reality releases into form")
+        elif breath_phase == BreathPhase.HOLD_OUT:
+            implications.append("Void state prepares for new possibilities")
+        
+        # Ensure we always return at least one implication
+        if not implications:
+            implications.append("Quantum potential collapses into classical reality")
+        
+        return implications
 
 # ================================================================
 # ETHICAL TENSOR FACTORY

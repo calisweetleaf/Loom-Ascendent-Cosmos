@@ -9,6 +9,7 @@ import numpy as np
 from typing import Dict, List, Tuple, Any, Optional, Union
 from dataclasses import dataclass, field
 from enum import Enum, auto
+from scipy.ndimage import center_of_mass
 
 from quantum_physics import QuantumField, QuantumStateVector, EthicalGravityManifold, PhysicsConstants, SymbolicOperators
 
@@ -604,13 +605,22 @@ class CollapseAdapter:
             return "scattered_peaks"
         
         # Check for symmetry
-        from scipy.ndimage import center_of_mass
         com = center_of_mass(density)
+        
+        # Ensure com is a list of floats for proper indexing
+        if isinstance(com, (int, float)):
+            com = [float(com)]
+        else:
+            com = [float(c) for c in com]
         
         # Measure symmetry around center of mass
         flipped = np.zeros_like(density)
         for idx in np.ndindex(density.shape):
-            flipped_idx = tuple(int(2 * com[i] - idx[i]) % density.shape[i] for i in range(len(idx)))
+            # Calculate flipped index with proper type handling
+            flipped_idx = tuple(
+                int(2 * com[i] - idx[i]) % density.shape[i] 
+                for i in range(len(idx))
+            )
             flipped[idx] = density[flipped_idx]
         
         symmetry = 1.0 - np.mean(np.abs(density - flipped)) / np.max(density)

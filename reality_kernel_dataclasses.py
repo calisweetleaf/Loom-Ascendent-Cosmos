@@ -167,15 +167,13 @@ class RealityMetrics:
     ethical_balance: float = 0.0 # Changed from ethical_tension for consistency with example
     last_snapshot_time: Optional[float] = None # Changed from last_updated_timestamp
     total_energy_observed: float = 0.0
-    # Removed qbit_efficiency, timeline_divergence, perception_latency from direct attributes,
-    # as they will be part of history deques or calculated in update/summary.
 
-    coherence_history: deque[float] = field(init=False)
-    qbit_efficiency_history: deque[float] = field(init=False) # Added as per subtask
-    timeline_divergence_history: deque[float] = field(init=False) # Added as per subtask
-    perception_latency_history: deque[float] = field(init=False) # Added as per subtask
-    entropy_rate_history: deque[float] = field(init=False)
-    paradox_count_history: deque[int] = field(init=False)
+    coherence_history: deque = field(init=False)
+    qbit_efficiency_history: deque = field(init=False)
+    timeline_divergence_history: deque = field(init=False)
+    perception_latency_history: deque = field(init=False)
+    entropy_rate_history: deque = field(init=False)
+    paradox_count_history: deque = field(init=False)
         
     def __post_init__(self):
         # Initialize deques with sampling_rate as maxlen
@@ -253,8 +251,8 @@ class RealityMetrics:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'RealityMetrics':
         init_data = data.copy()
-        # Use the sampling_rate from the data if present, otherwise use ClassVar default for maxlen
-        maxlen = init_data.get('sampling_rate', cls._history_maxlen)
+        # Use the sampling_rate from the data if present, otherwise use default
+        maxlen = init_data.get('sampling_rate', 1000)
         
         history_fields = {
             "coherence_history", "entropy_rate_history", "paradox_count_history",
@@ -266,10 +264,12 @@ class RealityMetrics:
         
         # Ensure only fields defined in the dataclass are passed to constructor
         defined_field_names = {f.name for f in fields(cls)}
-        defined_field_names.discard('_history_maxlen') # Exclude ClassVar itself
         
         filtered_init_data = {k: v for k, v in init_data.items() if k in defined_field_names}
         
+        return cls(**filtered_init_data)
+
+logger.info("reality_kernel_dataclasses.py defined with RealityAnchor and RealityMetrics.")
         return cls(**filtered_init_data)
 
 logger.info("reality_kernel_dataclasses.py defined with RealityAnchor and RealityMetrics.")

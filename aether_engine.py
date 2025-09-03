@@ -16,6 +16,48 @@ from collections import defaultdict
 import json
 import concurrent.futures
 from functools import lru_cache
+import threading
+from abc import ABC, abstractmethod
+
+# ================================================================
+# CUSTOM EXCEPTION CLASSES FOR AETHER OPERATIONS
+# ================================================================
+
+class AetherEngineError(Exception):
+    """Base exception for all Aether Engine related errors"""
+    pass
+
+class PatternValidationError(AetherEngineError):
+    """Raised when pattern validation fails"""
+    pass
+
+class EncodingError(AetherEngineError):
+    """Raised when pattern encoding fails"""
+    pass
+
+class InteractionError(AetherEngineError):
+    """Raised when pattern interaction fails"""
+    pass
+
+class MutationError(AetherEngineError):
+    """Raised when pattern mutation fails"""
+    pass
+
+class RecursionLimitError(AetherEngineError):
+    """Raised when recursion depth exceeds allowed limits"""
+    pass
+
+class PhysicsConstraintViolation(AetherEngineError):
+    """Raised when operation violates physics constraints"""
+    pass
+
+class PatternCompatibilityError(AetherEngineError):
+    """Raised when patterns are incompatible for interaction"""
+    pass
+
+class ThreadSafetyError(AetherEngineError):
+    """Raised when thread safety operations fail"""
+    pass
 
 # Configure logging with more detailed formatting
 logging.basicConfig(
@@ -113,53 +155,79 @@ class PhysicsConstraints:
         return getattr(self, key, default)
 
 class AetherSpace:
-    """Multi-dimensional manifold containing patterns"""
+    """Multi-dimensional manifold containing patterns with thread safety"""
     def __init__(self, dimensions: int = 3):
         self.dimensions = dimensions
         self.patterns = set()
         self.spatial_index = defaultdict(set)  # Simple spatial partitioning
         self.interaction_history = []
         self._last_cleanup = time.time()
+        self._lock = threading.RLock()  # Reentrant lock for thread safety
+        self._pattern_positions = {}  # Track pattern positions for spatial queries
     
     def add_pattern(self, pattern: AetherPattern, position: Tuple[float, ...]) -> None:
-        """Add pattern to space at specific position"""
+        """Add pattern to space at specific position (thread-safe)"""
         if len(position) != self.dimensions:
             raise ValueError(f"Position must have {self.dimensions} dimensions")
             
-        self.patterns.add(pattern)
-        
-        # Add to spatial index (coarse grid)
-        grid_pos = tuple(int(p/10) for p in position)
-        self.spatial_index[grid_pos].add(pattern)
+        with self._lock:
+            try:
+                self.patterns.add(pattern)
+                self._pattern_positions[pattern.pattern_id] = position
+                
+                # Add to spatial index (coarse grid)
+                grid_pos = tuple(int(p/10) for p in position)
+                self.spatial_index[grid_pos].add(pattern)
+                
+                logger.debug(f"Added pattern {pattern.pattern_id} at position {position}")
+            except Exception as e:
+                logger.error(f"Failed to add pattern {pattern.pattern_id}: {e}")
+                raise ThreadSafetyError(f"Failed to add pattern: {e}")
     
     def remove_pattern(self, pattern: AetherPattern) -> None:
-        """Remove pattern from space"""
-        if pattern in self.patterns:
-            self.patterns.remove(pattern)
-            
-            # Remove from spatial index
-            for cell, patterns in list(self.spatial_index.items()):
-                if pattern in patterns:
-                    patterns.remove(pattern)
-                    if not patterns:
-                        del self.spatial_index[cell]
+        """Remove pattern from space (thread-safe)"""
+        with self._lock:
+            try:
+                if pattern in self.patterns:
+                    self.patterns.remove(pattern)
+                    
+                    # Remove from position tracking
+                    if pattern.pattern_id in self._pattern_positions:
+                        del self._pattern_positions[pattern.pattern_id]
+                    
+                    # Remove from spatial index
+                    for cell, patterns in list(self.spatial_index.items()):
+                        if pattern in patterns:
+                            patterns.remove(pattern)
+                            if not patterns:
+                                del self.spatial_index[cell]
+                    
+                    logger.debug(f"Removed pattern {pattern.pattern_id}")
+            except Exception as e:
+                logger.error(f"Failed to remove pattern {pattern.pattern_id}: {e}")
+                raise ThreadSafetyError(f"Failed to remove pattern: {e}")
     
     def get_nearby_patterns(self, position: Tuple[float, ...], radius: float) -> Set[AetherPattern]:
-        """Find patterns within radius of position"""
+        """Find patterns within radius of position (thread-safe)"""
         if len(position) != self.dimensions:
             raise ValueError(f"Position must have {self.dimensions} dimensions")
             
-        # Get grid cells that might contain nearby patterns
-        nearby = set()
-        grid_pos = tuple(int(p/10) for p in position)
-        
-        # Check surrounding grid cells
-        for offset in self._generate_neighbor_offsets(radius/10):
-            neighbor_pos = tuple(g + o for g, o in zip(grid_pos, offset))
-            if neighbor_pos in self.spatial_index:
-                nearby.update(self.spatial_index[neighbor_pos])
-        
-        return nearby
+        with self._lock:
+            try:
+                # Get grid cells that might contain nearby patterns
+                nearby = set()
+                grid_pos = tuple(int(p/10) for p in position)
+                
+                # Check surrounding grid cells
+                for offset in self._generate_neighbor_offsets(radius/10):
+                    neighbor_pos = tuple(g + o for g, o in zip(grid_pos, offset))
+                    if neighbor_pos in self.spatial_index:
+                        nearby.update(self.spatial_index[neighbor_pos])
+                
+                return nearby
+            except Exception as e:
+                logger.error(f"Failed to get nearby patterns: {e}")
+                raise ThreadSafetyError(f"Failed to get nearby patterns: {e}")
     
     def _generate_neighbor_offsets(self, radius: int) -> List[Tuple[int, ...]]:
         """Generate offsets for neighboring grid cells"""
@@ -203,8 +271,20 @@ class AetherEngine:
         # Framework constraints
         self.physics = PhysicsConstraints(**physics_constraints) if physics_constraints else PhysicsConstraints()
         
+        # Thread safety locks
+        self._engine_lock = threading.RLock()  # Main engine lock
+        self._metrics_lock = threading.Lock()  # Metrics-specific lock
+        self._observer_lock = threading.Lock()  # Observer-specific lock
+        
         # Pattern space
         self.space = AetherSpace(dimensions=3)
+        
+        # Pattern cache for performance optimization
+        self._pattern_cache = {}
+        self._cache_lock = threading.Lock()
+        
+        # Physics component connections
+        self.physics_components = {}
         
         # Encoding protocol registry
         self.encoders = {
@@ -233,6 +313,9 @@ class AetherEngine:
             'patterns_created': 0,
             'patterns_mutated': 0,
             'interactions_processed': 0,
+            'patterns_validated': 0,
+            'cache_hits': 0,
+            'cache_misses': 0,
             'start_time': time.time()
         }
         
@@ -296,6 +379,244 @@ class AetherEngine:
         self.notify_observers(event_data)
 
         return new_pattern
+
+    def mutate_pattern(self, pattern: AetherPattern, mutation_vector: bytes, 
+                      conscious_agent_id: Optional[str] = None) -> AetherPattern:
+        """
+        Apply mutation vector to pattern according to Genesis Framework.
+        
+        Args:
+            pattern: The pattern to mutate
+            mutation_vector: Byte sequence defining the mutation
+            conscious_agent_id: Optional ID of conscious agent performing mutation
+            
+        Returns:
+            AetherPattern: The mutated pattern
+            
+        Raises:
+            MutationError: If mutation fails validation
+            RecursionLimitError: If recursion depth exceeds limits
+        """
+        with self._engine_lock:
+            try:
+                # Validate recursion depth
+                max_depth = self.physics.get('max_recursion_depth', 10)
+                if pattern.recursion_level >= max_depth:
+                    raise RecursionLimitError(f"Pattern recursion depth {pattern.recursion_level} exceeds limit {max_depth}")
+                
+                # Validate mutation vector
+                if not mutation_vector:
+                    raise MutationError("Mutation vector cannot be empty")
+                
+                # Apply mutation using XOR operation for controlled modification
+                mutated_core = bytes(a ^ b for a, b in 
+                                   zip(pattern.core, 
+                                       (mutation_vector * (len(pattern.core) // len(mutation_vector) + 1))[:len(pattern.core)]))
+                
+                # Create new mutations tuple including the applied mutation
+                new_mutations = pattern.mutations + (mutation_vector,)
+                
+                # Update metadata with mutation info
+                mutation_metadata = {
+                    **pattern.metadata,
+                    'last_mutation': time.time(),
+                    'mutation_count': len(new_mutations),
+                    'mutated_by': conscious_agent_id or 'system'
+                }
+                
+                # Create mutated pattern
+                mutated_pattern = AetherPattern(
+                    core=mutated_core,
+                    mutations=new_mutations,
+                    interactions=pattern.interactions.copy(),
+                    encoding_type=pattern.encoding_type,
+                    recursion_level=pattern.recursion_level + 1,
+                    metadata=mutation_metadata
+                )
+                
+                # Validate the mutated pattern
+                if not self.validate_pattern_integrity(mutated_pattern):
+                    raise MutationError("Mutated pattern failed integrity validation")
+                
+                # Update metrics
+                with self._metrics_lock:
+                    self.metrics['patterns_mutated'] += 1
+                
+                # Notify observers
+                self.notify_observers({
+                    'event_type': 'pattern_mutated',
+                    'original_pattern_id': pattern.pattern_id,
+                    'mutated_pattern_id': mutated_pattern.pattern_id,
+                    'conscious_agent_id': conscious_agent_id,
+                    'mutation_size': len(mutation_vector)
+                })
+                
+                logger.info(f"Successfully mutated pattern {pattern.pattern_id} -> {mutated_pattern.pattern_id}")
+                return mutated_pattern
+                
+            except Exception as e:
+                logger.error(f"Pattern mutation failed: {e}")
+                raise MutationError(f"Pattern mutation failed: {e}")
+
+    def validate_pattern_integrity(self, pattern: AetherPattern) -> bool:
+        """
+        Comprehensive validation of pattern integrity and consistency.
+        
+        Args:
+            pattern: The pattern to validate
+            
+        Returns:
+            bool: True if pattern passes all validation checks
+            
+        Raises:
+            PatternValidationError: If validation encounters critical errors
+        """
+        try:
+            with self._metrics_lock:
+                self.metrics['patterns_validated'] += 1
+            
+            # Check core integrity
+            if not pattern.core:
+                logger.warning(f"Pattern {pattern.pattern_id} has empty core")
+                return False
+            
+            # Validate minimum size requirements
+            min_size = self.physics.get('min_pattern_size', 32)
+            if len(pattern.core) < min_size:
+                logger.warning(f"Pattern {pattern.pattern_id} core size {len(pattern.core)} below minimum {min_size}")
+                return False
+            
+            # Check maximum complexity
+            max_complexity = self.physics.get('max_pattern_complexity', 1000.0)
+            if pattern.complexity > max_complexity:
+                logger.warning(f"Pattern {pattern.pattern_id} complexity {pattern.complexity} exceeds maximum {max_complexity}")
+                return False
+            
+            # Validate encoding type
+            if not isinstance(pattern.encoding_type, EncodingType):
+                logger.error(f"Pattern {pattern.pattern_id} has invalid encoding type")
+                return False
+            
+            # Check recursion depth limits
+            max_depth = self.physics.get('max_recursion_depth', 10)
+            if pattern.recursion_level > max_depth:
+                logger.warning(f"Pattern {pattern.pattern_id} recursion level {pattern.recursion_level} exceeds maximum {max_depth}")
+                return False
+            
+            # Validate mutation consistency
+            for i, mutation in enumerate(pattern.mutations):
+                if not isinstance(mutation, bytes) or len(mutation) == 0:
+                    logger.error(f"Pattern {pattern.pattern_id} has invalid mutation at index {i}")
+                    return False
+            
+            # Check interaction protocol consistency
+            for protocol, signature in pattern.interactions.items():
+                if not isinstance(protocol, str) or not isinstance(signature, str):
+                    logger.error(f"Pattern {pattern.pattern_id} has invalid interaction protocol")
+                    return False
+            
+            # Validate against physics constraints if available
+            if hasattr(self, 'physics_components') and 'constants' in self.physics_components:
+                constants = self.physics_components['constants']
+                # Add physics-based validation here if needed
+            
+            logger.debug(f"Pattern {pattern.pattern_id} passed integrity validation")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Pattern validation failed: {e}")
+            raise PatternValidationError(f"Pattern validation failed: {e}")
+
+    def apply_recursive_modification(self, pattern: AetherPattern, 
+                                   modification_func: Callable[[bytes], bytes],
+                                   conscious_agent_id: str,
+                                   permission_level: str = "user") -> AetherPattern:
+        """
+        Apply recursive modification with proper permission control.
+        
+        Args:
+            pattern: The pattern to modify
+            modification_func: Function to apply to pattern core
+            conscious_agent_id: ID of the conscious agent requesting modification
+            permission_level: Permission level ("user", "admin", "system")
+            
+        Returns:
+            AetherPattern: The recursively modified pattern
+            
+        Raises:
+            RecursionLimitError: If recursion depth exceeds limits
+            PermissionError: If agent lacks required permissions
+        """
+        with self._engine_lock:
+            try:
+                # Check permissions
+                allowed_levels = {"system", "admin"}
+                if permission_level == "user":
+                    # Users can only modify patterns they created or own
+                    pattern_creator = pattern.metadata.get('created_by', '')
+                    if pattern_creator != conscious_agent_id:
+                        raise PermissionError(f"Agent {conscious_agent_id} lacks permission to modify pattern {pattern.pattern_id}")
+                elif permission_level not in allowed_levels:
+                    raise PermissionError(f"Invalid permission level: {permission_level}")
+                
+                # Check recursion limits
+                max_depth = self.physics.get('max_recursion_depth', 10)
+                if pattern.recursion_level >= max_depth:
+                    raise RecursionLimitError(f"Cannot modify pattern at recursion depth {pattern.recursion_level}")
+                
+                # Apply modification function
+                try:
+                    modified_core = modification_func(pattern.core)
+                except Exception as e:
+                    raise MutationError(f"Modification function failed: {e}")
+                
+                # Create recursively modified pattern
+                modified_pattern = AetherPattern(
+                    core=modified_core,
+                    mutations=pattern.mutations,
+                    interactions=pattern.interactions.copy(),
+                    encoding_type=pattern.encoding_type,
+                    recursion_level=pattern.recursion_level + 1,
+                    metadata={
+                        **pattern.metadata,
+                        'last_modified': time.time(),
+                        'modified_by': conscious_agent_id,
+                        'permission_level': permission_level,
+                        'recursive_modification': True
+                    }
+                )
+                
+                # Validate the modified pattern
+                if not self.validate_pattern_integrity(modified_pattern):
+                    raise MutationError("Recursively modified pattern failed integrity validation")
+                
+                # Add to space if original was in space
+                if pattern in self.space.patterns:
+                    original_position = self.space._pattern_positions.get(pattern.pattern_id, (0.0, 0.0, 0.0))
+                    self.space.add_pattern(modified_pattern, original_position)
+                
+                # Update metrics
+                with self._metrics_lock:
+                    self.metrics['patterns_mutated'] += 1
+                
+                # Notify observers
+                self.notify_observers({
+                    'event_type': 'recursive_modification_applied',
+                    'original_pattern_id': pattern.pattern_id,
+                    'modified_pattern_id': modified_pattern.pattern_id,
+                    'conscious_agent_id': conscious_agent_id,
+                    'permission_level': permission_level
+                })
+                
+                logger.info(f"Applied recursive modification to pattern {pattern.pattern_id} by agent {conscious_agent_id}")
+                return modified_pattern
+                
+            except Exception as e:
+                logger.error(f"Recursive modification failed: {e}")
+                if isinstance(e, (RecursionLimitError, PermissionError, MutationError)):
+                    raise
+                else:
+                    raise MutationError(f"Recursive modification failed: {e}")
 
     # --------------------------
     # Encoding Protocols
