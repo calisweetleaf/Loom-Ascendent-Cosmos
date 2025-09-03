@@ -68,6 +68,7 @@ generated_data/
 # Git
 .git/
 .gitmodules
+.github/
 
 # Backup editors
 *.bak
@@ -98,3 +99,4 @@ QWEN.md
 test_python_doctor.py
 .gitignore
 python_doctor_config.py
+.github/copilot-instructions.md
