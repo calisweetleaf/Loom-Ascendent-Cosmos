@@ -688,19 +688,31 @@ class AMRGrid:
             # Ensure minimum patch size and even dimensions for refinement
             for d in range(len(bbox)):
                 min_size = 4  # Minimum patch size
-                size = bbox[d][1] - bbox[d][0] + 1
-                
+                size = int(bbox[d][1]) - int(bbox[d][0]) + 1
+
                 if size < min_size:
-                    center = (bbox[d][0] + bbox[d][1]) // 2
+                    # Use explicit arithmetic instead of max/min to avoid mixed int / numpy intp typing issues
+                    center = (int(bbox[d][0]) + int(bbox[d][1])) // 2
                     half_size = min_size // 2
-                    bbox[d] = (max(0, center - half_size), 
-                              min(self.grids[level].shape[d] - 1, center + half_size))
-                
-                # Make sure dimensions are even
-                size = bbox[d][1] - bbox[d][0] + 1
+                    start = center - half_size
+                    if start < 0:
+                        start = 0
+                    end = center + half_size
+                    limit = self.grids[level].shape[d] - 1
+                    if end > limit:
+                        end = limit
+                    bbox[d] = (np.intp(start), np.intp(end))
+
+                # Recompute size after possible adjustment
+                size = int(bbox[d][1]) - int(bbox[d][0]) + 1
                 if size % 2 == 1:
-                    bbox[d] = (bbox[d][0], min(self.grids[level].shape[d] - 1, bbox[d][1] + 1))
-            
+                    # Make even by extending upper bound within limits
+                    end = int(bbox[d][1]) + 1
+                    limit = self.grids[level].shape[d] - 1
+                    if end > limit:
+                        end = limit
+                    bbox[d] = (np.intp(bbox[d][0]), np.intp(end))
+
             patches.append(bbox)
         
         return patches
@@ -1639,7 +1651,7 @@ class QuantumStateVector:
         ax.text(0, 0, -1.5, r'$|i-\rangle$', color='black')
         
         # Set figure properties
-        ax.set_box_aspect([1,1,1])
+        ax.set_box_aspect((1, 1, 1))
         ax.set_axis_off()
         ax.set_title(f'Qubit {qubit} State on Bloch Sphere')
         

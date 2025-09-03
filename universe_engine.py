@@ -1,24 +1,15 @@
-# ================================================================
-#  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
-#  Author: Morpheus (Creator), Somnus Development Collective 
-#  License: Proprietary Software License Agreement (Somnus Development Collective)
-#  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
-# ================================================================
 import numpy as np
 from typing import Dict, List, Tuple, Any, Optional, Set
 from dataclasses import dataclass, field
 import logging
-from collections import defaultdict, deque
-import importlib
-import sys
+from collections import defaultdict
 from aether_engine import AetherPattern, AetherSpace, PhysicsConstraints, EncodingType
 from timeline_engine import TimelineEngine, TemporalEvent
-from quantum_physics import QuantumField, QuantumMonteCarlo, PhysicsConstants, WaveFunction, SymbolicOperators, AMRGrid, SimulationConfig, EthicalGravityManifold, QuantumStateVector
+from quantum_physics import QuantumField, QuantumMonteCarlo, PhysicsConstants
 import heapq
 import matplotlib.pyplot as plt
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import eigsh
-import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("UniverseEngine")
@@ -28,74 +19,6 @@ file_handler = logging.FileHandler("universe_evolution.log")
 file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(file_handler)
-
-class UniverseMetrics:
-    """Tracks and analyzes universe evolution metrics and performance"""
-    
-    def __init__(self, sampling_rate: int = 100):
-        self.sampling_rate = sampling_rate
-        self.coherence_history = deque(maxlen=sampling_rate)
-        self.expansion_history = deque(maxlen=sampling_rate)
-        self.complexity_history = deque(maxlen=sampling_rate)
-        self.entropy_history = deque(maxlen=sampling_rate)
-        self.structure_count_history = deque(maxlen=sampling_rate)
-        self.ethical_balance_history = deque(maxlen=sampling_rate)
-        self.total_mass = 0.0
-        self.total_energy = 0.0
-        self.hubble_parameter = 0.0
-        self.recursive_depth_avg = 0
-        self.last_update = time.time()
-    
-    def update(self, universe_state: Dict[str, Any]) -> Dict[str, Any]:
-        """Update metrics based on current universe state"""
-        self.coherence_history.append(universe_state.get('coherence', 1.0))
-        self.expansion_history.append(universe_state.get('scale_factor', 1.0))
-        self.complexity_history.append(universe_state.get('avg_complexity', 0.5))
-        self.entropy_history.append(universe_state.get('entropy', 0.0))
-        self.structure_count_history.append(universe_state.get('structure_count', 0))
-        self.ethical_balance_history.append(universe_state.get('ethical_balance', 0.5))
-        
-        self.total_mass = universe_state.get('total_mass', self.total_mass)
-        self.total_energy = universe_state.get('total_energy', self.total_energy)
-        self.hubble_parameter = universe_state.get('hubble_parameter', self.hubble_parameter)
-        self.recursive_depth_avg = universe_state.get('recursive_depth_avg', self.recursive_depth_avg)
-        self.last_update = time.time()
-        
-        return self.get_summary()
-    
-    def get_summary(self) -> Dict[str, Any]:
-        """Generate comprehensive metrics summary"""
-        return {
-            'coherence': sum(self.coherence_history) / len(self.coherence_history) if self.coherence_history else 1.0,
-            'expansion_rate': sum(self.expansion_history) / len(self.expansion_history) if self.expansion_history else 1.0,
-            'avg_complexity': sum(self.complexity_history) / len(self.complexity_history) if self.complexity_history else 0.5,
-            'entropy': sum(self.entropy_history) / len(self.entropy_history) if self.entropy_history else 0.0,
-            'structure_count': sum(self.structure_count_history) / len(self.structure_count_history) if self.structure_count_history else 0,
-            'ethical_balance': sum(self.ethical_balance_history) / len(self.ethical_balance_history) if self.ethical_balance_history else 0.5,
-            'total_mass': self.total_mass,
-            'total_energy': self.total_energy,
-            'hubble_parameter': self.hubble_parameter,
-            'recursive_depth_avg': self.recursive_depth_avg,
-            'last_update': self.last_update
-        }
-    
-    def measure_coherence(self) -> float:
-        """Measure current universe coherence level"""
-        return sum(self.coherence_history) / len(self.coherence_history) if self.coherence_history else 1.0
-    
-    def reset(self) -> None:
-        """Reset all metrics"""
-        self.coherence_history.clear()
-        self.expansion_history.clear()
-        self.complexity_history.clear()
-        self.entropy_history.clear()
-        self.structure_count_history.clear()
-        self.ethical_balance_history.clear()
-        self.total_mass = 0.0
-        self.total_energy = 0.0
-        self.hubble_parameter = 0.0
-        self.recursive_depth_avg = 0
-        self.last_update = time.time()
 
 class ConservationError(Exception):
     """Exception raised when conservation laws are violated in cosmic simulation"""
@@ -1342,24 +1265,3 @@ class UniverseEngine:
             logger.info(f"Interaction processed: {interaction_details}")
         else:
             logger.warning(f"Unhandled AetherEngine event type: {event_type}")
-
-    def get_scroll_ready_entities(self) -> List[Dict[str, Any]]:
-        """
-        Retrieve entities that are ready for lifecycle processing by the Cosmic Scroll.
-
-        Returns:
-            A list of entities with lifecycle-relevant fields.
-        """
-        scroll_ready_entities = []
-        for structure in self.structural_hierarchy:
-            if hasattr(structure, 'metadata') and 'birth_time' in structure.metadata:
-                scroll_ready_entities.append({
-                    'name': structure.structure_id,
-                    'birth_time': structure.metadata.get('birth_time'),
-                    'lifespan': structure.metadata.get('lifespan', float('inf')),
-                    'growth_cycle_duration': structure.metadata.get('growth_cycle_duration', 1.0),
-                    'last_update_time': structure.metadata.get('last_update_time', 0.0),
-                    'age': structure.metadata.get('age', 0.0),
-                    'health': structure.metadata.get('health', 1.0),
-                })
-        return scroll_ready_entities

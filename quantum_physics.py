@@ -1,383 +1,2718 @@
 # ================================================================
-#  LOOM ASCENDANT COSMOS — QUANTUM PHYSICS MODULE
+#  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
 #  Author: Morpheus (Creator), Somnus Development Collective 
 #  License: Proprietary Software License Agreement (Somnus Development Collective)
-#  Integrity Hash (SHA-256): Will be updated upon finalization
+#  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
 # ================================================================
 import numpy as np
 import matplotlib.pyplot as plt
 import logging
-# import importlib.util # Removed dynamic loading
-# import sys # Removed dynamic loading
-# import os # Removed dynamic loading
+import importlib.util
+import sys
+import os
 from typing import Dict, List, Tuple, Optional, Union, Any, Callable
 from enum import Enum, auto
-from dataclasses import dataclass, field # For potential future dataclasses here
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - [%(module)s.%(funcName)s:%(lineno)d] - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("QuantumPhysics")
 
-# Removed dynamic loading section as classes are defined directly in this file.
+# Load the quantum&physics module dynamically using a relative path
+try:
+    # Get the directory of the current file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # Build path to quantum&physics.py relative to current file
+    quantum_physics_path = os.path.join(current_dir, "quantum&physics.py")
+    
+    logger.info(f"Attempting to load quantum physics implementation from {quantum_physics_path}")
+    
+    spec = importlib.util.spec_from_file_location("quantum_physics_impl", quantum_physics_path)
+    quantum_physics_impl = importlib.util.module_from_spec(spec)
+    sys.modules["quantum_physics_impl"] = quantum_physics_impl
+    spec.loader.exec_module(quantum_physics_impl)
+    
+    # Re-export the necessary classes and functions
+    QuantumField = quantum_physics_impl.QuantumField
+    QuantumMonteCarlo = quantum_physics_impl.QuantumMonteCarlo
+    PhysicsConstants = quantum_physics_impl.PhysicsConstants
+    SimulationConfig = quantum_physics_impl.SimulationConfig
+    AMRGrid = quantum_physics_impl.AMRGrid
+    
+    # Add the missing exports
+    SymbolicOperators = quantum_physics_impl.SymbolicOperators
+    EthicalGravityManifold = quantum_physics_impl.EthicalGravityManifold
+    QuantumStateVector = quantum_physics_impl.QuantumStateVector
+    
+    logger.info("Successfully loaded quantum physics implementation module")
 
-class PhysicsConstants:
-    """Physics constants for the simulation"""
-    def __init__(self):
-        self.c: float = 299792458  # Speed of light (m/s)
-        self.G: float = 6.67430e-11  # Gravitational constant (m^3/kg/s^2)
-        self.h: float = 6.62607015e-34  # Planck constant (J*s)
-        self.k_B: float = 1.380649e-23  # Boltzmann constant (J/K)
-        self.h_bar: float = self.h / (2 * np.pi)  # Reduced Planck constant
-        
-        # Simulation scale factors (can be adjusted)
-        self.time_scale: float = 1.0 
-        self.space_scale: float = 1.0 
-        self.mass_scale: float = 1.0
-        
-        # Derived Planck units based on fundamental constants (not scaled by simulation factors yet)
-        self.planck_length: float = np.sqrt(self.h_bar * self.G / (self.c**3))
-        self.planck_time: float = self.planck_length / self.c
-        self.planck_mass: float = np.sqrt(self.h_bar * self.c / self.G)
-        self.planck_temperature: float = np.sqrt(self.h_bar * (self.c**5) / (self.G * (self.k_B**2)))
-        
-        # Cosmological constants (example values, can be part of simulation config)
-        self.hubble_constant: float = 70.0  # km/s/Mpc (needs conversion for simulation units)
-        self.dark_energy_density_fraction: float = 0.683 
-        self.dark_matter_density_fraction: float = 0.268
-        self.baryonic_matter_density_fraction: float = 0.049
+except Exception as e:
+    logger.warning(f"Failed to load quantum&physics.py module: {e}")
+    logger.info("Using fallback implementation for quantum physics classes")
 
+# WaveFunction implementation
 class WaveFunction:
-    """Represents a quantum mechanical wave function."""
-    def __init__(self, initial_state: np.ndarray, lattice_spacing: float = 1.0):
-        if not isinstance(initial_state, np.ndarray) or initial_state.dtype != np.complex128:
-            raise ValueError("Initial state must be a NumPy array of complex numbers.")
-        self.psi: np.ndarray = initial_state
-        self.dimensions: int = initial_state.ndim
-        self.grid_shape: Tuple[int, ...] = initial_state.shape
-        self.lattice_spacing: float = lattice_spacing # Assume same spacing for all dimensions
+    """Represents a quantum mechanical wave function with various representations"""
+    
+    def __init__(self, grid_size=64, dimensions=3, representation='position'):
+        """Initialize a wave function on a grid.
+        
+        Args:
+            grid_size: Size of the grid in each dimension
+            dimensions: Number of spatial dimensions
+            representation: Initial representation ('position' or 'momentum')
+        """
+        self.grid_size = grid_size
+        self.dimensions = dimensions
+        self.representation = representation
+        self.lattice_spacing = 1.0 / grid_size
+        
+        # Initialize in position space as a Gaussian wave packet
+        if dimensions == 1:
+            x = np.linspace(-5, 5, grid_size)
+            self.grid = np.array([x])
+            self.psi = np.exp(-x**2/2) * (1.0/np.pi)**0.25
+            
+        elif dimensions == 2:
+            x = np.linspace(-5, 5, grid_size)
+            y = np.linspace(-5, 5, grid_size)
+            X, Y = np.meshgrid(x, y)
+            self.grid = np.array([X, Y])
+            self.psi = np.exp(-(X**2 + Y**2)/2) * (1.0/np.pi)**0.5
+            
+        elif dimensions == 3:
+            x = np.linspace(-5, 5, grid_size)
+            y = np.linspace(-5, 5, grid_size)
+            z = np.linspace(-5, 5, grid_size)
+            X, Y, Z = np.meshgrid(x, y, z)
+            self.grid = np.array([X, Y, Z])
+            self.psi = np.exp(-(X**2 + Y**2 + Z**2)/2) * (1.0/np.pi)**0.75
+        
+        else:
+            # Higher dimensions use a simple product form
+            self.grid = np.zeros((dimensions, grid_size))
+            self.psi = np.ones((grid_size,) * dimensions) / np.sqrt(grid_size**dimensions)
+            
+        # Normalize
         self.normalize()
-        logger.debug(f"Initialized WaveFunction with shape {self.grid_shape}")
-
+        
+        # For momentum space representation
+        self.psi_momentum = None
+        
+        logger.debug(f"Initialized WaveFunction with {dimensions}D grid of size {grid_size}")
+    
     def normalize(self):
-        norm_sq = np.sum(np.abs(self.psi)**2) * (self.lattice_spacing**self.dimensions)
-        if norm_sq > 1e-12: # Avoid division by zero or tiny numbers
-            self.psi /= np.sqrt(norm_sq)
+        """Normalize the wave function"""
+        norm = np.sqrt(np.sum(np.abs(self.psi)**2) * self.lattice_spacing**self.dimensions)
+        if norm > 0:
+            self.psi /= norm
         else:
-            logger.warning("Wave function norm is near zero. Cannot normalize properly.")
-            # Could re-initialize to a default state or raise error depending on desired behavior
-
-    def probability_density(self) -> np.ndarray:
-        return np.abs(self.psi)**2
-
-    def expectation_value(self, operator_func: Callable[[np.ndarray], np.ndarray]) -> complex:
-        # Operator_func takes psi and returns O|psi>
-        op_psi = operator_func(self.psi)
-        return np.sum(np.conj(self.psi) * op_psi) * (self.lattice_spacing**self.dimensions)
-
-    def apply_operator(self, operator_matrix: np.ndarray):
-        # This is tricky for fields; usually operators are applied in specific ways (e.g. Hamiltonian in Schrodinger eq)
-        # For a general state vector (if psi is flat), this works.
-        # If psi is a field, operator_matrix would need to be a superoperator or applied via convolutions/FFTs.
-        # Assuming for now this might be used for global phase or simple transformations.
-        if self.psi.ndim == 1 and operator_matrix.shape == (self.psi.size, self.psi.size):
-            self.psi = np.dot(operator_matrix, self.psi)
-            self.normalize()
+            logger.warning("Cannot normalize: wave function is zero everywhere")
+    
+    def to_momentum_space(self):
+        """Transform to momentum space representation using FFT"""
+        if self.representation == 'position':
+            # Use FFT to transform to momentum space
+            self.psi_momentum = np.fft.fftn(self.psi)
+            self.representation = 'momentum'
+            logger.debug("Transformed to momentum space")
+        return self.psi_momentum
+    
+    def to_position_space(self):
+        """Transform to position space representation using inverse FFT"""
+        if self.representation == 'momentum':
+            # Use inverse FFT to transform back to position space
+            self.psi = np.fft.ifftn(self.psi_momentum)
+            self.representation = 'position'
+            logger.debug("Transformed to position space")
+        return self.psi
+    
+    def probability_density(self):
+        """Calculate probability density |ψ|²"""
+        if self.representation == 'position':
+            return np.abs(self.psi)**2
         else:
-            logger.warning("apply_operator with matrix is ambiguous for multi-dimensional field psi. Consider specific methods.")
-
-
-    def fourier_transform(self) -> np.ndarray:
-        return np.fft.fftn(self.psi)
-
-    def inverse_fourier_transform(self, psi_k: np.ndarray) -> np.ndarray:
-        return np.fft.ifftn(psi_k)
-
-    def collapse(self, position: Optional[Tuple[int, ...]] = None, measurement_operator: Optional[np.ndarray] = None) -> Union[Tuple[int, ...], Any]:
-        if measurement_operator is not None:
-            # Collapse to an eigenstate of the operator
-            eigenvalues, eigenvectors = np.linalg.eigh(measurement_operator) # Assumes Hermitian operator
-            # Project current state onto eigenvectors to get probabilities
-            probabilities = np.array([np.abs(np.vdot(eigenvector, self.psi.flatten()))**2 for eigenvector in eigenvectors.T])
-            probabilities /= np.sum(probabilities)
+            return np.abs(self.to_position_space())**2
+    
+    def expectation_value(self, operator):
+        """Calculate expectation value of an operator using advanced numerical integration"""
+        try:
+            if callable(operator):
+                # Function-based operator - handles differential operators, potentials, etc.
+                if self.representation == 'position':
+                    # Direct calculation: <ψ|Ô|ψ> = ∫ ψ* Ô ψ dτ
+                    operator_psi = operator(self.psi)
+                    integrand = np.conj(self.psi) * operator_psi
+                    
+                    # Use Simpson's rule for better numerical integration
+                    if self.dimensions == 1:
+                        from scipy.integrate import simps
+                        result = simps(integrand, dx=self.lattice_spacing)
+                    elif self.dimensions == 2:
+                        from scipy.integrate import simpson
+                        # Integrate over both dimensions
+                        temp = simpson(integrand, dx=self.lattice_spacing, axis=0)
+                        result = simpson(temp, dx=self.lattice_spacing)
+                    elif self.dimensions == 3:
+                        from scipy.integrate import simpson
+                        # Integrate over all three dimensions
+                        temp1 = simpson(integrand, dx=self.lattice_spacing, axis=0)
+                        temp2 = simpson(temp1, dx=self.lattice_spacing, axis=0)
+                        result = simpson(temp2, dx=self.lattice_spacing)
+                    else:
+                        # Fallback to simple rectangular integration
+                        result = np.sum(integrand) * self.lattice_spacing**self.dimensions
+                else:
+                    # Transform to position space for calculation
+                    original_psi = self.psi.copy()
+                    original_psi_momentum = self.psi_momentum.copy()
+                    
+                    self.to_position_space()
+                    result = self.expectation_value(operator)  # Recursive call
+                    
+                    # Restore original state
+                    self.psi = original_psi
+                    self.psi_momentum = original_psi_momentum
+                    self.representation = 'momentum'
+            else:
+                # Matrix-based operator - handle sparse and dense matrices
+                if hasattr(operator, 'toarray'):
+                    # Sparse matrix
+                    operator_dense = operator.toarray()
+                else:
+                    operator_dense = operator
+                
+                if self.representation == 'position':
+                    psi_flat = self.psi.flatten()
+                    # <ψ|Ô|ψ> = ψ† Ô ψ  
+                    operator_psi = operator_dense.dot(psi_flat)
+                    result = np.sum(np.conj(psi_flat) * operator_psi) * self.lattice_spacing**self.dimensions
+                else:
+                    # Work in position space for matrix operators
+                    original_psi = self.psi.copy()
+                    original_psi_momentum = self.psi_momentum.copy()
+                    
+                    self.to_position_space()
+                    psi_flat = self.psi.flatten()
+                    operator_psi = operator_dense.dot(psi_flat)
+                    result = np.sum(np.conj(psi_flat) * operator_psi) * self.lattice_spacing**self.dimensions
+                    
+                    # Restore original state
+                    self.psi = original_psi
+                    self.psi_momentum = original_psi_momentum
+                    self.representation = 'momentum'
             
-            chosen_index = np.random.choice(len(eigenvalues), p=probabilities)
-            self.psi = eigenvectors[:, chosen_index].reshape(self.grid_shape)
-            self.normalize()
-            logger.info(f"Wave function collapsed to eigenstate {chosen_index} of operator, eigenvalue {eigenvalues[chosen_index]}.")
-            return eigenvalues[chosen_index]
+            logger.debug(f"Calculated expectation value: {result}")
+            return complex(result) if np.iscomplexobj(result) else float(np.real(result))
+            
+        except Exception as e:
+            logger.error(f"Error calculating expectation value: {e}")
+            # Fallback to simple calculation
+            if callable(operator):
+                if self.representation == 'position':
+                    result = np.sum(np.conj(self.psi) * operator(self.psi)) * self.lattice_spacing**self.dimensions
+                else:
+                    position_psi = self.to_position_space()
+                    result = np.sum(np.conj(position_psi) * operator(position_psi)) * self.lattice_spacing**self.dimensions
+            else:
+                if self.representation == 'position':
+                    psi_flat = self.psi.flatten()
+                    result = np.sum(np.conj(psi_flat) * operator.dot(psi_flat)) * self.lattice_spacing**self.dimensions
+                else:
+                    self.to_position_space()
+                    psi_flat = self.psi.flatten()
+                    result = np.sum(np.conj(psi_flat) * operator.dot(psi_flat)) * self.lattice_spacing**self.dimensions
+            return result
+    
+    def apply_operator(self, operator):
+        """Apply an operator to the wave function"""
+        if callable(operator):
+            # Function-based operator
+            if self.representation == 'position':
+                self.psi = operator(self.psi)
+            else:
+                self.psi_momentum = operator(self.psi_momentum)
         else:
-            # Position measurement (default)
-            prob_density = self.probability_density().flatten()
-            prob_density /= np.sum(prob_density) # Normalize probabilities
-            
-            chosen_flat_index = np.random.choice(len(prob_density), p=prob_density)
-            chosen_indices = np.unravel_index(chosen_flat_index, self.grid_shape)
-            
-            self.psi = np.zeros_like(self.psi)
-            self.psi[chosen_indices] = 1.0 # Delta function at the chosen position
-            self.normalize() # Normalization will set the amplitude correctly
-            logger.info(f"Wave function collapsed to position {chosen_indices}.")
-            return chosen_indices
-
-class QuantumField:
-    def __init__(self, grid_size: int, dimensions: int, potential_func: Optional[Callable[[np.ndarray], np.ndarray]] = None, mass: float = 1.0, constants: Optional[PhysicsConstants] = None):
-        self.grid_size: int = grid_size
-        self.spatial_dimensions: int = dimensions # Number of spatial dimensions for the field
-        self.shape: Tuple[int, ...] = (grid_size,) * self.spatial_dimensions
-        self.mass: float = mass
-        self.constants = constants if constants else PhysicsConstants()
+            # Matrix-based operator
+            if self.representation == 'position':
+                self.psi = operator.dot(self.psi)
+            else:
+                self.psi_momentum = operator.dot(self.psi_momentum)
         
-        # Initialize psi as a complex field
-        initial_psi_real = np.random.rand(*self.shape) - 0.5
-        initial_psi_imag = np.random.rand(*self.shape) - 0.5
-        self.psi: np.ndarray = initial_psi_real + 1j * initial_psi_imag
-        self.wave_function = WaveFunction(self.psi, lattice_spacing=1.0/grid_size) # Lattice spacing assumption
-
-        self.potential_func = potential_func if potential_func else lambda coords: np.zeros(self.shape)
-        self.potential: np.ndarray = self._initialize_potential()
-        
-        self.coupling: float = 0.0 # Self-interaction coupling, can be set later
-        logger.info(f"Initialized QuantumField: {self.spatial_dimensions}D, Size: {self.grid_size}, Mass: {self.mass}")
-
-    def _initialize_potential(self) -> np.ndarray:
-        coords = np.indices(self.shape) # Generates a list of arrays: [dim0_coords, dim1_coords, ...]
-        # Normalize coordinates to be in [-0.5, 0.5] range for potential function if it expects that
-        normalized_coords = [(c / (self.grid_size -1) - 0.5) * self.grid_size * self.wave_function.lattice_spacing for c in coords]
-        return self.potential_func(np.array(normalized_coords))
-
-    def set_potential(self, potential_array: np.ndarray):
-        if potential_array.shape != self.shape:
-            raise ValueError("Potential array shape must match field shape.")
-        self.potential = potential_array
-
-    def add_potential_source(self, source_potential: np.ndarray):
-        if source_potential.shape != self.shape:
-            raise ValueError("Source potential array shape must match field shape.")
-        self.potential += source_potential
-        
-    def _laplacian(self, field: np.ndarray) -> np.ndarray:
-        # Finite difference Laplacian for N dimensions
-        laplacian_psi = np.zeros_like(field, dtype=complex)
-        spacing_sq = self.wave_function.lattice_spacing**2
-        for dim in range(self.spatial_dimensions):
-            laplacian_psi += (np.roll(field, -1, axis=dim) - 2 * field + np.roll(field, 1, axis=dim)) / spacing_sq
-        return laplacian_psi
-
-    def hamiltonian_operator(self, psi_input: np.ndarray) -> np.ndarray:
-        # H = - (hbar^2 / 2m) * Laplacian(psi) + V*psi + g*|psi|^2*psi
-        # Assuming hbar = 1 for simulation units, or absorbed into mass/coupling
-        kinetic_term = - (self.constants.h_bar**2 / (2 * self.mass * self.mass_scale)) * self._laplacian(psi_input)
-        potential_term = self.potential * psi_input
-        
-        interaction_term = 0.0
-        if self.coupling != 0: # Self-interaction term (e.g., for Gross-Pitaevskii)
-            interaction_term = self.coupling * (np.abs(psi_input)**2) * psi_input
-            
-        return kinetic_term + potential_term + interaction_term
-
-    def evolve_field(self, dt: float):
-        # Split-step Fourier method for evolution: exp(-i H dt) psi
-        # H = T + V.  exp(-i(T+V)dt) approx exp(-iVdt/2) exp(-iTdt) exp(-iVdt/2)
-        
-        # Half step in potential
-        self.psi *= np.exp(-0.5j * self.potential * dt / self.constants.h_bar)
-        if self.coupling != 0:
-             self.psi *= np.exp(-0.5j * self.coupling * (np.abs(self.psi)**2) * dt / self.constants.h_bar)
-
-        # Full step in kinetic (momentum space)
-        psi_k = self.wave_function.fourier_transform() # Uses self.psi from WaveFunction
-        
-        # Calculate momentum grid (k-space coordinates)
-        k_coords = []
-        for dim_idx in range(self.spatial_dimensions):
-            k_dim = np.fft.fftfreq(self.shape[dim_idx], d=self.wave_function.lattice_spacing) * 2 * np.pi
-            k_coords.append(k_dim)
-        
-        k_grids = np.meshgrid(*k_coords, indexing='ij')
-        k_squared = sum(kg**2 for kg in k_grids)
-        
-        kinetic_operator_k = (self.constants.h_bar**2 * k_squared) / (2 * self.mass * self.mass_scale)
-        psi_k *= np.exp(-1j * kinetic_operator_k * dt / self.constants.h_bar)
-        
-        self.psi = self.wave_function.inverse_fourier_transform(psi_k) # Updates self.psi in WaveFunction too
-
-        # Another half step in potential
-        self.psi *= np.exp(-0.5j * self.potential * dt / self.constants.h_bar)
-        if self.coupling != 0:
-             self.psi *= np.exp(-0.5j * self.coupling * (np.abs(self.psi)**2) * dt / self.constants.h_bar)
-
-        self.wave_function.normalize() # Normalize after evolution
-        self.psi = self.wave_function.psi # Ensure QuantumField.psi is synced with WaveFunction.psi
-
-    def measure_observables(self) -> Dict[str, float]:
-        self.wave_function.psi = self.psi # Ensure WaveFunction has current psi
-        prob_density = self.wave_function.probability_density()
-        
-        # Total probability (should be 1 after normalization)
-        total_prob = np.sum(prob_density) * (self.wave_function.lattice_spacing**self.spatial_dimensions)
-        
-        # Energy (simplified - expectation value of H)
-        # This is computationally intensive if H is not diagonal in current basis
-        # For a rough estimate, we can use <psi|V|psi> + <psi|T|psi>
-        # H_psi = self.hamiltonian_operator(self.psi)
-        # total_energy = np.real(np.sum(np.conj(self.psi) * H_psi) * (self.wave_function.lattice_spacing**self.spatial_dimensions))
-        
-        # Simplified: sum of potential energy density + rough kinetic estimate from gradients
-        potential_energy_density = self.potential * prob_density
-        total_potential_energy = np.sum(potential_energy_density) * (self.wave_function.lattice_spacing**self.spatial_dimensions)
-
-        # Kinetic energy from gradient (approximate)
-        grad_psi_sq = np.zeros_like(self.psi, dtype=float)
-        for dim in range(self.spatial_dimensions):
-            grad_dim = (np.roll(self.psi, -1, axis=dim) - np.roll(self.psi, 1, axis=dim)) / (2 * self.wave_function.lattice_spacing)
-            grad_psi_sq += np.abs(grad_dim)**2
-        kinetic_energy_density = (self.constants.h_bar**2 / (2 * self.mass * self.mass_scale)) * grad_psi_sq
-        total_kinetic_energy = np.sum(kinetic_energy_density) * (self.wave_function.lattice_spacing**self.spatial_dimensions)
-        total_energy = np.real(total_potential_energy + total_kinetic_energy)
-
-        # Shannon Entropy of the probability distribution
-        # Add epsilon to avoid log(0)
-        prob_density_flat = prob_density.flatten() + 1e-12 
-        entropy = -np.sum(prob_density_flat * np.log(prob_density_flat)) * (self.wave_function.lattice_spacing**self.spatial_dimensions)
-        
-        return {
-            'total_probability': float(total_prob),
-            'total_energy_estimate': float(total_energy),
-            'entropy': float(entropy),
-            'mean_field_amplitude': float(np.mean(np.abs(self.psi)))
-        }
-
-    def vacuum_fluctuations(self, scale: float = 0.01):
-        noise_real = (np.random.rand(*self.shape) - 0.5) * scale
-        noise_imag = (np.random.rand(*self.shape) - 0.5) * scale
-        self.psi += noise_real + 1j * noise_imag
-        self.wave_function.psi = self.psi
-        self.wave_function.normalize()
-        self.psi = self.wave_function.psi
-
-# ... (QuantumMonteCarlo, SymbolicOperators, EthicalGravityManifold, QuantumStateVector implementations will follow)
-
-# Placeholder for the rest of the file content including other classes.
-# The full, refined implementations for all classes would be here.
-logger.info("quantum_physics.py module structure defined.")
-
-# Dummy/Placeholder implementations for classes mentioned in subtask but not yet fully detailed above
-# This is to ensure the file is syntactically valid if other parts are not yet filled.
-# In the final overwrite, these would be full implementations.
-
-class QuantumMonteCarlo:
-    def __init__(self, params: Optional[Dict] = None): self.params = params or {}; self.q_field = QuantumField(grid_size=params.get("grid_size",16), dimensions=params.get("spatial_dim",1))
-    def run_simulation(self, steps=100, temperature=1.0, measure_interval=10): logger.info("QMC run_simulation called (placeholder)."); return [{"step":s, "energy":random.random()} for s in range(0,steps,measure_interval)]
-    def propose_move(self): pass
-    def calculate_action(self): return 0.0
-    def accept_reject_move(self): pass
-
-class SymbolicOperators:
-    @staticmethod
-    def ethical_constraint_operator(ethical_vector: List[float], num_states: int) -> np.ndarray:
-        logger.info(f"Ethical constraint operator called with vector {ethical_vector} (placeholder).")
-        return np.eye(num_states, dtype=complex) # Identity op for now
-    @staticmethod
-    def narrative_focus_operator(narrative_archetype_name: str, num_states: int) -> np.ndarray:
-        logger.info(f"Narrative focus operator for {narrative_archetype_name} called (placeholder).")
-        return np.eye(num_states, dtype=complex) # Identity op for now
-    @staticmethod
-    def quantum_collapse(psi: np.ndarray, positions: Optional[np.ndarray]=None, method: str = "random") -> Tuple[np.ndarray, Any]:
-        logger.info(f"Quantum collapse called with method {method} (placeholder).")
-        # Simplified: collapse to a random single point if positions not given, or first position if given
-        collapsed_psi = np.zeros_like(psi)
-        idx = tuple(p[0] for p in positions) if positions is not None and all(len(p)>0 for p in positions) else tuple(np.random.randint(0, s) for s in psi.shape)
-        if len(idx) != psi.ndim: idx = tuple(idx[i] for i in range(psi.ndim)) # ensure idx matches psi dimensions
-        
-        collapsed_psi[idx] = 1.0 + 0.0j
-        norm = np.sqrt(np.sum(np.abs(collapsed_psi)**2))
-        if norm > 1e-9 : collapsed_psi /= norm
-        return collapsed_psi, idx
-
-
-class EthicalGravityManifold:
-    def __init__(self, dimensions: int = 4, resolution: int = 16, ethical_dimensions: int = 3):
-        self.dimensions = dimensions; self.resolution = resolution; self.ethical_dimensions = ethical_dimensions
-        self.metric_tensor = np.eye(dimensions, dtype=np.float64); self.metric_tensor[0,0] = -1.0
-        self.ethical_tensor = np.zeros((resolution,) * dimensions + (ethical_dimensions,))
-        self.coupled_metric = np.zeros((resolution,) * dimensions + (dimensions, dimensions))
-        self.coupling_constant = 0.01 # Reduced coupling for stability
-        self._initialize_flat_space()
-        logger.info("EthicalGravityManifold initialized.")
-    def _initialize_flat_space(self):
-        for idx in np.ndindex((self.resolution,) * self.dimensions): self.coupled_metric[idx] = self.metric_tensor.copy()
-    def apply_ethical_charge(self, position: List[float], ethical_vector: List[float], radius: float = 0.2):
-        grid_indices = [max(0, min(self.resolution - 1, int((p + 1) / 2 * (self.resolution - 1)))) for i,p in enumerate(position) if i < self.dimensions]
-        if len(grid_indices) != self.dimensions: logger.warning("Position dimensions mismatch manifold dimensions"); return
-
-        # Simplified: apply charge directly at the point, diffusion/evolution handles spread
-        current_charge = self.ethical_tensor[tuple(grid_indices)]
-        new_charge = np.array(ethical_vector[:self.ethical_dimensions]) # Ensure correct length
-        self.ethical_tensor[tuple(grid_indices)] = np.clip(current_charge + new_charge, -1.0, 1.0) # Add and clip
-        self._update_coupled_metric_point(tuple(grid_indices)) # Update metric locally
-    def _update_coupled_metric_point(self, grid_idx: Tuple[int, ...]):
-        ethical_charge_at_point = self.ethical_tensor[grid_idx]
-        perturbation = np.zeros((self.dimensions, self.dimensions))
-        # Simplified perturbation: diagonal terms affected by sum of ethical charges, off-diagonal by differences
-        # This is a placeholder for actual GR calculations from an energy-momentum tensor derived from ethical field
-        diag_perturb = self.coupling_constant * np.sum(ethical_charge_at_point) / self.ethical_dimensions
-        for i in range(self.dimensions): perturbation[i,i] = diag_perturb
-        self.coupled_metric[grid_idx] = self.metric_tensor + perturbation
-    def evolve_manifold(self, dt: float): # Diffusion/relaxation of ethical field
-        # Simple diffusion for ethical_tensor (can be improved with more physical model)
-        for _ in range(self.ethical_dimensions): # Iterate over each ethical dimension
-            laplacian_ethical = np.zeros_like(self.ethical_tensor[...,_])
-            for dim_axis in range(self.dimensions):
-                laplacian_ethical += (np.roll(self.ethical_tensor[...,_], -1, axis=dim_axis) - 2 * self.ethical_tensor[...,_] + np.roll(self.ethical_tensor[...,_], 1, axis=dim_axis))
-            self.ethical_tensor[...,_] += 0.1 * laplacian_ethical * dt # 0.1 is diffusion constant
-            self.ethical_tensor[...,_] = np.clip(self.ethical_tensor[...,_], -1.0, 1.0) # Keep charges bounded
-        # After ethical_tensor evolves, coupled_metric needs full recompute
-        for idx in np.ndindex((self.resolution,) * self.dimensions): self._update_coupled_metric_point(idx)
-    def get_ethical_field(self, dimension_index: int) -> Optional[np.ndarray]:
-        if 0 <= dimension_index < self.ethical_dimensions: return self.ethical_tensor[..., dimension_index]
-        return None
-    def measure_curvature(self, position: List[float]): return random.random() # Placeholder
-
-class QuantumStateVector:
-    def __init__(self, num_qubits: int, initial_state_data: Optional[np.ndarray] = None):
-        self.num_qubits = num_qubits
-        self.dimension = 2**num_qubits
-        if initial_state_data is not None:
-            if initial_state_data.shape == (self.dimension,) and initial_state_data.dtype == np.complex128:
-                self.vector = initial_state_data
-            else: raise ValueError("Invalid initial state data.")
-        else:
-            self.vector = np.zeros(self.dimension, dtype=np.complex128)
-            self.vector[0] = 1.0 # Default to |0...0> state
+        # Normalize after operator application
         self.normalize()
-    def normalize(self): norm = np.linalg.norm(self.vector); self.vector /= (norm if norm > 1e-9 else 1.0)
-    def get_probability(self, basis_state_index: int) -> float: return np.abs(self.vector[basis_state_index])**2
-    def measure_state(self, basis_index: int) -> int: # Measures a single qubit in computational basis
-        # This is simplified. A full measurement projects onto the measured state.
-        # For measuring a specific qubit, one would typically calculate probabilities for that qubit.
-        # This implementation measures the whole state against a specific basis_index.
-        probabilities = np.abs(self.vector)**2
-        outcome_index = np.random.choice(self.dimension, p=probabilities/np.sum(probabilities))
-        # Collapse state (simplified to chosen outcome)
-        self.vector = np.zeros(self.dimension, dtype=np.complex128)
-        self.vector[outcome_index] = 1.0
-        return outcome_index 
-    def apply_operator(self, operator_matrix: np.ndarray):
-        if operator_matrix.shape != (self.dimension, self.dimension): raise ValueError("Operator shape mismatch.")
-        self.vector = np.dot(operator_matrix, self.vector); self.normalize()
+        logger.debug("Applied operator to wave function")
+    
+    def evolve(self, hamiltonian, dt):
+        """Evolve wave function using advanced numerical integration methods"""
+        # Use 4th-order Runge-Kutta for time evolution
+        # ∂ψ/∂t = -i/ħ H ψ
+        
+        h_bar = 1.0  # Natural units
+        
+        if self.representation == 'position':
+            # Store initial state
+            psi_initial = self.psi.copy()
+            
+            # Calculate k1 = -i/ħ H ψ(t)
+            k1 = -1j / h_bar * hamiltonian(psi_initial) * dt
+            
+            # Calculate k2 = -i/ħ H [ψ(t) + k1/2]
+            psi_temp = psi_initial + k1/2
+            k2 = -1j / h_bar * hamiltonian(psi_temp) * dt
+            
+            # Calculate k3 = -i/ħ H [ψ(t) + k2/2]
+            psi_temp = psi_initial + k2/2
+            k3 = -1j / h_bar * hamiltonian(psi_temp) * dt
+            
+            # Calculate k4 = -i/ħ H [ψ(t) + k3]
+            psi_temp = psi_initial + k3
+            k4 = -1j / h_bar * hamiltonian(psi_temp) * dt
+            
+            # Final update: ψ(t+dt) = ψ(t) + (k1 + 2k2 + 2k3 + k4)/6
+            self.psi = psi_initial + (k1 + 2*k2 + 2*k3 + k4)/6
+            self.normalize()
+            
+            logger.debug(f"Evolved wave function using RK4 for dt={dt}")
+        else:
+            # First transform to position space
+            self.to_position_space()
+            # Apply RK4 evolution
+            self.evolve(hamiltonian, dt)
+            # Transform back to momentum space
+            self.to_momentum_space()
+    
+    def collapse(self, measurement_operator=None):
+        """Simulate wave function collapse after measurement"""
+        if measurement_operator is None:
+            # Default: position measurement
+            prob = self.probability_density()
+            
+            # Flatten for easier random selection
+            flat_prob = prob.flatten()
+            flat_prob = flat_prob / np.sum(flat_prob)
+            
+            # Random selection based on probability
+            indices = np.random.choice(range(len(flat_prob)), p=flat_prob)
+            
+            # Convert flat index back to multidimensional
+            multi_indices = np.unravel_index(indices, prob.shape)
+            
+            # Collapse to delta function at measured position
+            self.psi = np.zeros_like(self.psi)
+            self.psi[multi_indices] = 1.0
+            
+            # Renormalize
+            self.normalize()
+            logger.info(f"Wave function collapsed to position {multi_indices}")
+        else:
+            # Custom measurement operator - full eigenvalue decomposition
+            try:
+                if callable(measurement_operator):
+                    # Apply operator to get result
+                    operator_result = measurement_operator(self.psi)
+                    # For callable operators, we need to create a matrix representation
+                    # by applying to a complete basis
+                    basis_size = np.prod(self.psi.shape)
+                    operator_matrix = np.zeros((basis_size, basis_size), dtype=complex)
+                    
+                    # Create basis states (computational basis)
+                    for i in range(basis_size):
+                        basis_state = np.zeros(basis_size, dtype=complex)
+                        basis_state[i] = 1.0
+                        basis_state = basis_state.reshape(self.psi.shape)
+                        result = measurement_operator(basis_state).flatten()
+                        operator_matrix[:, i] = result
+                    
+                    # Compute eigendecomposition
+                    eigenvalues, eigenvectors = np.linalg.eigh(operator_matrix)
+                    # Reshape eigenvectors back to grid shape
+                    eigenvectors = eigenvectors.T.reshape(len(eigenvalues), *self.psi.shape)
+                else:
+                    # Matrix-based operator
+                    if measurement_operator.shape != (np.prod(self.psi.shape), np.prod(self.psi.shape)):
+                        raise ValueError(f"Measurement operator shape {measurement_operator.shape} doesn't match flattened wave function size {np.prod(self.psi.shape)}")
+                    
+                    eigenvalues, eigenvectors = np.linalg.eigh(measurement_operator)
+                    # Reshape eigenvectors to match wave function grid
+                    eigenvectors = eigenvectors.T.reshape(len(eigenvalues), *self.psi.shape)
+                
+                # Calculate Born rule probabilities
+                psi_flat = self.psi.flatten()
+                probabilities = []
+                
+                for i, eigenvector in enumerate(eigenvectors):
+                    eigenvector_flat = eigenvector.flatten()
+                    # Inner product <eigenvector|psi>
+                    amplitude = np.sum(np.conj(eigenvector_flat) * psi_flat) * self.lattice_spacing**self.dimensions
+                    # Born rule: P = |<eigenvector|psi>|²
+                    probability = np.abs(amplitude)**2
+                    probabilities.append(probability)
+                
+                # Normalize probabilities
+                probabilities = np.array(probabilities)
+                total_prob = np.sum(probabilities)
+                if total_prob > 0:
+                    probabilities = probabilities / total_prob
+                else:
+                    # Fallback to uniform distribution if all probabilities are zero
+                    probabilities = np.ones(len(probabilities)) / len(probabilities)
+                
+                # Quantum measurement: randomly select eigenstate
+                selected_index = np.random.choice(range(len(probabilities)), p=probabilities)
+                selected_eigenvalue = eigenvalues[selected_index]
+                
+                # Collapse to selected eigenstate
+                self.psi = eigenvectors[selected_index].copy()
+                self.normalize()
+                
+                logger.info(f"Wave function collapsed to eigenstate {selected_index} with eigenvalue {selected_eigenvalue:.6f}")
+                return selected_eigenvalue
+                
+            except Exception as e:
+                logger.warning(f"Error in measurement operator collapse: {e}")
+                logger.warning("Falling back to position measurement")
+                # Fallback to position measurement
+                prob = self.probability_density()
+                flat_prob = prob.flatten()
+                flat_prob = flat_prob / np.sum(flat_prob)
+                indices = np.random.choice(range(len(flat_prob)), p=flat_prob)
+                multi_indices = np.unravel_index(indices, prob.shape)
+                self.psi = np.zeros_like(self.psi)
+                self.psi[multi_indices] = 1.0
+                self.normalize()
+                return None
+    
+    def visualize(self, title="Wave Function Visualization"):
+        """Visualize the wave function"""
+        prob = self.probability_density()
+        
+        if self.dimensions == 1:
+            plt.figure(figsize=(10, 6))
+            x = self.grid[0]
+            plt.plot(x, prob, 'b-', label=r'$|\psi(x)|^2$')
+            plt.plot(x, np.real(self.psi), 'g--', label=r'$\mathrm{Re}[\psi(x)]$')
+            plt.plot(x, np.imag(self.psi), 'r--', label=r'$\mathrm{Im}[\psi(x)]$')
+            plt.title(title)
+            plt.xlabel('Position')
+            plt.ylabel('Probability Density')
+            plt.legend()
+            plt.grid(True)
+            
+        elif self.dimensions == 2:
+            plt.figure(figsize=(10, 8))
+            X, Y = self.grid
+            plt.contourf(X, Y, prob, 50, cmap='viridis')
+            plt.colorbar(label='Probability Density')
+            plt.title(title)
+            plt.xlabel('X')
+            plt.ylabel('Y')
+            
+        elif self.dimensions == 3:
+            # For 3D, show slices through the center
+            center = self.grid_size // 2
+            
+            fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+            
+            # XY plane (constant z)
+            axes[0].contourf(self.grid[0][:,:,center], self.grid[1][:,:,center], 
+                           prob[:,:,center], 50, cmap='viridis')
+            axes[0].set_title('XY Plane (z=0)')
+            axes[0].set_xlabel('X')
+            axes[0].set_ylabel('Y')
+            
+            # XZ plane (constant y)
+            axes[1].contourf(self.grid[0][:,center,:], self.grid[2][:,center,:], 
+                           prob[:,center,:], 50, cmap='viridis')
+            axes[1].set_title('XZ Plane (y=0)')
+            axes[1].set_xlabel('X')
+            axes[1].set_ylabel('Z')
+            
+            # YZ plane (constant x)
+            axes[2].contourf(self.grid[1][center,:,:], self.grid[2][center,:,:], 
+                           prob[center,:,:], 50, cmap='viridis')
+            axes[2].set_title('YZ Plane (x=0)')
+            axes[2].set_xlabel('Y')
+            axes[2].set_ylabel('Z')
+            
+            plt.tight_layout()
+            
+        else:
+            logger.warning(f"Visualization not implemented for {self.dimensions} dimensions")
+            return
+        
+        plt.tight_layout()
+        return plt.gcf()
+    
+    def hamiltonian(self, psi):
+        """Apply the Hamiltonian operator to the wavefunction"""
+        # H = -∇²/2m + V
+        
+        # Calculate kinetic term using discrete Laplacian
+        kinetic = np.zeros_like(psi, dtype=complex)
+        
+        for dim in range(self.dimensions):
+            # Second derivative in this dimension
+            slice_next = [slice(None)] * self.dimensions
+            slice_prev = [slice(None)] * self.dimensions
+            slice_center = [slice(None)] * self.dimensions
+            
+            slice_next[dim] = slice(1, None)
+            slice_prev[dim] = slice(0, -1)
+            slice_center[dim] = slice(1, -1)
+            
+            # Apply finite difference for second derivative
+            kinetic[tuple(slice_center)] += (psi[tuple(slice_next)] - 2 * psi[tuple(slice_center)] + psi[tuple(slice_prev)]) / self.lattice_spacing**2
+        
+        # Simple harmonic oscillator potential
+        potential = np.zeros_like(psi, dtype=complex)
+        
+        if self.dimensions == 1:
+            x = self.grid[0]
+            potential = 0.5 * x**2 * psi
+        elif self.dimensions == 2:
+            X, Y = self.grid
+            potential = 0.5 * (X**2 + Y**2) * psi
+        elif self.dimensions == 3:
+            X, Y, Z = self.grid
+            potential = 0.5 * (X**2 + Y**2 + Z**2) * psi
+        
+        # Combine kinetic and potential terms
+        # H = -∇²/2m + V with m=1 (natural units)
+        hamiltonian_psi = -0.5 * kinetic + potential
+        
+        return hamiltonian_psi
 
-# Final check for missing imports or minor fixes
-# Example: matplotlib is imported but not used outside visualize methods.
-# If visualize methods are not critical for this step, plt can be removed.
-# For now, kept for completeness of the provided structure.
+    class PhysicsConstants:
+        """Physics constants for the simulation"""
+        
+        def __init__(self):
+            # Universal constants
+            self.c = 299792458  # Speed of light (m/s)
+            self.G = 6.67430e-11  # Gravitational constant (m^3/kg/s^2)
+            self.h = 6.62607015e-34  # Planck constant (J⋅s)
+            self.k_B = 1.380649e-23  # Boltzmann constant (J/K)
+            
+            # Simulation constants
+            self.time_scale = 1e-30  # Time scale modifier
+            self.space_scale = 1e-10  # Space scale modifier
+            self.mass_scale = 1e20    # Mass scale modifier
+            
+            # Derived constants
+            self.h_bar = self.h / (2 * np.pi)  # Reduced Planck constant
+            self.planck_length = np.sqrt(self.h_bar * self.G / self.c**3)  # Planck length
+            self.planck_time = self.planck_length / self.c  # Planck time
+            self.planck_mass = np.sqrt(self.h_bar * self.c / self.G)  # Planck mass
+            self.planck_temperature = np.sqrt(self.h_bar * self.c**5 / (self.G * self.k_B**2))  # Planck temperature
+            
+            # Cosmological constants
+            self.hubble_constant = 70.0  # km/s/Mpc
+            self.dark_energy_density = 0.7  # Fraction of critical density
+            self.dark_matter_density = 0.25  # Fraction of critical density
+            self.baryonic_matter_density = 0.05  # Fraction of critical density
 
-# Add __all__ for explicit exports
+    class QuantumField:
+        """Quantum field simulation for cosmic evolution"""
+        
+        def __init__(self, params=None):
+            """Initialize a quantum field"""
+            self.params = params or {}
+            self.grid_size = self.params.get('grid_size', 64)
+            self.dimensions = self.params.get('dimensions', 4)
+            self.spatial_dim = self.params.get('spatial_dim', 3)
+            
+            # Initialize the field
+            self.psi = np.zeros((self.grid_size,) * self.spatial_dim, dtype=complex)
+            
+            # Field configuration
+            center = self.grid_size // 2
+            sigma = self.grid_size // 8
+            
+            # Create a Gaussian wave packet
+            indices = np.indices((self.grid_size,) * self.spatial_dim)
+            
+            # Calculate distance from center
+            r_squared = sum((indices[i] - center)**2 for i in range(self.spatial_dim))
+            
+            # Set initial field configuration
+            self.psi = np.exp(-r_squared / (2 * sigma**2))
+            self.psi /= np.sqrt(np.sum(np.abs(self.psi)**2))
+            
+            # Set up physical parameters
+            self.potential_type = self.params.get('potential_type', 'harmonic')
+            self.mass = self.params.get('mass', 1.0)
+            self.coupling = self.params.get('coupling', 0.1)
+            self.max_iterations = self.params.get('max_iterations', 1000)
+            
+            # Set up grid spacing and time step
+            self.lattice_spacing = 1.0
+            self.dt = 0.01
+            
+            # Initialize potential
+            self.potential = np.zeros((self.grid_size,) * self.spatial_dim)
+            self._setup_potential()
+            
+            logger.info(f"Initialized QuantumField with {self.spatial_dim}D grid of size {self.grid_size}")
+        
+        def _setup_potential(self):
+            """Set up the potential energy function based on potential_type"""
+            indices = np.indices((self.grid_size,) * self.spatial_dim)
+            center = self.grid_size // 2
+            
+            if self.potential_type == 'harmonic':
+                # Harmonic oscillator: V(x) = 0.5 * ω^2 * x^2
+                omega = 1.0
+                r_squared = sum((indices[i] - center)**2 for i in range(self.spatial_dim))
+                self.potential = 0.5 * omega**2 * r_squared
+                
+            elif self.potential_type == 'coulomb':
+                # Coulomb potential: V(r) = k/r
+                k = 1.0
+                r_squared = sum((indices[i] - center)**2 for i in range(self.spatial_dim))
+                r = np.sqrt(r_squared)
+                np.place(r, r == 0, [1e-10])  # Avoid division by zero
+                self.potential = k / r
+                
+            elif self.potential_type == 'woods_saxon':
+                # Woods-Saxon potential for nuclear physics
+                V0 = -50.0  # Depth in MeV
+                R = self.grid_size // 4  # Nuclear radius
+                a = 0.5  # Surface diffuseness
+                
+                r_squared = sum((indices[i] - center)**2 for i in range(self.spatial_dim))
+                r = np.sqrt(r_squared)
+                self.potential = V0 / (1 + np.exp((r - R) / a))
+                
+            elif self.potential_type == 'cosmological':
+                # Simplified cosmological potential
+                # Double-well potential for inflation
+                lambda_param = 0.1
+                eta = 1.0
+                
+                # We use the first dimension as the inflaton field
+                phi = indices[0] - center
+                self.potential = lambda_param * (phi**2 - eta**2)**2
+                
+            else:
+                logger.warning(f"Unknown potential type: {self.potential_type}, using zero potential")
+        
+        def hamiltonian(self, psi):
+            """Apply the Hamiltonian operator to the wavefunction"""
+            # H = -∇²/2m + V
+            
+            # Calculate kinetic term using discrete Laplacian
+            kinetic = np.zeros_like(psi, dtype=complex)
+            
+            for dim in range(self.spatial_dim):
+                # Second derivative in this dimension
+                slice_next = [slice(None)] * self.spatial_dim
+                slice_prev = [slice(None)] * self.spatial_dim
+                slice_center = [slice(None)] * self.spatial_dim
+                
+                slice_next[dim] = slice(1, None)
+                slice_prev[dim] = slice(0, -1)
+                slice_center[dim] = slice(1, -1)
+                
+                # Apply finite difference for second derivative
+                kinetic[tuple(slice_center)] += (psi[tuple(slice_next)] - 2 * psi[tuple(slice_center)] + psi[tuple(slice_prev)]) / self.lattice_spacing**2
+            
+            # Divide by 2m for kinetic energy
+            kinetic = -kinetic / (2 * self.mass)
+            
+            # Add potential energy
+            h_psi = kinetic + self.potential * psi
+            
+            # Add self-interaction term if coupling is non-zero
+            if self.coupling != 0:
+                h_psi += self.coupling * np.abs(psi)**2 * psi
+            
+            return h_psi
+        
+        def evolve_field(self, dt=None):
+            """Evolve the field for a time step using the Schrödinger equation"""
+            if dt is not None:
+                self.dt = dt
+                
+            # Time evolution
+            # We use a simple explicit Euler method here
+            # For a production system, use split-operator or Crank-Nicolson methods
+            
+            # Calculate H|ψ⟩
+            h_psi = self.hamiltonian(self.psi)
+            
+            # psi(t+dt) = psi(t) - i*dt*H*psi(t)
+            self.psi = self.psi - 1j * self.dt * h_psi
+            
+            # Normalize
+            norm = np.sqrt(np.sum(np.abs(self.psi)**2) * self.lattice_spacing**self.spatial_dim)
+            if norm > 0:
+                self.psi /= norm
+                
+            logger.debug(f"Evolved field for dt={self.dt}")
+            return self.psi
+        
+        def monte_carlo_update(self, temperature=1.0):
+            """Perform a Monte Carlo update of the field configuration"""
+            # This would implement a Metropolis-Hastings algorithm
+            # For quantum field theory in thermal equilibrium
+            
+            # Calculate current action
+            current_action = self._calculate_action()
+            
+            # Make a trial change to the field
+            original_psi = self.psi.copy()
+            
+            # Random perturbation
+            delta_psi = np.random.normal(0, 0.1, size=self.psi.shape) + 1j * np.random.normal(0, 0.1, size=self.psi.shape)
+            self.psi += delta_psi
+            
+            # Normalize
+            norm = np.sqrt(np.sum(np.abs(self.psi)**2) * self.lattice_spacing**self.spatial_dim)
+            if norm > 0:
+                self.psi /= norm
+            
+            # Calculate new action
+            new_action = self._calculate_action()
+            
+            # Metropolis acceptance criterion
+            delta_action = new_action - current_action
+            if delta_action < 0 or np.random.random() < np.exp(-delta_action / temperature):
+                # Accept the update
+                logger.debug(f"Monte Carlo update accepted: dS={delta_action:.4f}")
+                return True
+            else:
+                # Reject the update
+                self.psi = original_psi
+                logger.debug(f"Monte Carlo update rejected: dS={delta_action:.4f}")
+                return False
+        
+        def _calculate_action(self):
+            """Calculate the Euclidean action of the current field configuration"""
+            # S = ∫d⁴x [0.5*|∇ψ|² + V(ψ)]
+            
+            # Gradient term
+            gradient_sq = 0
+            
+            for dim in range(self.spatial_dim):
+                # Calculate gradient in this dimension
+                slice_next = [slice(None)] * self.spatial_dim
+                slice_prev = [slice(None)] * self.spatial_dim
+                
+                slice_next[dim] = slice(1, None)
+                slice_prev[dim] = slice(0, -1)
+                
+                # Finite difference for derivative
+                gradient = (self.psi[tuple(slice_next)] - self.psi[tuple(slice_prev)]) / (2 * self.lattice_spacing)
+                gradient_sq += np.sum(np.abs(gradient)**2)
+            
+            # Potential term
+            potential_term = np.sum(self.potential * np.abs(self.psi)**2)
+            
+            # Interaction term
+            interaction_term = 0
+            if self.coupling != 0:
+                interaction_term = self.coupling * np.sum(np.abs(self.psi)**4) / 4
+            
+            # Total action
+            action = 0.5 * gradient_sq + potential_term + interaction_term
+            
+            return action * self.lattice_spacing**self.spatial_dim
+        
+        def vacuum_fluctuations(self, scale=0.01):
+            """Add vacuum fluctuations to the field"""
+            # Generate random field fluctuations
+            fluctuations = np.random.normal(0, scale, size=self.psi.shape) + 1j * np.random.normal(0, scale, size=self.psi.shape)
+            
+            # Add to field
+            self.psi += fluctuations
+            
+            # Normalize
+            norm = np.sqrt(np.sum(np.abs(self.psi)**2) * self.lattice_spacing**self.spatial_dim)
+            if norm > 0:
+                self.psi /= norm
+                
+            logger.debug(f"Added vacuum fluctuations with scale {scale}")
+            
+        def visualize_field(self, title="Quantum Field Visualization"):
+            """Visualize the quantum field"""
+            field_density = np.abs(self.psi)**2
+            
+            if self.spatial_dim == 1:
+                plt.figure(figsize=(10, 6))
+                x = np.arange(self.grid_size)
+                plt.plot(x, field_density, 'b-', label=r'$|\psi(x)|^2$')
+                plt.plot(x, self.potential / np.max(self.potential), 'r--', label='Normalized Potential')
+                plt.title(title)
+                plt.xlabel('Position')
+                plt.ylabel('Field Density')
+                plt.legend()
+                plt.grid(True)
+                
+            elif self.spatial_dim == 2:
+                plt.figure(figsize=(12, 5))
+                
+                # Field density
+                plt.subplot(1, 2, 1)
+                plt.contourf(field_density, 50, cmap='viridis')
+                plt.colorbar(label='Field Density')
+                plt.title('Field Density')
+                
+                # Potential
+                plt.subplot(1, 2, 2)
+                plt.contourf(self.potential, 50, cmap='plasma')
+                plt.colorbar(label='Potential')
+                plt.title('Potential Energy')
+                
+            elif self.spatial_dim == 3:
+                # For 3D, show slices through the center
+                center = self.grid_size // 2
+                
+                fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+                
+                # Field density slices
+                axes[0, 0].contourf(field_density[:,:,center], 50, cmap='viridis')
+                axes[0, 0].set_title('XY Plane Field Density')
+                
+                axes[0, 1].contourf(field_density[:,center,:], 50, cmap='viridis')
+                axes[0, 1].set_title('XZ Plane Field Density')
+                
+                axes[0, 2].contourf(field_density[center,:,:], 50, cmap='viridis')
+                axes[0, 2].set_title('YZ Plane Field Density')
+                
+                # Potential slices
+                axes[1, 0].contourf(self.potential[:,:,center], 50, cmap='plasma')
+                axes[1, 0].set_title('XY Plane Potential')
+                
+                axes[1, 1].contourf(self.potential[:,center,:], 50, cmap='plasma')
+                axes[1, 1].set_title('XZ Plane Potential')
+                
+                axes[1, 2].contourf(self.potential[center,:,:], 50, cmap='plasma')
+                axes[1, 2].set_title('YZ Plane Potential')
+                
+            else:
+                logger.warning(f"Visualization not implemented for {self.spatial_dim} dimensions")
+                return
+            
+            plt.tight_layout()
+            plt.suptitle(title, y=1.05, fontsize=16)
+            
+            return plt.gcf()
+        
+        def measure_observables(self):
+            """Measure physical observables of the field"""
+            # Field expectation values
+            field_sq_mean = np.mean(np.abs(self.psi)**2)
+            
+            # Gradient observables
+            gradient_energy = 0
+            
+            for dim in range(self.spatial_dim):
+                # Calculate gradient in this dimension
+                slice_next = [slice(None)] * self.spatial_dim
+                slice_prev = [slice(None)] * self.spatial_dim
+                
+                slice_next[dim] = slice(1, None)
+                slice_prev[dim] = slice(0, -1)
+                
+                # Finite difference for derivative
+                gradient = (self.psi[tuple(slice_next)] - self.psi[tuple(slice_prev)]) / (2 * self.lattice_spacing)
+                gradient_energy += np.sum(np.abs(gradient)**2) / self.psi.size
+            
+            # Potential energy
+            potential_energy = np.sum(self.potential * np.abs(self.psi)**2) / self.psi.size
+            
+            # Interaction energy
+            interaction_energy = 0
+            if self.coupling != 0:
+                interaction_energy = 0.25 * self.coupling * np.sum(np.abs(self.psi)**4) / self.psi.size
+            
+            # Total energy
+            total_energy = 0.5 * gradient_energy + potential_energy + interaction_energy
+            
+            # Entropy (approximate)
+            prob = np.abs(self.psi)**2
+            prob = prob / np.sum(prob)
+            entropy = -np.sum(prob * np.log(prob + 1e-10))
+            
+            return {
+                'field_mean_square': float(field_sq_mean),
+                'gradient_energy': float(gradient_energy),
+                'potential_energy': float(potential_energy),
+                'interaction_energy': float(interaction_energy),
+                'total_energy': float(total_energy),
+                'entropy': float(entropy)
+            }
+    
+    class QuantumMonteCarlo:
+        """Quantum Monte Carlo simulation for field theory"""
+        def __init__(self, params=None):
+            self.params = params or {}
+            self.quantum_field = QuantumField(self.params)
+            
+        def run_simulation(self, steps=1000, temperature=1.0, measure_interval=10):
+            results = []
+            
+            for step in range(steps):
+                # Monte Carlo update
+                accepted = self.quantum_field.monte_carlo_update(temperature)
+                
+                # Measure observables periodically
+                if step % measure_interval == 0:
+                    observables = self.quantum_field.measure_observables()
+                    observables['step'] = step
+                    observables['accepted'] = accepted
+                    results.append(observables)
+                    
+                    logger.debug(f"Step {step}: energy={observables['total_energy']:.4f}, accepted={accepted}")
+                
+            return results
+    
+    class SimulationConfig:
+        """Configuration for simulation parameters"""
+        def __init__(self, verbose: bool = False):
+            self.grid_resolution = 64
+            self.spatial_dim = 3
+            self.temporal_resolution = 0.01
+            self.total_time = 10.0
+            
+            # QFT parameters
+            self.mass = 0.1
+            self.coupling = 0.5
+            self.vacuum_energy = 1e-6
+            
+            # Monte Carlo parameters
+            self.metropolis_steps = 1000
+            self.thermalization_steps = 100
+            self.correlation_length = 5
+            
+            # Numerical parameters
+            self.convergence_tolerance = 1e-6
+            self.max_iterations = 1000
+            self.adaptive_step_size = True
+            
+            # GPU parameters
+            self.use_gpu = False  # Will be updated based on CUDA availability
+            
+            # Ethical parameters
+            self.ethical_dim = 5
+            self.ethical_init = np.array([0.8, -0.2, 0.5, 0.1, -0.4])
+            self.ethical_coupling = 0.1
+            
+            # Output & visualization
+            self.save_frequency = 10
+            self.output_dir = "./quantum_sim_results"
+            self.verbose = verbose  # Adding verbose attribute
+    
+    class AMRGrid:
+        """Adaptive Mesh Refinement Grid for resolving multiple scales"""
+        def __init__(self, base_resolution=32, max_level=3, refinement_threshold=0.1):
+            self.base_resolution = base_resolution
+            self.max_level = max_level
+            self.refinement_threshold = refinement_threshold
+            self.base_grid = np.zeros((base_resolution, base_resolution, base_resolution))
+            self.subgrids = {}  # Dictionary of refined regions
+            
+        def refine_region(self, region, level=1):
+            """Refine a specific region to higher resolution"""
+            if level > self.max_level:
+                return False
+                
+            # Region is specified as (x_min, x_max, y_min, y_max, z_min, z_max)
+            x_min, x_max, y_min, y_max, z_min, z_max = region
+            
+            # Create subgrid
+            subgrid_shape = (
+                2 * (x_max - x_min),
+                2 * (y_max - y_min),
+                2 * (z_max - z_min)
+            )
+            
+            # Add to subgrids dictionary
+            grid_id = f"level_{level}_grid_{len(self.subgrids)}"
+            self.subgrids[grid_id] = {
+                'grid': np.zeros(subgrid_shape),
+                'region': region,
+                'level': level,
+                'parent_grid': 'base' if level == 1 else None  # To be set for levels > 1
+            }
+            
+            logger.debug(f"Refined region {region} to level {level} with shape {subgrid_shape}")
+            
+            return grid_id
+            
+        def derefine_region(self, grid_id):
+            """Remove a refined region and project data back to parent grid"""
+            if grid_id not in self.subgrids:
+                return False
+                
+            grid_info = self.subgrids[grid_id]
+            region = grid_info['region']
+            level = grid_info['level']
+            
+            # Project data back to parent grid (simple averaging)
+            if level == 1:
+                # Project to base grid
+                x_min, x_max, y_min, y_max, z_min, z_max = region
+                refined_data = grid_info['grid']
+                
+                # Average 2x2x2 blocks to get base grid values
+                for i in range(x_max - x_min):
+                    for j in range(y_max - y_min):
+                        for k in range(z_max - z_min):
+                            base_i = x_min + i
+                            base_j = y_min + j
+                            base_k = z_min + k
+                            
+                            if base_i < self.base_grid.shape[0] and base_j < self.base_grid.shape[1] and base_k < self.base_grid.shape[2]:
+                                refined_i = 2 * i
+                                refined_j = 2 * j
+                                refined_k = 2 * k
+                                
+                                # Average 2x2x2 refined cells to get base cell value
+                                avg_value = 0.0
+                                count = 0
+                                
+                                for di in range(2):
+                                    for dj in range(2):
+                                        for dk in range(2):
+                                            ri, rj, rk = refined_i + di, refined_j + dj, refined_k + dk
+                                            if ri < refined_data.shape[0] and rj < refined_data.shape[1] and rk < refined_data.shape[2]:
+                                                avg_value += refined_data[ri, rj, rk]
+                                                count += 1
+                                
+                                if count > 0:
+                                    self.base_grid[base_i, base_j, base_k] = avg_value / count
+            
+            # Remove the subgrid
+            del self.subgrids[grid_id]
+            logger.debug(f"Derefined grid {grid_id}")
+            
+            return True
+            
+        def adapt_grid(self, field_data):
+            """Automatically adapt the grid based on field gradients"""
+            # Apply refinement criteria to identify regions that need refinement
+            
+            # Calculate gradient magnitude
+            grad_x, grad_y, grad_z = np.gradient(field_data)
+            gradient_mag = np.sqrt(grad_x**2 + grad_y**2 + grad_z**2)
+            
+            # Find regions with high gradients
+            high_gradient = gradient_mag > self.refinement_threshold * np.max(gradient_mag)
+            
+            # Identify connected regions (simplified approach)
+            from scipy import ndimage
+            labeled_regions, num_regions = ndimage.label(high_gradient)
+            
+            # Process each region
+            for region_id in range(1, num_regions + 1):
+                # Get the bounding box of this region
+                region_mask = (labeled_regions == region_id)
+                x_indices, y_indices, z_indices = np.where(region_mask)
+                
+                if len(x_indices) > 0:
+                    x_min, x_max = np.min(x_indices), np.max(x_indices) + 1
+                    y_min, y_max = np.min(y_indices), np.max(y_indices) + 1
+                    z_min, z_max = np.min(z_indices), np.max(z_indices) + 1
+                    
+                    # Add padding
+                    padding = 1
+                    x_min = max(0, x_min - padding)
+                    y_min = max(0, y_min - padding)
+                    z_min = max(0, z_min - padding)
+                    x_max = min(field_data.shape[0], x_max + padding)
+                    y_max = min(field_data.shape[1], y_max + padding)
+                    z_max = min(field_data.shape[2], z_max + padding)
+                    
+                    # Refine this region
+                    region = (x_min, x_max, y_min, y_max, z_min, z_max)
+                    self.refine_region(region)
+            
+            logger.info(f"Adapted grid: identified {num_regions} regions for refinement")
+            
+            return num_regions
+            
+        def interpolate_field(self, field, coordinates):
+            """Interpolate field value at arbitrary coordinates"""
+            x, y, z = coordinates
+            
+            # Check if coordinates are in a refined region
+            for grid_id, grid_info in self.subgrids.items():
+                region = grid_info['region']
+                x_min, x_max, y_min, y_max, z_min, z_max = region
+                
+                if x_min <= x < x_max and y_min <= y < y_max and z_min <= z < z_max:
+                    # Coordinates are in this refined region
+                    level = grid_info['level']
+                    grid = grid_info['grid']
+                    
+                    # Map to refined grid coordinates
+                    refined_x = 2 * (x - x_min)
+                    refined_y = 2 * (y - y_min)
+                    refined_z = 2 * (z - z_min)
+                    
+                    # Trilinear interpolation in refined grid
+                    x0, y0, z0 = int(refined_x), int(refined_y), int(refined_z)
+                    x1, y1, z1 = min(x0 + 1, grid.shape[0] - 1), min(y0 + 1, grid.shape[1] - 1), min(z0 + 1, grid.shape[2] - 1)
+                    
+                    # Interpolation weights
+                    wx = refined_x - x0
+                    wy = refined_y - y0
+                    wz = refined_z - z0
+                    
+                    # Trilinear interpolation
+                    value = (
+                        grid[x0, y0, z0] * (1-wx) * (1-wy) * (1-wz) +
+                        grid[x1, y0, z0] * wx * (1-wy) * (1-wz) +
+                        grid[x0, y1, z0] * (1-wx) * wy * (1-wz) +
+                        grid[x0, y0, z1] * (1-wx) * (1-wy) * wz +
+                        grid[x1, y1, z0] * wx * wy * (1-wz) +
+                        grid[x1, y0, z1] * wx * (1-wy) * wz +
+                        grid[x0, y1, z1] * (1-wx) * wy * wz +
+                        grid[x1, y1, z1] * wx * wy * wz
+                    )
+                    
+                    return value
+            
+            # If not in a refined region, use base grid with trilinear interpolation
+            # Ensure coordinates are within the base grid
+            x = max(0, min(x, self.base_grid.shape[0] - 1.001))
+            y = max(0, min(y, self.base_grid.shape[1] - 1.001))
+            z = max(0, min(z, self.base_grid.shape[2] - 1.001))
+            
+            x0, y0, z0 = int(x), int(y), int(z)
+            x1, y1, z1 = min(x0 + 1, self.base_grid.shape[0] - 1), min(y0 + 1, self.base_grid.shape[1] - 1), min(z0 + 1, self.base_grid.shape[2] - 1)
+            
+            # Interpolation weights
+            wx = x - x0
+            wy = y - y0
+            wz = z - z0
+            
+            # Trilinear interpolation
+            value = (
+                self.base_grid[x0, y0, z0] * (1-wx) * (1-wy) * (1-wz) +
+                self.base_grid[x1, y0, z0] * wx * (1-wy) * (1-wz) +
+                self.base_grid[x0, y1, z0] * (1-wx) * wy * (1-wz) +
+                self.base_grid[x0, y0, z1] * (1-wx) * (1-wy) * wz +
+                self.base_grid[x1, y1, z0] * wx * wy * (1-wz) +
+                self.base_grid[x1, y0, z1] * wx * (1-wy) * wz +
+                self.base_grid[x0, y1, z1] * (1-wx) * wy * wz +
+                self.base_grid[x1, y1, z1] * wx * wy * wz
+            )
+            
+            return value
+    
+    class SymbolicOperators:
+        """Symbolic operators for quantum mechanics and field theory"""
+        
+        @staticmethod
+        def position_operator(grid_size, dimension):
+            """Create position operator matrix"""
+            x = np.linspace(-5, 5, grid_size)
+            return np.diag(x)
+        
+        @staticmethod
+        def momentum_operator(grid_size, dimension):
+            """Create momentum operator matrix (p = -i*∂/∂x)"""
+            # Create finite difference matrix for first derivative
+            h = 10.0 / grid_size  # Grid spacing
+            diag = np.ones(grid_size)
+            upper_diag = np.ones(grid_size-1)
+            lower_diag = -np.ones(grid_size-1)
+            
+            # Create tri-diagonal matrix
+            p = np.diag(upper_diag, k=1) + np.diag(lower_diag, k=-1)
+            
+            # Apply factor -i/(2h)
+            p = -1j * p / (2*h)
+            
+            return p
+        
+        @staticmethod
+        def kinetic_energy_operator(grid_size, dimension, mass=1.0):
+            """Create kinetic energy operator T = -∇²/(2m)"""
+            # Create finite difference matrix for second derivative
+            h = 10.0 / grid_size  # Grid spacing
+            diag = -2 * np.ones(grid_size)
+            upper_diag = np.ones(grid_size-1)
+            lower_diag = np.ones(grid_size-1)
+            
+            # Create tri-diagonal matrix
+            laplacian = np.diag(diag) + np.diag(upper_diag, k=1) + np.diag(lower_diag, k=-1)
+            
+            # Apply factor -1/(2m*h²)
+            t = -laplacian / (2 * mass * h**2)
+            
+            return t
+        
+        @staticmethod
+        def harmonic_oscillator_hamiltonian(grid_size, dimension, mass=1.0, omega=1.0):
+            """Create harmonic oscillator Hamiltonian H = p²/(2m) + 0.5*m*ω²*x²"""
+            # Kinetic energy term
+            t = SymbolicOperators.kinetic_energy_operator(grid_size, dimension, mass)
+            
+            # Potential energy term
+            x = np.linspace(-5, 5, grid_size)
+            v = 0.5 * mass * omega**2 * np.diag(x**2)
+            
+            # Total Hamiltonian
+            h = t + v
+            
+            return h
+        
+        @staticmethod
+        def annihilation_operator(grid_size, dimension, mass=1.0, omega=1.0):
+            """Create annihilation operator a = sqrt(m*ω/2)*(x + i*p/(m*ω))"""
+            x_op = SymbolicOperators.position_operator(grid_size, dimension)
+            p_op = SymbolicOperators.momentum_operator(grid_size, dimension)
+            
+            a = np.sqrt(mass * omega / 2) * (x_op + 1j * p_op / (mass * omega))
+            
+            return a
+        
+        @staticmethod
+        def creation_operator(grid_size, dimension, mass=1.0, omega=1.0):
+            """Create creation operator a⁺ = sqrt(m*ω/2)*(x - i*p/(m*ω))"""
+            x_op = SymbolicOperators.position_operator(grid_size, dimension)
+            p_op = SymbolicOperators.momentum_operator(grid_size, dimension)
+            
+            a_dag = np.sqrt(mass * omega / 2) * (x_op - 1j * p_op / (mass * omega))
+            
+            return a_dag
+        
+        @staticmethod
+        def number_operator(grid_size, dimension, mass=1.0, omega=1.0):
+            """Create number operator N = a⁺*a"""
+            a = SymbolicOperators.annihilation_operator(grid_size, dimension, mass, omega)
+            a_dag = SymbolicOperators.creation_operator(grid_size, dimension, mass, omega)
+            
+            n = a_dag @ a
+            
+            return n
+        
+        @staticmethod
+        def apply_operator(operator, wavefunction):
+            """Apply operator to wavefunction"""
+            if isinstance(operator, np.ndarray):
+                # Matrix operator
+                return operator @ wavefunction
+            elif callable(operator):
+                # Function operator
+                return operator(wavefunction)
+            else:
+                raise ValueError("Operator must be either a matrix or a callable function")
+    
+    class EthicalGravityManifold:
+        """
+        Implements the Quantum-Ethical Unified Field that combines spacetime curvature
+        with ethical tensor components, creating a framework where moral choices
+        exert actual forces on the physical substrate of reality.
+        
+        The EthicalGravityManifold calculates how ethical decisions modify the 
+        gravitational field tensor, allowing moral choices to ripple through
+        the fabric of reality and alter physical conditions in measurable ways.
+        """
+        
+        def __init__(self, dimensions=4, resolution=32, ethical_dimensions=3):
+            """
+            Initialize an Ethical Gravity Manifold with specified dimensions.
+            
+            Args:
+                dimensions: Number of spacetime dimensions (default 4)
+                resolution: Grid resolution for each dimension (default 32)
+                ethical_dimensions: Number of ethical tensor dimensions (default 3)
+            """
+            self.dimensions = dimensions
+            self.resolution = resolution
+            self.ethical_dimensions = ethical_dimensions
+            
+            # Initialize the physical metric tensor (spacetime)
+            self.metric_tensor = np.eye(dimensions, dtype=np.float64)
+            self.metric_tensor[0,0] = -1.0  # Time component sign for Minkowski space
+            
+            # Initialize ethical tensor field (ethical charge density across spacetime)
+            self.ethical_tensor_shape = (resolution,) * dimensions + (ethical_dimensions,)
+            self.ethical_tensor = np.zeros(self.ethical_tensor_shape)
+            
+            # Initialize the coupled field (spacetime modified by ethical choices)
+            self.coupled_metric = np.zeros((resolution,) * dimensions + (dimensions, dimensions))
+            
+            # Coupling constant between ethical and physical fields
+            self.coupling_constant = 0.1
+            
+            # Set up grid coordinates
+            self.grid_coordinates = np.meshgrid(*[np.linspace(-1, 1, resolution) for _ in range(dimensions)])
+            
+            # Default to flat spacetime with zero ethical charge
+            self._initialize_flat_space()
+            
+            logger.info(f"Initialized EthicalGravityManifold with {dimensions}D spacetime and {ethical_dimensions}D ethical space")
+        
+        def _initialize_flat_space(self):
+            """Initialize manifold with flat spacetime and zero ethical charge"""
+            # Set up Minkowski metric at each grid point
+            for idx in np.ndindex((self.resolution,) * self.dimensions):
+                self.coupled_metric[idx] = self.metric_tensor.copy()
+        
+        def apply_ethical_charge(self, position, ethical_vector, radius=0.2):
+            """
+            Apply an ethical charge at a specific position in the manifold.
+            
+            Args:
+                position: Position vector in spacetime (x,y,z,t)
+                ethical_vector: Ethical charge vector (typically 3D: good/harm, truth/deception, fairness/bias)
+                radius: Radius of influence for this ethical charge
+            """
+            # Convert position to grid indices
+            grid_indices = []
+            for i, pos in enumerate(position):
+                if i >= self.dimensions:
+                    break
+                idx = int((pos + 1) / 2 * (self.resolution - 1))
+                idx = max(0, min(self.resolution - 1, idx))
+                grid_indices.append(idx)
+                
+            # Create a mask for points within radius
+            mask = np.zeros((self.resolution,) * self.dimensions, dtype=bool)
+            
+            # Calculate distance from the center point
+            distances = np.zeros((self.resolution,) * self.dimensions)
+            for grid_idx in np.ndindex((self.resolution,) * self.dimensions):
+                # Calculate Euclidean distance
+                dist_sq = sum((grid_idx[i] - grid_indices[i])**2 for i in range(self.dimensions))
+                distances[grid_idx] = np.sqrt(dist_sq) / self.resolution
+                
+            # Create mask based on radius
+            mask = distances <= radius
+            
+            # Apply ethical charge with exponential falloff
+            falloff = np.exp(-distances**2 / (radius**2/2))
+            
+            # Update ethical tensor field
+            ethical_vector = np.array(ethical_vector)
+            
+            # Ensure ethical vector has correct dimensions
+            if len(ethical_vector) != self.ethical_dimensions:
+                ethical_vector = np.resize(ethical_vector, self.ethical_dimensions)
+            
+            # Apply to each dimension of the ethical tensor
+            for e_dim in range(self.ethical_dimensions):
+                # Create a view into the ethical tensor for this ethical dimension
+                tensor_dim_view = self.ethical_tensor[..., e_dim]
+                
+                # Update with new charge, applying falloff
+                charge_update = falloff * ethical_vector[e_dim]
+                tensor_dim_view[mask] += charge_update[mask]
+            
+            # Update the coupled metric
+            self._update_coupled_metric()
+            
+            logger.info(f"Applied ethical charge {ethical_vector} at position {position}")
+            return True
+        
+        def _update_coupled_metric(self):
+            """Update the coupled metric based on current ethical tensor values"""
+            # Loop through each spacetime point
+            for grid_idx in np.ndindex((self.resolution,) * self.dimensions):
+                # Get ethical charge at this point
+                ethical_charge = self.ethical_tensor[grid_idx]
+                
+                # Calculate ethical field strength
+                field_strength = np.sqrt(np.sum(ethical_charge**2))
+                
+                # Create perturbation to the metric based on ethical charge
+                # This implements the core idea that ethical choices modify spacetime
+                perturbation = np.zeros((self.dimensions, self.dimensions))
+                
+                # The direction of ethical charge affects different components
+                # of the metric tensor, creating different types of curvature
+                
+                # Example effect: "good" actions create positive curvature
+                # (like attractive gravity), "harm" creates negative curvature
+                if self.ethical_dimensions >= 1:
+                    good_harm = ethical_charge[0]  # First ethical dimension
+                    perturbation += good_harm * np.eye(self.dimensions) * self.coupling_constant
+                
+                # Example: "truth" affects time-space components, changing how
+                # cause and effect propagate
+                if self.ethical_dimensions >= 2:
+                    truth_deception = ethical_charge[1]  # Second ethical dimension
+                    for i in range(1, self.dimensions):  # Skip time component
+                        perturbation[0, i] = perturbation[i, 0] = truth_deception * self.coupling_constant
+                
+                # Example: "fairness" affects space-space components, changing how
+                # things distribute and balance
+                if self.ethical_dimensions >= 3:
+                    fairness_bias = ethical_charge[2]  # Third ethical dimension
+                    for i in range(1, self.dimensions):
+                        for j in range(1, self.dimensions):
+                            if i != j:
+                                perturbation[i, j] = fairness_bias * self.coupling_constant
+                
+                # Apply perturbation to base metric
+                self.coupled_metric[grid_idx] = self.metric_tensor + perturbation
+        
+        def calculate_geodesic(self, start_position, direction, steps=100):
+            """
+            Calculate the path a particle would take through the ethical gravity field.
+            
+            Args:
+                start_position: Starting position in spacetime
+                direction: Initial direction/velocity vector
+                steps: Number of steps to simulate
+                
+            Returns:
+                Array of positions representing the geodesic path
+            """
+            # Initialize the path
+            path = np.zeros((steps, self.dimensions))
+            path[0] = np.array(start_position)
+            
+            # Initialize velocity (direction normalized)
+            velocity = np.array(direction)
+            velocity = velocity / np.sqrt(np.sum(velocity**2))
+            
+            # Step size for integration
+            dt = 0.01
+            
+            # Integrate the geodesic equation
+            for i in range(1, steps):
+                # Current position
+                pos = path[i-1]
+                
+                # Convert to grid indices for interpolating the metric
+                grid_indices = []
+                for j, p in enumerate(pos):
+                    if j >= self.dimensions:
+                        break
+                    idx = int((p + 1) / 2 * (self.resolution - 1))
+                    idx = max(0, min(self.resolution - 1, idx))
+                    grid_indices.append(idx)
+                
+                # Get the metric at current position
+                metric = self.coupled_metric[tuple(grid_indices)]
+                
+                # Calculate Christoffel symbols (connection coefficients)
+                # This is a simplified approach - full GR would use proper derivatives
+                christoffel = np.zeros((self.dimensions, self.dimensions, self.dimensions))
+                
+                # Simplified calculation of Christoffel symbols
+                # In real applications, this would involve proper derivatives of the metric
+                for a in range(self.dimensions):
+                    for b in range(self.dimensions):
+                        for c in range(self.dimensions):
+                            christoffel[a, b, c] = 0.5 * (self.coupling_constant * 
+                                                           self.ethical_tensor[tuple(grid_indices)][0])
+                
+                # Calculate acceleration using the geodesic equation
+                acceleration = np.zeros(self.dimensions)
+                for a in range(self.dimensions):
+                    for b in range(self.dimensions):
+                        for c in range(self.dimensions):
+                            acceleration[a] -= christoffel[a, b, c] * velocity[b] * velocity[c]
+                
+                # Update velocity and position using simple Euler integration
+                velocity += acceleration * dt
+                velocity = velocity / np.sqrt(np.sum(velocity**2))  # Renormalize
+                path[i] = pos + velocity * dt
+            
+            return path
+        
+        def measure_curvature(self, position):
+            """
+            Measure the spacetime curvature at a given position.
+            
+            Args:
+                position: Position vector in spacetime
+                
+            Returns:
+                Scalar measure of curvature (Ricci scalar)
+            """
+            # Convert position to grid indices
+            grid_indices = []
+            for i, pos in enumerate(position):
+                if i >= self.dimensions:
+                    break
+                idx = int((pos + 1) / 2 * (self.resolution - 1))
+                idx = max(0, min(self.resolution - 1, idx))
+                grid_indices.append(idx)
+            
+            # Get the metric at this position
+            metric = self.coupled_metric[tuple(grid_indices)]
+            
+            # Calculate the Ricci scalar (simplified approximation)
+            # In a real implementation, this would involve proper tensor calculus
+            
+            # Simplified estimate of curvature based on trace of metric perturbation
+            base_trace = np.trace(self.metric_tensor)
+            actual_trace = np.trace(metric)
+            
+            # Difference in trace as simple curvature measure
+            curvature = actual_trace - base_trace
+            
+            # Also factor in the ethical field strength
+            ethical_charge = self.ethical_tensor[tuple(grid_indices)]
+            ethical_magnitude = np.sqrt(np.sum(ethical_charge**2))
+            
+            # Combined curvature measure
+            total_curvature = curvature + self.coupling_constant * ethical_magnitude
+            
+            return total_curvature
+        
+        def get_ethical_field(self, ethical_dimension=0):
+            """
+            Get the field for a specific ethical dimension.
+            
+            Args:
+                ethical_dimension: Index of the ethical dimension to retrieve
+                
+            Returns:
+                Array representing the field values across spacetime
+            """
+            if self.ethical_dimension >= self.ethical_dimensions:
+                return None
+            
+            return self.ethical_tensor[..., ethical_dimension]
+        
+        def visualize_slice(self, time_slice=0, dimensions=(0, 1, 2), ethical_dimension=0):
+            """
+            Visualize a slice of the ethical gravity field.
+            
+            Args:
+                time_slice: Time coordinate for the slice
+                dimensions: Which 3 dimensions to use for visualization (if more than 3 spatial dimensions)
+                ethical_dimension: Which ethical dimension to visualize
+                
+            Returns:
+                Matplotlib figure
+            """
+            if self.dimensions < 2:
+                logger.warning("Cannot visualize: need at least 2 dimensions")
+                return None
+            
+            # Ensure dimensions are valid
+            vis_dims = []
+            for d in dimensions:
+                if d < self.dimensions:
+                    vis_dims.append(d)
+                if len(vis_dims) == 3:
+                    break
+                    
+            while len(vis_dims) < 3:
+                for d in range(self.dimensions):
+                    if d not in vis_dims:
+                        vis_dims.append(d)
+                        break
+            
+            # Create a slice index
+            slice_idx = [slice(None)] * self.dimensions
+            
+            # Set time slice if time is not one of the visualization dimensions
+            if 0 not in vis_dims:
+                time_idx = int((time_slice + 1) / 2 * (self.resolution - 1))
+                time_idx = max(0, min(self.resolution - 1, time_idx))
+                slice_idx[0] = time_idx
+            
+            # Create a 3D or 2D plot depending on available dimensions
+            if len(vis_dims) >= 3:
+                # 3D Visualization
+                from mpl_toolkits.mplot3d import Axes3D
+                
+                fig = plt.figure(figsize=(10, 8))
+                ax = fig.add_subplot(111, projection='3d')
+                
+                # Create meshgrid for the 3 visualization dimensions
+                x_coords = np.linspace(-1, 1, self.resolution)
+                y_coords = np.linspace(-1, 1, self.resolution)
+                z_coords = np.linspace(-1, 1, self.resolution)
+                
+                # Sample points for visualization
+                stride = max(1, self.resolution // 16)  # Adjust for resolution
+                
+                # Create coordinates for the 3 visualization dimensions
+                coords = [x_coords, y_coords, z_coords]
+                X, Y, Z = np.meshgrid(coords[0][::stride], coords[1][::stride], coords[2][::stride])
+                
+                # Get ethical field and curvature at each point
+                ethical_field = np.zeros_like(X)
+                curvature = np.zeros_like(X)
+                
+                # Fill the arrays
+                for i, x in enumerate(coords[0][::stride]):
+                    for j, y in enumerate(coords[1][::stride]):
+                        for k, z in enumerate(coords[2][::stride]):
+                            # Create position vector
+                            pos = [0] * self.dimensions
+                            pos[vis_dims[0]] = x
+                            pos[vis_dims[1]] = y
+                            pos[vis_dims[2]] = z
+                            
+                            # Calculate grid indices
+                            grid_indices = []
+                            for dim, p in enumerate(pos):
+                                idx = int((p + 1) / 2 * (self.resolution - 1))
+                                idx = max(0, min(self.resolution - 1, idx))
+                                grid_indices.append(idx)
+                            
+                            # Get ethical field and curvature
+                            ethical_field[j, i, k] = self.ethical_tensor[tuple(grid_indices)][ethical_dimension]
+                            curvature[j, i, k] = self.measure_curvature(pos)
+                
+                # Plot ethical field using color
+                sc = ax.scatter(X.flatten(), Y.flatten(), Z.flatten(), 
+                               c=ethical_field.flatten(), cmap='viridis', 
+                               alpha=0.6, marker='o')
+                
+                # Set labels
+                ax.set_xlabel(f'Dimension {vis_dims[0]}')
+                ax.set_ylabel(f'Dimension {vis_dims[1]}')
+                ax.set_zlabel(f'Dimension {vis_dims[2]}')
+                
+                # Add color bar
+                cbar = plt.colorbar(sc)
+                cbar.set_label(f'Ethical Field {ethical_dimension}')
+                
+                plt.title('Ethical Gravity Field Visualization')
+                
+            else:
+                # 2D Visualization (use first two vis_dims)
+                fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+                
+                # Create meshgrid for the 2 visualization dimensions
+                x_coords = np.linspace(-1, 1, self.resolution)
+                y_coords = np.linspace(-1, 1, self.resolution)
+                
+                # Create 2D slice index
+                flat_slice_idx = tuple(slice_idx)
+                
+                # Extract 2D slices of ethical field and curvature
+                ethical_slice = np.zeros((self.resolution, self.resolution))
+                curvature_slice = np.zeros((self.resolution, self.resolution))
+                
+                for i in range(self.resolution):
+                    for j in range(self.resolution):
+                        # Create modified slice index for this point
+                        point_idx = list(flat_slice_idx)
+                        point_idx[vis_dims[0]] = i
+                        point_idx[vis_dims[1]] = j
+                        
+                        # Get ethical field value
+                        ethical_slice[j, i] = self.ethical_tensor[tuple(point_idx)][ethical_dimension]
+                        
+                        # Calculate position vector for curvature
+                        pos = [0] * self.dimensions
+                        for dim, idx in enumerate(point_idx):
+                            if isinstance(idx, int):
+                                pos[dim] = -1 + 2 * idx / (self.resolution - 1)
+                        
+                        # Get curvature
+                        curvature_slice[j, i] = self.measure_curvature(pos)
+                
+                # Plot ethical field
+                im1 = axes[0].imshow(ethical_slice, cmap='viridis', 
+                                    origin='lower', extent=[-1, 1, -1, 1])
+                axes[0].set_title(f'Ethical Field {ethical_dimension}')
+                axes[0].set_xlabel(f'Dimension {vis_dims[0]}')
+                axes[0].set_ylabel(f'Dimension {vis_dims[1]}')
+                plt.colorbar(im1, ax=axes[0])
+                
+                # Plot curvature
+                im2 = axes[1].imshow(curvature_slice, cmap='plasma', 
+                                    origin='lower', extent=[-1, 1, -1, 1])
+                axes[1].set_title('Spacetime Curvature')
+                axes[1].set_xlabel(f'Dimension {vis_dims[0]}')
+                axes[1].set_ylabel(f'Dimension {vis_dims[1]}')
+                plt.colorbar(im2, ax=axes[1])
+            
+            plt.tight_layout()
+            return fig
+        
+        def apply_intention_field(self, positions, intentions, radius=0.2):
+            """
+            Apply multiple ethical intentions across a field of positions.
+            
+            Args:
+                positions: List of position vectors
+                intentions: List of ethical intention vectors
+                radius: Radius of influence for each intention
+                
+            Returns:
+                Bool indicating success
+            """
+            if len(positions) != len(intentions):
+                logger.error("Number of positions must match number of intentions")
+                return False
+            
+            for pos, intention in zip(positions, intentions):
+                self.apply_ethical_charge(pos, intention, radius)
+            
+            return True
+
+    class QuantumStateVector:
+        """
+        Represents a quantum state vector in Hilbert space, providing a 
+        mathematical representation of quantum superposition and entanglement.
+        """
+        
+        def __init__(self, n_qubits=1, state=None):
+            """
+            Initialize a quantum state vector.
+            
+            Args:
+                n_qubits: Number of qubits in the system
+                state: Initial state vector (if None, initialize to |0>^⊗n)
+            """
+            self.n_qubits = n_qubits
+            self.dim = 2 ** n_qubits
+            
+            # Initialize state vector
+            if state is not None:
+                if len(state) != self.dim:
+                    raise ValueError(f"State vector dimension {len(state)} doesn't match expected {self.dim}")
+                self.state = np.array(state, dtype=complex)
+                self.normalize()
+            else:
+                # Initialize to |0...0> state
+                self.state = np.zeros(self.dim, dtype=complex)
+                self.state[0] = 1.0
+        
+        def normalize(self):
+            """Normalize the state vector"""
+            norm = np.sqrt(np.sum(np.abs(self.state)**2))
+            if norm > 0:
+                self.state /= norm
+        
+        def amplitude(self, bitstring):
+            """
+            Get the amplitude for a specific basis state.
+            
+            Args:
+                bitstring: String of 0s and 1s representing the basis state
+                
+            Returns:
+                Complex amplitude
+            """
+            if len(bitstring) != self.n_qubits:
+                raise ValueError(f"Bitstring length {len(bitstring)} doesn't match qubit count {self.n_qubits}")
+            
+            # Convert bitstring to index
+            index = int(bitstring, 2)
+            return self.state[index]
+        
+        def probability(self, bitstring):
+            """
+            Get the probability for a specific basis state.
+            
+            Args:
+                bitstring: String of 0s and 1s representing the basis state
+                
+            Returns:
+                Probability (0 to 1)
+            """
+            return np.abs(self.amplitude(bitstring))**2
+        
+        def apply_gate(self, gate, target_qubits):
+            """
+            Apply a quantum gate to the state vector.
+            
+            Args:
+                gate: Unitary matrix representing the gate
+                target_qubits: List of qubits the gate acts on
+            """
+            # Validate gate shape
+            gate_qubits = int(np.log2(gate.shape[0]))
+            if len(target_qubits) != gate_qubits:
+                raise ValueError(f"Gate acts on {gate_qubits} qubits but {len(target_qubits)} targets specified")
+            
+            # Validate target qubits
+            if any(q >= self.n_qubits for q in target_qubits):
+                raise ValueError(f"Target qubits {target_qubits} out of range for {self.n_qubits} qubits")
+            
+            # For single qubit gates, we can use a more efficient implementation
+            if gate_qubits == 1:
+                target = target_qubits[0]
+                
+                # Reshape state for easier processing
+                new_shape = [2] * self.n_qubits
+                state_tensor = self.state.reshape(new_shape)
+                
+                # Apply gate along the target axis
+                # For numpy's tensordot to work correctly with complex matrices
+                state_tensor = np.tensordot(gate, state_tensor, axes=([1], [target]))
+                
+                # Transpose to get the correct order
+                axes = list(range(self.n_qubits + 1))
+                axes.remove(0)
+                axes.insert(target, 0)
+                state_tensor = np.transpose(state_tensor, axes)
+                
+                # Reshape back to vector
+                self.state = state_tensor.reshape(self.dim)
+                
+            else:
+                # For multi-qubit gates, we'll use a simple but less efficient approach
+                # Building the full unitary is exponential in the number of qubits!
+                full_gate = self._expand_gate(gate, target_qubits)
+                self.state = np.dot(full_gate, self.state)
+            
+            self.normalize()
+        
+        def _expand_gate(self, gate, target_qubits):
+            """
+            Expand a gate to act on the full Hilbert space.
+            
+            Args:
+                gate: Gate matrix
+                target_qubits: List of target qubits
+            
+            Returns:
+                Full unitary matrix
+            """
+            # This is an inefficient implementation for illustration
+            n = self.n_qubits
+            full_gate = np.eye(2**n, dtype=complex)
+            
+            # For each basis state, apply the gate
+            for i in range(2**n):
+                # Convert i to bitstring
+                bitstring = format(i, f'0{n}b')
+                
+                # Extract the bits corresponding to target_qubits
+                target_bits = ''.join(bitstring[q] for q in target_qubits)
+                target_idx = int(target_bits, 2)
+                
+                # For each output of the gate
+                for j in range(gate.shape[1]):
+                    # Convert j to bitstring for target qubits
+                    j_bits = format(j, f'0{len(target_qubits)}b')
+                    
+                    # Create new bitstring with j_bits inserted at target positions
+                    new_bits = list(bitstring)
+                    for q_idx, q in enumerate(target_qubits):
+                        new_bits[q] = j_bits[q_idx]
+                    new_bitstring = ''.join(new_bits)
+                    new_idx = int(new_bitstring, 2)
+                    
+                    # Apply gate
+                    full_gate[new_idx, i] = gate[j, target_idx]
+            
+            return full_gate
+        
+        def measure(self, qubit):
+            """
+            Measure a specific qubit and collapse the state.
+            
+            Args:
+                qubit: Index of qubit to measure
+                
+            Returns:
+                Measurement result (0 or 1)
+            """
+            # Calculate probabilities for 0 and 1 outcomes
+            prob_0 = 0.0
+            prob_1 = 0.0
+            
+            for i in range(self.dim):
+                # Convert i to bitstring
+                bitstring = format(i, f'0{self.n_qubits}b')
+                
+                # Check if the qubit is 0 or 1
+                if bitstring[qubit] == '0':
+                    prob_0 += np.abs(self.state[i])**2
+                else:
+                    prob_1 += np.abs(self.state[i])**2
+            
+            # Random outcome based on probabilities
+            outcome = np.random.choice([0, 1], p=[prob_0, prob_1])
+            
+            # Collapse the state
+            new_state = np.zeros_like(self.state)
+            norm = 0.0
+            
+            for i in range(self.dim):
+                # Convert i to bitstring
+                bitstring = format(i, f'0{self.n_qubits}b')
+                
+                # Keep only amplitudes consistent with measurement
+                if int(bitstring[qubit]) == outcome:
+                    new_state[i] = self.state[i]
+                    norm += np.abs(self.state[i])**2
+            
+            # Normalize the collapsed state
+            if norm > 0:
+                self.state = new_state / np.sqrt(norm)
+            
+            logger.info(f"Measured qubit {qubit}: outcome {outcome}")
+            return outcome
+        
+        def entanglement_entropy(self, subsystem_qubits):
+            """
+            Calculate the entanglement entropy between subsystem and its complement.
+            
+            Args:
+                subsystem_qubits: List of qubit indices in the subsystem
+                
+            Returns:
+                Entanglement entropy value
+            """
+            # Convert state vector to density matrix
+            density = np.outer(self.state, np.conj(self.state))
+            
+            # Compute partial trace over complement subsystem
+            reduced_density = self._partial_trace(density, subsystem_qubits)
+            
+            # Calculate von Neumann entropy
+            eigenvalues = np.linalg.eigvalsh(reduced_density)
+            eigenvalues = eigenvalues[eigenvalues > 1e-10]  # Ignore zero eigenvalues
+            entropy = -np.sum(eigenvalues * np.log2(eigenvalues))
+            
+            return float(entropy)
+        
+        def _partial_trace(self, density, subsystem_qubits):
+            """
+            Compute the partial trace of the density matrix.
+            
+            Args:
+                density: Full density matrix
+                subsystem_qubits: Qubits to keep
+                
+            Returns:
+                Reduced density matrix
+            """
+            # This is a simple but inefficient implementation
+            n = self.n_qubits
+            subsystem_dim = 2 ** len(subsystem_qubits)
+            complement_qubits = [i for i in range(n) if i not in subsystem_qubits]
+            complement_dim = 2 ** len(complement_qubits)
+            
+            # Reshape density matrix for partial trace
+            density_tensor = density.reshape([2] * (2 * n))
+            
+            # Trace over complement qubits
+            reduced_density = np.zeros((subsystem_dim, subsystem_dim), dtype=complex)
+            
+            # For each basis state of subsystem and complement
+            for i in range(subsystem_dim):
+                i_bits = format(i, f'0{len(subsystem_qubits)}b')
+                for j in range(subsystem_dim):
+                    j_bits = format(j, f'0{len(subsystem_qubits)}b')
+                    
+                    # Sum over complement subsystem
+                    val = 0.0
+                    for k in range(complement_dim):
+                        k_bits = format(k, f'0{len(complement_qubits)}b')
+                        
+                        # Create full indices for bra and ket
+                        bra_idx = ['0'] * n
+                        ket_idx = ['0'] * n
+                        
+                        # Fill in subsystem bits
+                        for idx, q in enumerate(subsystem_qubits):
+                            bra_idx[q] = i_bits[idx]
+                            ket_idx[q] = j_bits[idx]
+                        
+                        # Fill in complement bits
+                        for idx, q in enumerate(complement_qubits):
+                            bra_idx[q] = k_bits[idx]
+                            ket_idx[q] = k_bits[idx]
+                        
+                        # Convert to tensor indices
+                        bra_tensor_idx = tuple(int(bit) for bit in bra_idx)
+                        ket_tensor_idx = tuple(int(bit) for bit in ket_idx)
+                        
+                        # Combine for full density matrix index
+                        tensor_idx = bra_tensor_idx + ket_tensor_idx
+                        
+                        # Add to sum
+                        val += density_tensor[tensor_idx]
+                    
+                    reduced_density[i, j] = val
+            
+            return reduced_density
+        
+        def to_bloch_vector(self, qubit):
+            """
+            Convert a single qubit's state to Bloch sphere coordinates.
+            
+            Args:
+                qubit: Index of qubit
+                
+            Returns:
+                (x, y, z) coordinates on Bloch sphere
+            """
+            if self.n_qubits == 1:
+                # Simple case, just use the state directly
+                rho = np.outer(self.state, np.conj(self.state))
+            else:
+                # Compute reduced density matrix for the qubit
+                rho = self._partial_trace(np.outer(self.state, np.conj(self.state)), [qubit])
+            
+            # Pauli matrices
+            sigma_x = np.array([[0, 1], [1, 0]])
+            sigma_y = np.array([[0, -1j], [1j, 0]])
+            sigma_z = np.array([[1, 0], [0, -1]])
+            
+            # Calculate Bloch coordinates
+            x = np.real(np.trace(np.dot(rho, sigma_x)))
+            y = np.real(np.trace(np.dot(rho, sigma_y)))
+            z = np.real(np.trace(np.dot(rho, sigma_z)))
+            
+            return (x, y, z)
+        
+        def visualize_bloch(self, qubit=0):
+            """
+            Visualize a qubit state on the Bloch sphere.
+            
+            Args:
+                qubit: Index of qubit to visualize
+            
+            Returns:
+                Matplotlib figure
+            """
+            try:
+                from mpl_toolkits.mplot3d import Axes3D
+            except ImportError:
+                logger.warning("Cannot import Axes3D for 3D plotting")
+                return None
+            
+            # Get Bloch coordinates
+            x, y, z = self.to_bloch_vector(qubit)
+            
+            # Create figure
+            fig = plt.figure(figsize=(8, 8))
+            ax = fig.add_subplot(111, projection='3d')
+            
+            # Draw Bloch sphere
+            u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+            sphere_x = np.cos(u) * np.sin(v)
+            sphere_y = np.sin(u) * np.sin(v)
+            sphere_z = np.cos(v)
+            ax.plot_wireframe(sphere_x, sphere_y, sphere_z, color="lightgray", alpha=0.2)
+            
+            # Draw coordinate axes
+            ax.quiver(-1.3, 0, 0, 2.6, 0, 0, color='gray', arrow_length_ratio=0.05, linewidth=0.5)
+            ax.quiver(0, -1.3, 0, 0, 2.6, 0, color='gray', arrow_length_ratio=0.05, linewidth=0.5)
+            ax.quiver(0, 0, -1.3, 0, 0, 2.6, color='gray', arrow_length_ratio=0.05, linewidth=0.5)
+            
+            # Draw state vector
+            ax.quiver(0, 0, 0, x, y, z, color='r', arrow_length_ratio=0.05)
+            
+            # Label axes
+            ax.text(1.5, 0, 0, r'$|0\rangle$', color='black')
+            ax.text(-1.5, 0, 0, r'$|1\rangle$', color='black')
+            ax.text(0, 1.5, 0, r'$|+\rangle$', color='black')
+            ax.text(0, -1.5, 0, r'$|-\rangle$', color='black')
+            ax.text(0, 0, 1.5, r'$|i+\rangle$', color='black')
+            ax.text(0, 0, -1.5, r'$|i-\rangle$', color='black')
+            
+            # Set figure properties
+            ax.set_box_aspect([1,1,1])
+            ax.set_axis_off()
+            ax.set_title(f'Qubit {qubit} State on Bloch Sphere')
+            
+            # Add text showing coordinates
+            state_text = f"Bloch Vector: ({x:.3f}, {y:.3f}, {z:.3f})"
+            fig.text(0.5, 0.02, state_text, ha='center')
+            
+            return fig
+
+import numpy as np
+import logging
+import time
+from typing import Dict, Any, Optional, List, Tuple
+import importlib
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, 
+                   format='%(asctime)s - %(name)s - %(levellevel)s - %(message)s')
+logger = logging.getLogger("QuantumPhysics")
+
+def initialize(**kwargs):
+    """
+    Initialize the quantum physics module for the ORAMA framework.
+    
+    Args:
+        **kwargs: Configuration parameters including:
+            - grid_resolution: Resolution of the quantum field grid (default: 64)
+            - spatial_dimensions: Number of spatial dimensions for simulation (default: 3)
+            - entity_id: The ID of the entity using this quantum physics module
+            - timeline_engine: Optional reference to pre-initialized timeline_engine module
+            - use_gpu: Whether to use GPU acceleration if available (default: True)
+            - ethical_dimensions: Number of ethical dimensions (default: 5)
+            
+    Returns:
+        Dictionary containing the initialized quantum physics components
+    """
+    # Extract configuration parameters with defaults
+    grid_resolution = kwargs.get('grid_resolution', 64)
+    spatial_dimensions = kwargs.get('spatial_dimensions', 3)
+    entity_id = kwargs.get('entity_id', f"quantum_{int(time.time()) % 10000}")
+    use_gpu = kwargs.get('use_gpu', True)
+    ethical_dimensions = kwargs.get('ethical_dimensions', 5)
+    
+    # Create simulation configuration
+    config = SimulationConfig(verbose=True)
+    config.grid_resolution = grid_resolution
+    config.spatial_dim = spatial_dimensions
+    config.use_gpu = use_gpu and cuda.is_available()
+    config.ethical_dim = ethical_dimensions
+    
+    # Initialize core components
+    constants = PhysicsConstants()
+    quantum_field = QuantumField(config)
+    
+    # Initialize Monte Carlo engine for statistical calculations
+    monte_carlo = QuantumMonteCarlo(config)
+    
+    # Initialize the paradox resolver
+    paradox_resolver = ParadoxResolver(config)
+    
+    # Connect to timeline engine if provided
+    timeline_connection = None
+    if 'timeline_engine' in kwargs and kwargs['timeline_engine'] is not None:
+        timeline_connection = TemporalFramework(config)
+        timeline_connection.register_timeline(kwargs['timeline_engine'])
+        logger.info(f"Connected to timeline engine")
+    
+    # Initialize ethical gravity manifold
+    ethical_manifold = EthicalGravityManifold(config, dimensions=ethical_dimensions)
+    
+    # Create recursive scaling handler
+    recursive_handler = RecursiveScaling(constants)
+    
+    # Initialize state vector system
+    state_vector = QuantumStateVector(n_qubits=int(np.log2(grid_resolution)))
+    
+    # Return initialized components
+    components = {
+        'config': config,
+        'constants': constants,
+        'quantum_field': quantum_field,
+        'monte_carlo': monte_carlo,
+        'paradox_resolver': paradox_resolver,
+        'timeline_connection': timeline_connection,
+        'ethical_manifold': ethical_manifold,
+        'recursive_handler': recursive_handler,
+        'state_vector': state_vector,
+        'entity_id': entity_id
+    }
+    
+    logger.info(f"Quantum Physics module initialized with ID {entity_id}")
+    logger.info(f"Configuration: grid_resolution={grid_resolution}, "
+               f"spatial_dimensions={spatial_dimensions}, use_gpu={config.use_gpu}")
+    
+    return components
+
+# Allow conditional imports to handle missing dependencies
+try:
+    from numba import cuda
+except ImportError:
+    class cuda:
+        @staticmethod
+        def is_available():
+            return False
+    logger.warning("Numba CUDA not available, GPU acceleration disabled")
+    
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    logger.warning("Matplotlib not available, visualization features disabled")
+    
+# The rest of the module remains the same
+# ================================================================
+
+# Add these exports to make classes available to importing modules
 __all__ = [
-    'PhysicsConstants', 'WaveFunction', 'QuantumField', 
-    'QuantumMonteCarlo', 'SymbolicOperators', 
-    'EthicalGravityManifold', 'QuantumStateVector',
-    # Removed SimulationConfig and AMRGrid as they were not in the subtask completion list
-    # and their implementations were very basic.
+    'PhysicsConstants', 
+    'WaveFunction', 
+    'QuantumField', 
+    'QuantumMonteCarlo', 
+    'SimulationConfig', 
+    'AMRGrid',
+    'SymbolicOperators',
+    'EthicalGravityManifold',
+    'QuantumStateVector'
 ]
 
-logger.info("quantum_physics.py module fully defined and refined.")
+import numpy as np
+import logging
+import time
+from scipy.integrate import odeint, solve_ivp
+from scipy.sparse import csr_matrix, diags, kron, eye
+from scipy.sparse.linalg import eigsh, expm_multiply
+from scipy.linalg import eigh
+from numba import cuda, njit, prange
+from matplotlib import animation
+from mpl_toolkits.mplot3d import Axes3D
+from tqdm import tqdm
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, 
+                   format='%(asctime)s - %(name)s - %(levellevel)s - %(message)s')
+logger = logging.getLogger("QuantumPhysics")
+
+# Configuration and constants at module level for default values
+DEFAULT_CONFIG = {
+    'grid_resolution': 64,
+    'spatial_dim': 3,
+    'temporal_resolution': 0.01,
+    'total_time': 10.0,
+    'mass': 0.1,
+    'coupling': 0.5,
+    'vacuum_energy': 1e-6,
+    'metropolis_steps': 1000,
+    'thermalization_steps': 100,
+    'correlation_length': 5,
+    'convergence_tolerance': 1e-6,
+    'max_iterations': 1000,
+    'adaptive_step_size': True,
+    'use_gpu': cuda.is_available(),
+    'ethical_dim': 5,
+    'save_frequency': 10,
+    'output_dir': "./quantum_sim_results",
+    'verbose': True
+}
+
+def initialize(**kwargs):
+    """
+    Initialize the quantum physics module.
+    
+    Args:
+        **kwargs: Configuration parameters including any of the physics 
+                 constants, simulation parameters, and flags for specific 
+                 quantum simulation features.
+                 
+    Returns:
+        An initialized SimulationManager instance that combines all quantum physics
+        components for a unified interface.
+    """
+    # Extract configuration parameters with defaults
+    config_dict = DEFAULT_CONFIG.copy()
+    config_dict.update(kwargs)
+    
+    # Set up simulation configuration
+    config = SimulationConfig(verbose=True)
+    for key, value in config_dict.items():
+        if hasattr(config, key):
+            setattr(config, key, value)
+    
+    # Set logging level based on verbose flag
+    if config.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+    
+    # Initialize physical constants
+    constants = PhysicsConstants()
+    
+    # Create simulation manager
+    manager = SimulationManager(config, constants)
+    
+    logger.info(f"Quantum Physics module initialized with grid resolution {config.grid_resolution}")
+    logger.info(f"Spatial dimensions: {config.spatial_dim}, Temporal resolution: {config.temporal_resolution}")
+    
+    # Initialize core components
+    manager.initialize_components()
+    
+    return manager
+
+class SimulationManager:
+    """Manages all quantum physics components for a unified interface"""
+    
+    def __init__(self, config, constants):
+        """
+        Initialize the simulation manager.
+        
+        Args:
+            config: SimulationConfig instance
+            constants: PhysicsConstants instance
+        """
+        self.config = config
+        self.constants = constants
+        
+        # Core components
+        self.quantum_field = None
+        self.monte_carlo = None
+        self.amr_grid = None
+        self.ethical_manifold = None
+        self.temporal_framework = None
+        self.paradox_resolver = None
+        self.recursive_scaling = None
+        
+        # State tracking
+        self.is_initialized = False
+        self.is_running = False
+        self.current_time = 0.0
+        self.simulation_step = 0
+        
+        # Event handling
+        self.observers = []
+        self.event_queue = []
+        
+        logger.info("Simulation Manager created")
+    
+    def initialize_components(self):
+        """Initialize all simulation components"""
+        # Create quantum field
+        self.quantum_field = QuantumField(self.config)
+        
+        # Initialize Monte Carlo system
+        self.monte_carlo = QuantumMonteCarlo(self.config)
+        
+        # Initialize AMR grid
+        self.amr_grid = AMRGrid(self.config)
+        
+        # Initialize Ethical Gravity Manifold
+        self.ethical_manifold = EthicalGravityManifold(self.config)
+        
+        # Initialize Temporal Framework
+        self.temporal_framework = TemporalFramework(self.config)
+        
+        # Initialize Paradox Resolver
+        self.paradox_resolver = ParadoxResolver(self.config)
+        
+        # Initialize Recursive Scaling
+        self.recursive_scaling = RecursiveScaling(self.constants)
+        
+        # Set initialized flag
+        self.is_initialized = True
+        
+        logger.info("All quantum physics components initialized")
+        return True
+    
+    def register_observer(self, observer_func):
+        """Register an observer for simulation events"""
+        if observer_func not in self.observers:
+            self.observers.append(observer_func)
+            logger.debug(f"Observer registered, total observers: {len(self.observers)}")
+            return True
+        return False
+    
+    def unregister_observer(self, observer_func):
+        """Unregister an observer"""
+        if observer_func in self.observers:
+            self.observers.remove(observer_func)
+            logger.debug(f"Observer unregistered, remaining observers: {len(self.observers)}")
+            return True
+        return False
+    
+    def notify_observers(self, event):
+        """Notify all observers of an event"""
+        for observer in self.observers:
+            try:
+                observer(event)
+            except Exception as e:
+                logger.error(f"Error in observer: {str(e)}")
+    
+    def start_simulation(self):
+        """Start the quantum simulation"""
+        if not self.is_initialized:
+            logger.error("Cannot start simulation: Components not initialized")
+            return False
+        
+        if self.is_running:
+            logger.warning("Simulation is already running")
+            return False
+        
+        # Reset simulation state
+        self.current_time = 0.0
+        self.simulation_step = 0
+        
+        # Mark as running
+        self.is_running = True
+        
+        # Notify observers
+        self.notify_observers({
+            "type": "simulation_started",
+            "time": time.time(),
+            "config": self.config.__dict__
+        })
+        
+        logger.info("Quantum simulation started")
+        return True
+    
+    def stop_simulation(self):
+        """Stop the quantum simulation"""
+        if not self.is_running:
+            logger.warning("Simulation is not running")
+            return False
+        
+        # Mark as stopped
+        self.is_running = False
+        
+        # Notify observers
+        self.notify_observers({
+            "type": "simulation_stopped",
+            "time": time.time(),
+            "steps_completed": self.simulation_step,
+            "simulation_time": self.current_time
+        })
+        
+        logger.info(f"Quantum simulation stopped at step {self.simulation_step}, time {self.current_time:.3f}")
+        return True
+    
+    def step_simulation(self, num_steps=1):
+        """
+        Run a specific number of simulation steps.
+        
+        Args:
+            num_steps: Number of steps to run
+            
+        Returns:
+            Dict with simulation results
+        """
+        if not self.is_initialized:
+            logger.error("Cannot step simulation: Components not initialized")
+            return {"success": False, "error": "Not initialized"}
+        
+        if not self.is_running:
+            logger.warning("Starting simulation implicitly")
+            self.start_simulation()
+        
+        results = []
+        
+        for _ in range(num_steps):
+            # Advance time
+            dt = self.config.temporal_resolution
+            self.current_time += dt
+            self.simulation_step += 1
+            
+            # Evolve quantum field
+            try:
+                self.quantum_field.evolve_field(dt)
+            except Exception as e:
+                logger.error(f"Error in field evolution: {str(e)}")
+                results.append({
+                    "step": self.simulation_step,
+                    "time": self.current_time,
+                    "success": False,
+                    "error": str(e)
+                })
+                continue
+            
+            # Apply ethical forces from manifold
+            try:
+                ethical_tensor = self.ethical_manifold.ethical_tensor
+                self.quantum_field.set_ethical_tensor(ethical_tensor)
+            except Exception as e:
+                logger.error(f"Error applying ethical forces: {str(e)}")
+            
+            # Propagate ethical effects
+            try:
+                self.ethical_manifold.propagate_ethical_effects(dt)
+            except Exception as e:
+                logger.error(f"Error in ethical propagation: {str(e)}")
+            
+            # Check for events in the event queue
+            self._process_event_queue()
+            
+            # Calculate energy and other observables
+            energy = self.quantum_field.compute_energy()
+            
+            # Create step result
+            step_result = {
+                "step": self.simulation_step,
+                "time": self.current_time,
+                "energy": energy,
+                "success": True
+            }
+            
+            # Add to results
+            results.append(step_result)
+            
+            # Notify observers
+            self.notify_observers({
+                "type": "simulation_step",
+                "step": self.simulation_step,
+                "time": self.current_time,
+                "energy": energy
+            })
+            
+            # Log progress periodically
+            if self.simulation_step % 10 == 0:
+                logger.debug(f"Simulation step {self.simulation_step}, time {self.current_time:.3f}, energy {energy:.6f}")
+        
+        return {
+            "success": True,
+            "steps_completed": num_steps,
+            "current_step": self.simulation_step,
+            "current_time": self.current_time,
+            "results": results
+        }
+    
+    def _process_event_queue(self):
+        """Process events in the event queue"""
+        if not self.event_queue:
+            return
+        
+        # Process all events in the queue
+        for event in self.event_queue:
+            event_type = event.get("type", "unknown")
+            
+            # Handle specific event types
+            if event_type == "quantum_fluctuation":
+                # Apply quantum fluctuation to field
+                self._handle_quantum_fluctuation(event)
+            elif event_type == "ethical_action":
+                # Apply ethical action to manifold
+                self._handle_ethical_action(event)
+            elif event_type == "temporal_paradox":
+                # Handle temporal paradox
+                self._handle_temporal_paradox(event)
+            
+            # Notify observers of the event
+            self.notify_observers(event)
+        
+        # Clear the queue
+        self.event_queue = []
+    
+    def _handle_quantum_fluctuation(self, event):
+        """Handle a quantum fluctuation event"""
+        # Extract parameters
+        location = event.get("location", (0, 0, 0))
+        magnitude = event.get("magnitude", 0.1)
+        
+        # Apply to field (simplified)
+        # In a real implementation, this would have more sophisticated effects
+        # For now, just log it
+        logger.debug(f"Applied quantum fluctuation at {location} with magnitude {magnitude}")
+    
+    def _handle_ethical_action(self, event):
+        """Handle an ethical action event"""
+        # Extract parameters
+        value = event.get("value", 0.0)
+        location = event.get("location", (0, 0, 0))
+        dimension = event.get("dimension", None)
+        radius = event.get("radius", 5)
+        
+        # Apply to ethical manifold
+        try:
+            result = self.ethical_manifold.apply_ethical_action(value, location, dimension, radius)
+            logger.debug(f"Applied ethical action: {result}")
+        except Exception as e:
+            logger.error(f"Error applying ethical action: {str(e)}")
+    
+    def _handle_temporal_paradox(self, event):
+        """Handle a temporal paradox event"""
+        # Extract parameters
+        severity = event.get("severity", 0.5)
+        location = event.get("location", (0, 0, 0, 0))
+        
+        # Use paradox resolver
+        try:
+            resolution = self.paradox_resolver.resolve_physical_paradox(event)
+            logger.info(f"Resolved temporal paradox: {resolution}")
+        except Exception as e:
+            logger.error(f"Error resolving paradox: {str(e)}")
+    
+    def add_event(self, event):
+        """Add an event to the event queue"""
+        self.event_queue.append(event)
+        return True
+    
+    def get_state_vector(self):
+        """Get the current quantum state vector of the simulation"""
+        if not self.is_initialized:
+            return None
+        
+        return {
+            "field": self.quantum_field.psi.copy() if self.quantum_field else None,
+            "energy": self.quantum_field.compute_energy() if self.quantum_field else 0.0,
+            "ethical_tensor": self.ethical_manifold.ethical_tensor.copy() if self.ethical_manifold else None,
+            "time": self.current_time,
+            "step": self.simulation_step
+        }
+    
+    def set_ethical_parameters(self, ethical_params):
+        """Set the ethical parameters of the simulation"""
+        if not self.is_initialized:
+            logger.error("Cannot set ethical parameters: Components not initialized")
+            return False
+        
+        try:
+            # Convert to numpy array if needed
+            if not isinstance(ethical_params, np.ndarray):
+                ethical_params = np.array(ethical_params)
+            
+            # Update ethical initial values in config
+            self.config.ethical_init = ethical_params
+            
+            # Apply to manifold
+            for d in range(min(len(ethical_params), self.config.ethical_dim)):
+                self.ethical_manifold.ethical_tensor[d].fill(ethical_params[d])
+            
+            logger.info(f"Set ethical parameters to {ethical_params}")
+            return True
+        except Exception as e:
+            logger.error(f"Error setting ethical parameters: {str(e)}")
+            return False
+    
+    def get_status(self):
+        """Get current status of the simulation"""
+        return {
+            "is_initialized": self.is_initialized,
+            "is_running": self.is_running,
+            "current_time": self.current_time,
+            "simulation_step": self.simulation_step,
+            "components": {
+                "quantum_field": self.quantum_field is not None,
+                "monte_carlo": self.monte_carlo is not None,
+                "amr_grid": self.amr_grid is not None,
+                "ethical_manifold": self.ethical_manifold is not None,
+                "temporal_framework": self.temporal_framework is not None,
+                "paradox_resolver": self.paradox_resolver is not None,
+                "recursive_scaling": self.recursive_scaling is not None
+            },
+            "energy": self.quantum_field.compute_energy() if (self.is_initialized and self.quantum_field) else 0.0,
+            "observer_count": len(self.observers),
+            "event_queue_size": len(self.event_queue)
+        }
+
+# Original class definitions continued below...
+# -------------------------------------------------------------------------
+# Custom Exceptions
+# -------------------------------------------------------------------------
+class QuantumDecoherenceError(Exception):
+    """Exception raised when quantum coherence falls below critical threshold causing decoherence."""
+    def __init__(self, message="Quantum state coherence failure detected", coherence_value=None, 
+                affected_patterns=None, location=None):
+        self.message = message
+        self.coherence_value = self.coherence_value
+        self.affected_patterns = self.affected_patterns or []
+        self.location = self.location
+        super().__init__(self.message)
+        
+    def __str__(self):
+        details = []
+        if self.coherence_value is not None:
+            details.append(f"Coherence value: {self.coherence_value:.6f}")
+            
+        if self.affected_patterns:
+            details.append(f"Affected patterns: {', '.join(str(p) for p in self.affected_patterns)}")
+            
+        if self.location:
+            details.append(f"Location: {self.location}")
+        
+        if details:
+            return f"{self.message} - {'; '.join(details)}"
+        return self.message
+
+# -------------------------------------------------------------------------
+# Constants and Configuration
+# -------------------------------------------------------------------------
+class PhysicsConstants:
+    """Physical constants in natural units (ħ = c = 1)"""
+
+    def __init__(self):
+        # Universal constants
+        self.c = 299792458  # Speed of light in vacuum (m/s)
+        self.h = 6.62607015e-34  # Planck constant (J·s)
+        self.h_bar = self.h / (2 * np.pi)  # Reduced Planck constant (J·s)
+        self.G = 6.67430e-11  # Gravitational constant (m³/kg·s²)
+        self.k_B = 1.380649e-23  # Boltzmann constant (J/K)
+        self.e = 1.602176634e-19  # Elementary charge (C)
+        self.epsilon_0 = 8.8541878128e-12  # Vacuum permittivity (F/m)
+        self.mu_0 = 4 * np.pi * 1e-7  # Vacuum permeability (N/A²)
+        self.m_e = 9.10938356e-31  # Electron mass (kg)
+        self.m_p = 1.67262192369e-27  # Proton mass (kg)
+        self.alpha = 1 / 137.035999084  # Fine-structure constant (dimensionless)
+
+        # Derived constants
+        self.planck_length = np.sqrt(self.h_bar * self.G / self.c**3)  # Planck length (m)
+        self.planck_time = self.planck_length / self.c  # Planck time (s)
+        self.planck_mass = np.sqrt(self.h_bar * self.c / self.G)  # Planck mass (kg)
+        self.planck_temperature = np.sqrt(self.h_bar * self.c**5 / (self.G * self.k_B**2))  # Planck temperature (K)
+
+        # Cosmological constants
+        self.hubble_constant = 70.0  # Hubble constant (km/s/Mpc)
+        self.dark_energy_density = 0.7  # Fraction of critical density
+        self.dark_matter_density = 0.25  # Fraction of critical density
+        self.baryonic_matter_density = 0.05  # Fraction of critical density
+
+    def summary(self):
+        """Return a summary of the constants as a dictionary."""
+        return {
+            "Speed of light (c)": self.c,
+            "Planck constant (h)": self.h,
+            "Reduced Planck constant (ħ)": self.h_bar,
+            "Gravitational constant (G)": self.G,
+            "Boltzmann constant (k_B)": self.k_B,
+            "Elementary charge (e)": self.e,
+            "Vacuum permittivity (ε₀)": self.epsilon_0,
+            "Vacuum permeability (μ₀)": self.mu_0,
+            "Electron mass (mₑ)": self.m_e,
+            "Proton mass (mₚ)": self.m_p,
+            "Fine-structure constant (α)": self.alpha,
+            "Planck length": self.planck_length,
+            "Planck time": self.planck_time,
+            "Planck mass": self.planck_mass,
+            "Planck temperature": self.planck_temperature,
+            "Hubble constant": self.hubble_constant,
+            "Dark energy density": self.dark_energy_density,
+            "Dark matter density": self.dark_matter_density,
+            "Baryonic matter density": self.baryonic_matter_density,
+        }
+
+class SimulationConfig:
+    """Configuration for simulation parameters"""
+    def __init__(self, verbose: bool = False):
+        self.verbose = verbose
+        self.grid_resolution = 64  # Default grid resolution
+        self.spatial_dim = 3  # Number of spatial dimensions
+        self.temporal_resolution = 0.01  # Time step size
+        self.total_time = 10.0  # Total simulation time
+        self.mass = 0.1  # Particle mass
+        self.coupling = 0.5  # Coupling constant for interactions
+        self.vacuum_energy = 1e-6  # Vacuum energy density
+        self.metropolis_steps = 1000  # Monte Carlo steps
+        self.thermalization_steps = 100  # Thermalization steps
+        self.correlation_length = 5  # Correlation length for measurements
+        self.convergence_tolerance = 1e-6  # Convergence tolerance for iterative solvers
+        self.max_iterations = 1000  # Maximum iterations for solvers
+        self.adaptive_step_size = True  # Whether to use adaptive time steps
+        self.use_gpu = False  # Whether to use GPU acceleration
+        self.ethical_dim = 5  # Number of ethical dimensions
+        self.ethical_init = [0.0] * self.ethical_dim  # Initial ethical parameters
+        self.save_frequency = 10  # Frequency of saving simulation results
+        self.output_dir = "./quantum_sim_results"  # Directory for output files
+
+    def update(self, **kwargs):
+        """Update configuration parameters dynamically."""
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                raise AttributeError(f"Invalid configuration parameter: {key}")
+
+    def summary(self) -> Dict[str, Any]:
+        """Return a summary of the current configuration."""
+        return {
+            "verbose": self.verbose,
+            "grid_resolution": self.grid_resolution,
+            "spatial_dim": self.spatial_dim,
+            "temporal_resolution": self.temporal_resolution,
+            "total_time": self.total_time,
+            "mass": self.mass,
+            "coupling": self.coupling,
+            "vacuum_energy": self.vacuum_energy,
+            "metropolis_steps": self.metropolis_steps,
+            "thermalization_steps": self.thermalization_steps,
+            "correlation_length": self.correlation_length,
+            "convergence_tolerance": self.convergence_tolerance,
+            "max_iterations": self.max_iterations,
+            "adaptive_step_size": self.adaptive_step_size,
+            "use_gpu": self.use_gpu,
+            "ethical_dim": self.ethical_dim,
+            "ethical_init": self.ethical_init,
+            "save_frequency": self.save_frequency,
+            "output_dir": self.output_dir,
+        }
+
+    def __str__(self):
+        """String representation of the configuration."""
+        return "\n".join(f"{key}: {value}" for key, value in self.summary().items())
+
+def initialize(config):
+    verbose = getattr(config, 'verbose', False)
+    if verbose:
+        logger.info("Verbose mode enabled for quantum_physics initialization")
+    # ...existing initialization logic...

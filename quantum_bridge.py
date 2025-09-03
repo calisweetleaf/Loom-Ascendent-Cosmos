@@ -38,77 +38,50 @@ class NarrativeArchetype:
         
         # Create pattern based on archetype
         if self.name.lower() == "creation":
-            # Creation increases energy in center (generalized for N-dimensions)
-            center = np.array([dim // 2 for dim in field_shape])
-            grids = np.ogrid[[slice(0, dim) for dim in field_shape]]
-            distance_sq = np.zeros(field_shape)
-            for i in range(len(field_shape)):
-                distance_sq += ((grids[i] - center[i]) / (field_shape[i] / 2.0))**2 # Normalize distance by half-size
+            # Creation increases energy in center
+            indices = np.indices(field_shape)
+            center = [dim // 2 for dim in field_shape]
+            distance = np.zeros(field_shape)
             
-            # Gaussian-like peak at the center
-            modulation += 0.3 * np.exp(-2.5 * distance_sq) * self.intensity # Adjusted falloff
-
+            for i, idx in enumerate(indices):
+                distance += ((idx - center[i]) / field_shape[i])**2
+            
+            distance = np.sqrt(distance)
+            modulation += 0.3 * np.exp(-5 * distance) * self.intensity
+            
         elif self.name.lower() == "destruction":
-            # Destruction creates chaotic interference patterns (generalized for N-dimensions)
-            # This creates a sum of sine waves along each dimension, scaled by intensity
-            temp_modulation = np.zeros(field_shape)
+            # Destruction creates chaotic interference patterns
             for i in range(len(field_shape)):
-                # Create a coordinate grid for the current dimension
-                coords = np.indices(field_shape)[i]
-                # Generate a sine wave based on these coordinates
-                # Vary frequency and phase for more chaos
-                freq = random.uniform(4, 8) 
-                phase_offset = random.uniform(0, 2 * np.pi)
-                temp_modulation += np.sin(coords * freq * np.pi / field_shape[i] + phase_offset)
-            
-            # Normalize and scale the chaotic pattern
-            if np.max(np.abs(temp_modulation)) > 1e-6: # Avoid division by zero
-                 temp_modulation = temp_modulation / np.max(np.abs(temp_modulation))
-            modulation += 0.2 * temp_modulation * self.intensity
-
+                indices = np.indices(field_shape)[i]
+                modulation += 0.2 * np.sin(indices * 6.28 / field_shape[i]) * self.intensity
+                
         elif self.name.lower() == "rebirth":
-            # Rebirth creates spiral patterns (primarily 2D, can be projected to higher dimensions)
-            if len(field_shape) >= 2:
-                indices = np.indices(field_shape)
-                center = np.array([dim // 2 for dim in field_shape])
-                x = (indices[0] - center[0]) / (field_shape[0] / 2.0) # Normalized coordinates
-                y = (indices[1] - center[1]) / (field_shape[1] / 2.0)
-                
-                radius = np.sqrt(x**2 + y**2) * 5 # Scale radius for more turns
-                angle = np.arctan2(y, x)
-                spiral = np.sin(radius + 3 * angle) # 3 arms for spiral
-                
-                # Apply spiral to the first two dimensions, replicate or average for others
-                if len(field_shape) == 2:
-                    modulation += 0.3 * spiral * self.intensity
-                else: # For 3D or more, apply to a "plane" and fade
-                    for i in range(field_shape[0]):
-                        for j in range(field_shape[1]):
-                            # Simple way: apply to slice, could be more complex
-                            modulation[i, j, ...] += 0.3 * spiral[i, j] * self.intensity 
-            else: # For 1D field, a simple wave
-                 coords = np.indices(field_shape)[0]
-                 modulation += 0.3 * np.sin(coords * 6 * np.pi / field_shape[0]) * self.intensity
-
-
+            # Rebirth creates spiral patterns
+            indices = np.indices(field_shape)
+            center = [dim // 2 for dim in field_shape]
+            x, y = indices[0] - center[0], indices[1] - center[1]
+            
+            # Create a spiral pattern
+            radius = np.sqrt(x**2 + y**2) / max(field_shape) * 10
+            angle = np.arctan2(y, x)
+            spiral = np.sin(radius + 5 * angle) * 0.3 * self.intensity
+            modulation += spiral
+            
         elif self.name.lower() == "transcendence":
-            # Transcendence creates rising energy gradients (generalized for N-dimensions)
-            # Gradient rises along the first dimension primarily, or an average
+            # Transcendence creates rising energy gradients
             height_factor = 0.3 * self.intensity
-            coords_dim0 = np.indices(field_shape)[0] / field_shape[0] # Normalized 0 to 1
-            modulation += height_factor * coords_dim0
+            for i in range(len(field_shape)):
+                indices = np.indices(field_shape)[i] / field_shape[i]
+                modulation += height_factor * indices
                 
         elif self.name.lower() == "equilibrium":
-            # Equilibrium creates balanced harmonic patterns (generalized for N-dimensions)
-            temp_modulation = np.zeros(field_shape)
+            # Equilibrium creates balanced harmonic patterns
             for i in range(len(field_shape)):
-                coords = np.indices(field_shape)[i]
-                temp_modulation += np.cos(coords * 2 * np.pi / field_shape[i]) # 2 cycles across dimension
-            if len(field_shape) > 0 : temp_modulation /= len(field_shape) # Average contribution
-            modulation += 0.2 * temp_modulation * self.intensity
+                indices = np.indices(field_shape)[i]
+                modulation += 0.2 * np.cos(indices * 3.14 / field_shape[i]) * self.intensity
         
-        # Ensure modulation is applied and clipped
-        modulation = np.clip(modulation, 0.01, 3.0) # Allow for stronger boosts/dampening but bounded
+        # Normalize to ensure reasonable values
+        modulation = np.clip(modulation, 0.1, 2.0)
         return modulation
 
 class QuantumBreathAdapter:
@@ -829,3 +802,741 @@ class CollapseAdapter:
             "average_ethical_vector": average_ethical,
             "analysis_timespan": len(recent_history)
         }
+
+import logging
+import numpy as np
+import time
+from typing import Dict, Any, Optional, List, Tuple
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, 
+                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("QuantumBridge")
+
+def initialize(**kwargs):
+    """
+    Initialize the quantum bridge that connects the quantum realm to the ORAMA framework.
+    
+    Args:
+        **kwargs: Configuration parameters including:
+            - entity_id: The ID of the entity using this quantum bridge (default: auto-generated)
+            - coherence_threshold: Minimum coherence level required (default: 0.7)
+            - quantum_physics_module: Optional pre-initialized quantum physics module
+            - timeline_engine: Optional pre-initialized timeline engine
+            - harmonic_engine: Optional pre-initialized harmonic engine
+            - debug_mode: Enable verbose debug logging (default: False)
+            
+    Returns:
+        Initialized QuantumBridge instance
+    """
+    # Extract configuration parameters with defaults
+    entity_id = kwargs.get('entity_id', f"bridge_{int(time.time()) % 10000}")
+    coherence_threshold = kwargs.get('coherence_threshold', 0.7)
+    debug_mode = kwargs.get('debug_mode', False)
+    
+    # Set logging level based on debug mode
+    if debug_mode:
+        logger.setLevel(logging.DEBUG)
+        
+    # Create quantum bridge
+    bridge = QuantumBridge(
+        entity_id=entity_id,
+        coherence_threshold=coherence_threshold
+    )
+    
+    # Connect to quantum physics module if provided
+    if 'quantum_physics_module' in kwargs and kwargs['quantum_physics_module'] is not None:
+        bridge.connect_quantum_module(kwargs['quantum_physics_module'])
+        logger.info(f"Connected to quantum physics module")
+    
+    # Connect to timeline engine if provided
+    if 'timeline_engine' in kwargs and kwargs['timeline_engine'] is not None:
+        bridge.connect_timeline(kwargs['timeline_engine'])
+        logger.info(f"Connected to timeline engine")
+    
+    # Connect to harmonic engine if provided
+    if 'harmonic_engine' in kwargs and kwargs['harmonic_engine'] is not None:
+        bridge.connect_harmonic(kwargs['harmonic_engine'])
+        logger.info(f"Connected to harmonic engine")
+    
+    logger.info(f"Quantum Bridge initialized with ID {entity_id}")
+    logger.info(f"Configuration: coherence_threshold={coherence_threshold}, debug_mode={debug_mode}")
+    
+    return bridge
+
+class QuantumBridge:
+    """
+    The Quantum Bridge provides a connection between classical and quantum
+    layers of the ORAMA Framework, facilitating the translation of quantum
+    phenomena into macro-scale effects.
+    """
+    
+    def __init__(self, entity_id: str = None, coherence_threshold: float = 0.7):
+        """
+        Initialize the Quantum Bridge.
+        
+        Args:
+            entity_id: Unique identifier for this bridge
+            coherence_threshold: Minimum quantum coherence required for stable connections
+        """
+        self.entity_id = entity_id or f"bridge_{int(time.time()) % 10000}"
+        self.coherence_threshold = coherence_threshold
+        self.coherence_level = 1.0  # Start with perfect coherence
+        
+        # Connected components
+        self.quantum_module = None
+        self.timeline_engine = None
+        self.harmonic_engine = None
+        
+        # State tracking
+        self.active_channels = {}
+        self.entangled_entities = {}
+        self.quantum_states = {}
+        self.is_active = False
+        
+        # Event handlers
+        self.event_handlers = {}
+        
+        logger.info(f"Quantum Bridge {self.entity_id} created with coherence threshold {coherence_threshold}")
+    
+    def connect_quantum_module(self, quantum_module):
+        """Connect to the quantum physics module"""
+        self.quantum_module = quantum_module
+        
+        # Register for quantum events if the module has an observer pattern
+        if hasattr(quantum_module, 'register_observer'):
+            quantum_module.register_observer(self._handle_quantum_event)
+            
+        logger.info(f"Connected to quantum physics module")
+        return True
+    
+    def connect_timeline(self, timeline_engine):
+        """Connect to the timeline engine"""
+        self.timeline_engine = timeline_engine
+        
+        # Register for temporal events
+        if hasattr(timeline_engine, 'register_observer'):
+            timeline_engine.register_observer(self._handle_temporal_event)
+            
+        logger.info(f"Connected to timeline engine")
+        return True
+    
+    def connect_harmonic(self, harmonic_engine):
+        """Connect to the harmonic engine"""
+        self.harmonic_engine = harmonic_engine
+        
+        # Register for harmonic events
+        if hasattr(harmonic_engine, 'register_observer'):
+            harmonic_engine.register_observer(self._handle_harmonic_event)
+            
+        logger.info(f"Connected to harmonic engine")
+        return True
+    
+    def activate(self):
+        """Activate the quantum bridge"""
+        if self.is_active:
+            logger.warning("Quantum Bridge already active")
+            return False
+            
+        self.is_active = True
+        
+        # Initialize quantum states and channels
+        self._initialize_quantum_channels()
+        
+        logger.info(f"Quantum Bridge {self.entity_id} activated")
+        return True
+    
+    def deactivate(self):
+        """Deactivate the quantum bridge"""
+        if not self.is_active:
+            logger.warning("Quantum Bridge not active")
+            return False
+            
+        self.is_active = False
+        
+        # Close quantum channels
+        self._close_quantum_channels()
+        
+        logger.info(f"Quantum Bridge {self.entity_id} deactivated")
+        return True
+    
+    def _initialize_quantum_channels(self):
+        """Initialize the quantum communication channels"""
+        if not self.quantum_module:
+            logger.warning("Cannot initialize quantum channels: no quantum module connected")
+            return False
+            
+        # Create basic channels
+        self.active_channels = {
+            "reality": self._create_channel("reality", 3),
+            "timeline": self._create_channel("timeline", 1),
+            "consciousness": self._create_channel("consciousness", 5),
+            "probability": self._create_channel("probability", 2)
+        }
+        
+        logger.debug(f"Initialized {len(self.active_channels)} quantum channels")
+        return True
+    
+    def _create_channel(self, name, dimension):
+        """Create a single quantum channel"""
+        # Channel is essentially an entangled state of specified dimension
+        channel = {
+            "name": name,
+            "dimension": dimension,
+            "state": np.eye(2 ** dimension, dtype=complex) / (2 ** dimension),
+            "entangled_entities": [],
+            "coherence": self.coherence_level,
+            "last_update": time.time()
+        }
+        
+        logger.debug(f"Created quantum channel '{name}' with dimension {dimension}")
+        return channel
+    
+    def _close_quantum_channels(self):
+        """Close all quantum channels"""
+        # Perform cleanup for each channel
+        for channel_name, channel in self.active_channels.items():
+            # Notify entangled entities
+            for entity in channel["entangled_entities"]:
+                self._send_channel_closed_event(channel_name, entity)
+                
+            logger.debug(f"Closed quantum channel '{channel_name}'")
+            
+        # Clear channels
+        self.active_channels = {}
+        return True
+    
+    def _send_channel_closed_event(self, channel_name, entity):
+        """Send notification that a channel has closed"""
+        event = {
+            "type": "quantum_channel_closed",
+            "channel": channel_name,
+            "entity": entity,
+            "time": time.time()
+        }
+        
+        # Handle event locally
+        self._handle_event(event)
+    
+    def transmit(self, channel_name, data, target=None):
+        """
+        Transmit data through a quantum channel.
+        
+        Args:
+            channel_name: Name of the channel to use
+            data: Data to transmit (will be quantum encoded)
+            target: Optional target entity (None for broadcast)
+            
+        Returns:
+            Bool indicating success
+        """
+        if not self.is_active:
+            logger.warning("Cannot transmit: Quantum Bridge not active")
+            return False
+            
+        if channel_name not in self.active_channels:
+            logger.warning(f"Cannot transmit: Unknown channel '{channel_name}'")
+            return False
+            
+        channel = self.active_channels[channel_name]
+        
+        # Check channel coherence
+        if channel["coherence"] < self.coherence_threshold:
+            logger.warning(f"Cannot transmit on channel '{channel_name}': Coherence too low ({channel['coherence']:.2f})")
+            return False
+            
+        # Encode data into quantum state
+        encoded_state = self._encode_quantum_data(data, channel["dimension"])
+        
+        # Store state in the channel
+        channel["state"] = encoded_state
+        channel["last_update"] = time.time()
+        
+        # Transmit to target or broadcast
+        if target:
+            if target in channel["entangled_entities"]:
+                self._deliver_quantum_data(channel_name, encoded_state, target)
+            else:
+                logger.warning(f"Cannot transmit to target {target}: Not entangled to channel '{channel_name}'")
+                return False
+        else:
+            # Broadcast to all entangled entities
+            for entity in channel["entangled_entities"]:
+                self._deliver_quantum_data(channel_name, encoded_state, entity)
+                
+        logger.debug(f"Transmitted data on channel '{channel_name}' to {'all entities' if target is None else target}")
+        return True
+    
+    def _encode_quantum_data(self, data, dimension):
+        """Encode classical data into quantum state"""
+        # This is a simplified encoding - real quantum encoding would be more sophisticated
+        
+        # Convert data to numerical representation if needed
+        if isinstance(data, str):
+            # Simple encoding of string to numbers
+            numerical_data = [ord(c) for c in data]
+        elif isinstance(data, (int, float)):
+            numerical_data = [data]
+        elif isinstance(data, (list, tuple)):
+            numerical_data = list(data)
+        elif isinstance(data, dict):
+            # Flatten dictionary to pairs
+            numerical_data = []
+            for k, v in data.items():
+                numerical_data.extend([hash(k) % 1000, v if isinstance(v, (int, float)) else hash(str(v)) % 1000])
+        else:
+            # Default fallback
+            numerical_data = [hash(str(data)) % 1000]
+            
+        # Create a normalized quantum state from the data
+        state_size = 2 ** dimension
+        quantum_state = np.zeros(state_size, dtype=complex)
+        
+        # Use data to set amplitudes
+        for i, value in enumerate(numerical_data[:state_size]):
+            if i < state_size:
+                angle = (value % 360) * np.pi / 180
+                quantum_state[i] = np.cos(angle) + 1j * np.sin(angle)
+                
+        # Fill remaining elements with small random values
+        if len(numerical_data) < state_size:
+            for i in range(len(numerical_data), state_size):
+                mag = 0.1 * np.random.random()
+                phase = 2 * np.pi * np.random.random()
+                quantum_state[i] = mag * (np.cos(phase) + 1j * np.sin(phase))
+                
+        # Normalize
+        norm = np.sqrt(np.sum(np.abs(quantum_state)**2))
+        if norm > 0:
+            quantum_state = quantum_state / norm
+            
+        # Convert to density matrix for mixed state representation
+        density_matrix = np.outer(quantum_state, np.conj(quantum_state))
+        
+        return density_matrix
+    
+    def _deliver_quantum_data(self, channel_name, state, target):
+        """Deliver quantum data to a target entity"""
+        # In a real system, this would use the entity communication mechanism
+        # For now, we'll just log the delivery
+        
+        delivery_event = {
+            "type": "quantum_data_delivery",
+            "channel": channel_name,
+            "state": state,  # This would be a reference in a real system
+            "target": target,
+            "time": time.time()
+        }
+        
+        # Handle event locally
+        self._handle_event(delivery_event)
+        
+        logger.debug(f"Delivered quantum data on channel '{channel_name}' to '{target}'")
+        return True
+    
+    def entangle(self, entity_id, channel_name):
+        """
+        Entangle an entity with a quantum channel.
+        
+        Args:
+            entity_id: ID of the entity to entangle
+            channel_name: Name of the channel to entangle with
+            
+        Returns:
+            Bool indicating success
+        """
+        if not self.is_active:
+            logger.warning("Cannot entangle: Quantum Bridge not active")
+            return False
+            
+        if channel_name not in self.active_channels:
+            logger.warning(f"Cannot entangle: Unknown channel '{channel_name}'")
+            return False
+            
+        channel = self.active_channels[channel_name]
+        
+        # Check if already entangled
+        if entity_id in channel["entangled_entities"]:
+            logger.debug(f"Entity '{entity_id}' already entangled with channel '{channel_name}'")
+            return True
+            
+        # Add to entangled entities
+        channel["entangled_entities"].append(entity_id)
+        
+        # Track in the reverse mapping
+        if entity_id not in self.entangled_entities:
+            self.entangled_entities[entity_id] = []
+            
+        self.entangled_entities[entity_id].append(channel_name)
+        
+        # Create entanglement event
+        entangle_event = {
+            "type": "quantum_entanglement",
+            "channel": channel_name,
+            "entity": entity_id,
+            "time": time.time()
+        }
+        
+        # Handle event locally
+        self._handle_event(entangle_event)
+        
+        logger.info(f"Entangled entity '{entity_id}' with channel '{channel_name}'")
+        return True
+    
+    def disentangle(self, entity_id, channel_name=None):
+        """
+        Disentangle an entity from a channel or all channels.
+        
+        Args:
+            entity_id: ID of the entity to disentangle
+            channel_name: Name of the channel (None for all channels)
+            
+        Returns:
+            Bool indicating success
+        """
+        if not self.is_active:
+            logger.warning("Cannot disentangle: Quantum Bridge not active")
+            return False
+            
+        # Check if entity is entangled with any channels
+        if entity_id not in self.entangled_entities:
+            logger.debug(f"Entity '{entity_id}' not entangled with any channels")
+            return False
+            
+        if channel_name is None:
+            # Disentangle from all channels
+            channels_to_disentangle = self.entangled_entities[entity_id].copy()
+            for ch_name in channels_to_disentangle:
+                self._disentangle_from_channel(entity_id, ch_name)
+                
+            # Clear entity's entanglement record
+            del self.entangled_entities[entity_id]
+            
+            logger.info(f"Disentangled entity '{entity_id}' from all channels")
+            return True
+        else:
+            # Disentangle from specific channel
+            if channel_name not in self.active_channels:
+                logger.warning(f"Cannot disentangle: Unknown channel '{channel_name}'")
+                return False
+                
+            if channel_name not in self.entangled_entities[entity_id]:
+                logger.debug(f"Entity '{entity_id}' not entangled with channel '{channel_name}'")
+                return False
+                
+            self._disentangle_from_channel(entity_id, channel_name)
+            
+            # Update entity's entanglement record
+            self.entangled_entities[entity_id].remove(channel_name)
+            if not self.entangled_entities[entity_id]:
+                del self.entangled_entities[entity_id]
+                
+            logger.info(f"Disentangled entity '{entity_id}' from channel '{channel_name}'")
+            return True
+    
+    def _disentangle_from_channel(self, entity_id, channel_name):
+        """Helper method to disentangle an entity from a channel"""
+        channel = self.active_channels[channel_name]
+        
+        # Remove from channel's entangled entities
+        if entity_id in channel["entangled_entities"]:
+            channel["entangled_entities"].remove(entity_id)
+            
+        # Create disentanglement event
+        disentangle_event = {
+            "type": "quantum_disentanglement",
+            "channel": channel_name,
+            "entity": entity_id,
+            "time": time.time()
+        }
+        
+        # Handle event locally
+        self._handle_event(disentangle_event)
+    
+    def measure_coherence(self, channel_name=None):
+        """
+        Measure the quantum coherence of a channel or the entire bridge.
+        
+        Args:
+            channel_name: Optional channel to measure (None for overall coherence)
+            
+        Returns:
+            Coherence value between 0.0 and 1.0
+        """
+        if not self.is_active:
+            logger.warning("Cannot measure coherence: Quantum Bridge not active")
+            return 0.0
+            
+        if channel_name is not None:
+            # Measure specific channel
+            if channel_name not in self.active_channels:
+                logger.warning(f"Cannot measure coherence: Unknown channel '{channel_name}'")
+                return 0.0
+                
+            channel = self.active_channels[channel_name]
+            return channel["coherence"]
+        else:
+            # Measure overall bridge coherence
+            if not self.active_channels:
+                return 0.0
+                
+            # Average coherence across all channels
+            total_coherence = sum(channel["coherence"] for channel in self.active_channels.values())
+            return total_coherence / len(self.active_channels)
+    
+    def update_coherence(self, channel_name, new_coherence):
+        """
+        Update the coherence level of a channel.
+        
+        Args:
+            channel_name: Name of the channel to update
+            new_coherence: New coherence value (0.0 to 1.0)
+            
+        Returns:
+            Bool indicating success
+        """
+        if not self.is_active:
+            logger.warning("Cannot update coherence: Quantum Bridge not active")
+            return False
+            
+        if channel_name not in self.active_channels:
+            logger.warning(f"Cannot update coherence: Unknown channel '{channel_name}'")
+            return False
+            
+        # Clamp coherence to valid range
+        new_coherence = max(0.0, min(1.0, new_coherence))
+        
+        channel = self.active_channels[channel_name]
+        old_coherence = channel["coherence"]
+        channel["coherence"] = new_coherence
+        
+        # Create coherence change event
+        coherence_event = {
+            "type": "quantum_coherence_change",
+            "channel": channel_name,
+            "old_coherence": old_coherence,
+            "new_coherence": new_coherence,
+            "time": time.time()
+        }
+        
+        # Handle event locally
+        self._handle_event(coherence_event)
+        
+        # Check if coherence crossed the threshold
+        if old_coherence >= self.coherence_threshold and new_coherence < self.coherence_threshold:
+            logger.warning(f"Channel '{channel_name}' coherence dropped below threshold ({new_coherence:.2f})")
+            # Additional handling for coherence loss could be added here
+        
+        logger.debug(f"Updated channel '{channel_name}' coherence to {new_coherence:.2f}")
+        return True
+    
+    def register_event_handler(self, event_type, handler_func):
+        """
+        Register a handler for quantum bridge events.
+        
+        Args:
+            event_type: Type of event to handle
+            handler_func: Function to call for this event type
+            
+        Returns:
+            Bool indicating success
+        """
+        if event_type not in self.event_handlers:
+            self.event_handlers[event_type] = []
+            
+        if handler_func not in self.event_handlers[event_type]:
+            self.event_handlers[event_type].append(handler_func)
+            logger.debug(f"Registered handler for '{event_type}' events")
+            return True
+        
+        return False
+    
+    def unregister_event_handler(self, event_type, handler_func):
+        """
+        Unregister a handler for quantum bridge events.
+        
+        Args:
+            event_type: Type of event
+            handler_func: Handler function to remove
+            
+        Returns:
+            Bool indicating success
+        """
+        if event_type in self.event_handlers and handler_func in self.event_handlers[event_type]:
+            self.event_handlers[event_type].remove(handler_func)
+            logger.debug(f"Unregistered handler for '{event_type}' events")
+            
+            # Clean up empty lists
+            if not self.event_handlers[event_type]:
+                del self.event_handlers[event_type]
+                
+            return True
+            
+        return False
+    
+    def _handle_event(self, event):
+        """Internal method to handle bridge events"""
+        event_type = event.get("type", "unknown")
+        
+        # Call registered handlers
+        if event_type in self.event_handlers:
+            for handler in self.event_handlers[event_type]:
+                try:
+                    handler(event)
+                except Exception as e:
+                    logger.error(f"Error in event handler for '{event_type}': {str(e)}")
+                    
+        # Call any handlers registered for "all" events
+        if "all" in self.event_handlers:
+            for handler in self.event_handlers["all"]:
+                try:
+                    handler(event)
+                except Exception as e:
+                    logger.error(f"Error in event handler for 'all': {str(e)}")
+                    
+        # Special handling for certain event types
+        if event_type == "quantum_coherence_change" and event["new_coherence"] < self.coherence_threshold:
+            self._handle_low_coherence(event)
+    
+    def _handle_quantum_event(self, event):
+        """Handle events from the quantum physics module"""
+        # Process quantum events and translate to bridge events if needed
+        event_type = event.get("type", "unknown")
+        
+        if event_type == "quantum_fluctuation":
+            # Quantum fluctuations can affect bridge coherence
+            affected_channels = event.get("affected_channels", [])
+            magnitude = event.get("magnitude", 0.1)
+            
+            if not affected_channels:
+                # Default to affecting all channels
+                affected_channels = list(self.active_channels.keys())
+                
+            for channel_name in affected_channels:
+                if channel_name in self.active_channels:
+                    current_coherence = self.active_channels[channel_name]["coherence"]
+                    
+                    # Calculate new coherence based on fluctuation
+                    # This is a simple model - real quantum coherence is more complex
+                    coherence_change = magnitude * (2 * np.random.random() - 1)
+                    new_coherence = current_coherence + coherence_change
+                    
+                    # Update channel coherence
+                    self.update_coherence(channel_name, new_coherence)
+    
+    def _handle_temporal_event(self, event):
+        """Handle events from the timeline engine"""
+        # Process temporal events and translate to bridge events if needed
+        event_type = event.get("type", "unknown")
+        
+        if event_type == "temporal_paradox":
+            # Temporal paradoxes can severely affect quantum bridge
+            severity = event.get("severity", 0.5)
+            
+            # Create bridge instability event
+            instability_event = {
+                "type": "quantum_bridge_instability",
+                "cause": "temporal_paradox",
+                "severity": severity,
+                "time": time.time()
+            }
+            
+            # Handle the instability
+            self._handle_event(instability_event)
+            
+            # Reduce coherence across all channels
+            for channel_name in self.active_channels:
+                current_coherence = self.active_channels[channel_name]["coherence"]
+                new_coherence = max(0, current_coherence - severity / 2)
+                self.update_coherence(channel_name, new_coherence)
+    
+    def _handle_harmonic_event(self, event):
+        """Handle events from the harmonic engine"""
+        # Process harmonic events and translate to bridge events if needed
+        event_type = event.get("type", "unknown")
+        
+        if event_type == "harmonic_resonance":
+            # Harmonic resonance can enhance quantum coherence
+            frequency = event.get("frequency", 0)
+            amplitude = event.get("amplitude", 0.1)
+            affected_channels = event.get("affected_channels", [])
+            
+            if not affected_channels:
+                # Default to affecting all channels
+                affected_channels = list(self.active_channels.keys())
+                
+            for channel_name in affected_channels:
+                if channel_name in self.active_channels:
+                    current_coherence = self.active_channels[channel_name]["coherence"]
+                    
+                    # Calculate coherence enhancement based on resonance
+                    coherence_boost = amplitude * 0.2
+                    new_coherence = min(1.0, current_coherence + coherence_boost)
+                    
+                    # Update channel coherence
+                    self.update_coherence(channel_name, new_coherence)
+                    
+            logger.debug(f"Harmonic resonance boost applied to {len(affected_channels)} channels")
+    
+    def _handle_low_coherence(self, event):
+        """Handle low coherence conditions"""
+        channel_name = event["channel"]
+        new_coherence = event["new_coherence"]
+        
+        if new_coherence < 0.3:
+            # Critically low coherence
+            logger.warning(f"CRITICAL: Channel '{channel_name}' coherence at {new_coherence:.2f}")
+            
+            # Attempt emergency coherence recovery
+            self._attempt_coherence_recovery(channel_name)
+        elif new_coherence < self.coherence_threshold:
+            # Low coherence
+            logger.warning(f"Low coherence on channel '{channel_name}': {new_coherence:.2f}")
+    
+    def _attempt_coherence_recovery(self, channel_name):
+        """Attempt to recover coherence on a channel"""
+        if channel_name not in self.active_channels:
+            return False
+            
+        channel = self.active_channels[channel_name]
+        
+        # Reset channel state
+        dimension = channel["dimension"]
+        channel["state"] = np.eye(2 ** dimension, dtype=complex) / (2 ** dimension)
+        
+        # Apply small coherence recovery
+        current_coherence = channel["coherence"]
+        recovery_amount = 0.1 + 0.1 * np.random.random()
+        new_coherence = min(1.0, current_coherence + recovery_amount)
+        
+        # Update coherence
+        self.update_coherence(channel_name, new_coherence)
+        
+        logger.info(f"Attempted coherence recovery on channel '{channel_name}': {current_coherence:.2f} -> {new_coherence:.2f}")
+        
+        return new_coherence > current_coherence
+
+    def get_status(self):
+        """Get current status of the quantum bridge"""
+        status = {
+            "entity_id": self.entity_id,
+            "is_active": self.is_active,
+            "coherence_threshold": self.coherence_threshold,
+            "overall_coherence": self.measure_coherence(),
+            "channels": {},
+            "entangled_entity_count": len(self.entangled_entities),
+            "quantum_module_connected": self.quantum_module is not None,
+            "timeline_connected": self.timeline_engine is not None,
+            "harmonic_connected": self.harmonic_engine is not None
+        }
+        
+        # Add channel details
+        for name, channel in self.active_channels.items():
+            status["channels"][name] = {
+                "dimension": channel["dimension"],
+                "coherence": channel["coherence"],
+                "entangled_entity_count": len(channel["entangled_entities"]),
+                "last_update": channel["last_update"]
+            }
+            
+        return status
