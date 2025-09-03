@@ -228,7 +228,7 @@ class SymbolicQuantumState:
         
         logger.info(f"Added archetype '{archetype.name}' with ethical vector {ethical_vector}")
     
-    def apply_symbolic_meaning(self, symbol: str, position: Tuple[float, ...], intensity: float = 1.0) -> None:
+    def apply_symbolic_meaning(self, symbol: str, position: Tuple[float, ...], intensity: float = 1.0) -> Dict[str, Any]:
         """Apply symbolic meaning to influence the quantum field"""
         # Convert position to grid indices
         grid_pos = tuple(int(p * dim) for p, dim in zip(position, self.field_shape))
