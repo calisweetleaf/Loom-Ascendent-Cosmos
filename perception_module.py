@@ -549,7 +549,6 @@ class SymbolicProcessor:
         self.active_symbols = {}
         self.symbol_associations = {}  # Links between symbols
         self.archetype_triggers = {
-            ArchetypeResonance.ANIMA: {"life", "growth", "creation", "nurture"},
             ArchetypeResonance.UMBRA: {"shadow", "hidden", "depth", "unknown"},
             ArchetypeResonance.NEXUS: {"connection", "bridge", "relation", "network"},
             ArchetypeResonance.LOGOS: {"order", "structure", "logic", "pattern"},
@@ -558,7 +557,8 @@ class SymbolicProcessor:
             ArchetypeResonance.CHORA: {"space", "place", "location", "container"},
             ArchetypeResonance.FLUX: {"change", "flow", "transformation", "becoming"},
             ArchetypeResonance.STASIS: {"stability", "permanence", "resistance", "being"},
-            ArchetypeResonance.AETHER: {"transcendence", "meta", "beyond", "spirit"}
+            ArchetypeResonance.AETHER: {"transcendence", "meta", "beyond", "spirit"},
+            ArchetypeResonance.ANIMA: {"life", "growth", "creation", "nurture"}
         }
         self.domain_keywords = {
             SymbolicDomain.MATERIAL: {"substance", "physical", "matter", "object"},

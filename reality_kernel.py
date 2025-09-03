@@ -211,6 +211,7 @@ class CosmicScroll:
         self.last_density_calculation = 0.0
         
         # Thread management
+        from collections import defaultdict
         self.thread_priorities = defaultdict(float)
         self.thread_interactions = defaultdict(list)
         
