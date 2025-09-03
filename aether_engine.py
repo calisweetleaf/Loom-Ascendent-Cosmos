@@ -1143,6 +1143,12 @@ class AetherEngine:
                 min_size = self.physics.get('min_pattern_size', 64)
                 max_size = self.physics.get('max_pattern_size', 1048576)
                 
+                # Ensure min_size and max_size are integers
+                if min_size is None:
+                    min_size = 64
+                if max_size is None:
+                    max_size = 1048576
+                
                 if len(wave_pattern) < min_size:
                     wave_pattern = wave_pattern.ljust(min_size, b'\x00')
                 elif len(wave_pattern) > max_size:
