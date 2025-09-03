@@ -1156,13 +1156,28 @@ class AetherEngine:
             
             # Calculate optimal cube size with performance considerations
             cube_size = max(int(np.ceil(len(arr) ** (1/3))), 3)  # Minimum cube size of 3 for 3x3x3 operations
-            max_cube_size = self.physics.get('max_voxel_dimension', 100)
+            
+            # Get max_cube_size with proper type checking and validation
+            max_cube_size_raw = self.physics.get('max_voxel_dimension', 100)
+            if max_cube_size_raw is None:
+                max_cube_size = 100  # Default fallback
+            else:
+                try:
+                    max_cube_size = int(max_cube_size_raw)
+                    if max_cube_size <= 0:
+                        max_cube_size = 100  # Ensure positive value
+                except (ValueError, TypeError):
+                    max_cube_size = 100  # Fallback for invalid values
             
             if cube_size > max_cube_size:
                 logger.warning(f"Voxel cube size {cube_size} exceeds maximum {max_cube_size}, clamping")
                 cube_size = max_cube_size
             
-            target_size = cube_size ** 3
+            # Ensure cube_size is valid before using it
+            if cube_size <= 0:
+                cube_size = 3  # Minimum valid cube size
+            
+            target_size = cube_size ** 3;
             
             # Reshape data to fit cube dimensions with proper padding/truncation
             if len(arr) >= target_size:
@@ -1199,12 +1214,13 @@ class AetherEngine:
                 # Apply 3D filtering with boundary handling
                 filtered_cube = np.zeros_like(voxel_cube, dtype=np.float32)
                 
-                # Process interior points with full kernel
-                for i in range(1, cube_size - 1):
-                    for j in range(1, cube_size - 1):
-                        for k in range(1, cube_size - 1):
-                            neighborhood = voxel_cube[i-1:i+2, j-1:j+2, k-1:k+2].astype(np.float32)
-                            filtered_cube[i, j, k] = np.sum(neighborhood * kernel_3d)
+                # Process interior points with full kernel - ensure cube_size is valid for range operations
+                if cube_size > 2:  # Need at least 3x3x3 for interior processing
+                    for i in range(1, cube_size - 1):
+                        for j in range(1, cube_size - 1):
+                            for k in range(1, cube_size - 1):
+                                neighborhood = voxel_cube[i-1:i+2, j-1:j+2, k-1:k+2].astype(np.float32)
+                                filtered_cube[i, j, k] = np.sum(neighborhood * kernel_3d)
                 
                 # Handle boundary conditions by copying edge values
                 filtered_cube[0, :, :] = voxel_cube[0, :, :].astype(np.float32)
@@ -1351,6 +1367,10 @@ class AetherEngine:
         try:
             if not data:
                 raise EncodingError("Input data for quantum encoding cannot be empty")
+            
+            # Generate deterministic seed from input data
+            seed_hash = hashlib.blake2b(data, digest_size=8).digest()
+            seed = int.from_bytes(seed_hash, 'big') % (2**32)  # 32-bit seed for numpy compatibility
             
             # Generate deterministic quantum-like state vector
             rng = np.random.RandomState(seed)  # Use full 64-bit seed
@@ -1780,7 +1800,8 @@ class AetherEngine:
             # Inherit transformation properties
             result = AetherPattern(
                 core=bytes(transformed_data),
-                mutations=pattern1.mutations + (pattern2.core[:32],),  # Add transform signature
+                mutations=pattern1.mutations + (pattern2.core[:32],  # Add transform signature
+                ),
                 interactions={**pattern1.interactions, 'transformed_by': pattern2.pattern_id},
                 encoding_type=pattern1.encoding_type,
                 recursion_level=pattern1.recursion_level + 1,
@@ -1809,7 +1830,7 @@ class AetherEngine:
                 raise InteractionError(f"Patterns incompatible for cascade (compatibility: {compatibility:.3f})")
             
             # Generate cascade iterations
-            cascade_iterations = min(int(compatibility * 10), 5)  # Max 5 iterations
+            cascade_iterations = min(int(compatibility * 10),  5)  # Max 5 iterations
             current_core = pattern1.core
             
             for iteration in range(cascade_iterations):

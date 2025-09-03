@@ -51,7 +51,7 @@ logging.basicConfig(
 logger = logging.getLogger("OramaAgent")
 
 # Dynamically discover and import available modules in the current directory
-def discover_available_modules():
+def discover_available_modules() -> Dict[str, Any]:
     """Scan current directory for available modules and import them dynamically"""
     available_modules = {}
     module_files = [f for f in os.listdir(current_dir) if f.endswith('.py') and f != 'orama_agent.py']
@@ -68,6 +68,449 @@ def discover_available_modules():
             system_logger.warning(f"Could not import {module_name}: {e}")
     
     return available_modules
+
+# ... (rest of the file)
+
+    def __post_init__(self) -> None:
+        """Initializes the hash_id of the memory event after creation."""
+        if not self.hash_id:
+            content_hash = hashlib.sha256(f"{self.timestamp}:{self.content}".encode()).hexdigest()
+            self.hash_id = content_hash[:16]  # Use first 16 chars of hash
+
+# ... (rest of the file)
+
+    def _check_required_components(self) -> None:
+        """Check if all required components are available."""
+        required_components = [
+            "paradox_engine", 
+            "mind_seed", 
+            "timeline_engine", 
+            "aether_engine", 
+            "quantum_bridge"
+        ]
+        
+        missing_components = []
+        for component in required_components:
+            if component not in self.components:
+                missing_components.append(component)
+                self.logger.warning(f"Required component missing: {component}")
+        
+        if missing_components:
+            self.logger.error(f"Missing required components: {', '.join(missing_components)}")
+            self.logger.warning("Conscious Substrate will function with limited capabilities")
+        else:
+            self.logger.info("All required components are available")
+
+    def _establish_component_connections(self) -> None:
+        """Establish connections between components."""
+        # Connect ParadoxEngine to TimelineEngine
+        if "paradox_engine" in self.components and "timeline_engine" in self.components:
+            paradox = self.components["paradox_engine"]
+            timeline = self.components["timeline_engine"]
+            
+            # Register callbacks
+            try:
+                paradox.register_callback(
+                    event_type='timeline_fork',
+                    callback=timeline.handle_forking
+                )
+                self.logger.info("Connected ParadoxEngine to TimelineEngine")
+            except Exception as e:
+                self.logger.error(f"Failed to connect ParadoxEngine to TimelineEngine: {e}")
+        
+        # Connect MindSeed to PerceptionModule
+        if "mind_seed" in self.components:
+            mind = self.components["mind_seed"]
+            
+            try:
+                if hasattr(mind, "register_perception_provider"):
+                    self.logger.info("Connected MindSeed to PerceptionModule")
+            except Exception as e:
+                self.logger.error(f"Failed to connect MindSeed to PerceptionModule: {e}")
+        
+        # Connect AetherEngine to QuantumBridge
+        if "aether_engine" in self.components and "quantum_bridge" in self.components:
+            aether = self.components["aether_engine"]
+            quantum = self.components["quantum_bridge"]
+            
+            try:
+                if hasattr(quantum, "register_field_provider") and hasattr(aether, "get_field"):
+                    quantum.register_field_provider(aether.get_field)
+                    self.logger.info("Connected AetherEngine to QuantumBridge")
+            except Exception as e:
+                self.logger.error(f"Failed to connect AetherEngine to QuantumBridge: {e}")
+        
+        # Connect additional relationships as needed
+        self._connect_additional_relationships()
+    
+    def _connect_additional_relationships(self) -> None:
+        """Connect additional inter-component relationships."""
+        # Connect MindSeed to KnowledgeSynthesizer
+        if 'mind_seed' in self.components and hasattr(self.orama_system, 'knowledge_synthesizer'):
+            mind = self.components['mind_seed']
+            knowledge_synthesizer = self.orama_system.knowledge_synthesizer
+            if hasattr(mind, 'identity_matrix'):
+                knowledge_synthesizer.create_entity_from_identity(mind.identity_matrix)
+                self.logger.info("Connected MindSeed to KnowledgeSynthesizer")
+
+        # Connect TimelineEngine to KnowledgeSynthesizer
+        if 'timeline_engine' in self.components and hasattr(self.orama_system, 'knowledge_synthesizer'):
+            timeline = self.components['timeline_engine']
+            knowledge_synthesizer = self.orama_system.knowledge_synthesizer
+            if hasattr(timeline, 'register_observer'):
+                timeline.register_observer(knowledge_synthesizer.handle_timeline_event)
+                self.logger.info("Connected TimelineEngine to KnowledgeSynthesizer")
+
+        # Connect ParadoxEngine to TruthValidator
+        if 'paradox_engine' in self.components and hasattr(self.orama_system, 'truth_validator'):
+            paradox = self.components['paradox_engine']
+            truth_validator = self.orama_system.truth_validator
+            if hasattr(paradox, 'register_paradox_handler'):
+                def paradox_handler(paradox_info):
+                    constraint = f"Detected paradox: {paradox_info.get('description')}"
+                    truth_validator.add_temporary_constraint(constraint, duration=300)
+                paradox.register_paradox_handler(paradox_handler)
+                self.logger.info("Connected ParadoxEngine to TruthValidator")
+
+# ... (rest of the file)
+
+    def _format_perceptions(self, perceptions: List[SimulationPerception]) -> str:
+        """Format recent perceptions for the prompt."""
+        if not perceptions:
+            return "No recent perceptions available."
+            
+        perception_texts = []
+        for p in perceptions:
+            if hasattr(p, 'content') and hasattr(p, 'timestamp'):
+                perception_texts.append(f"[{p.timestamp}] {p.content}")
+        
+        if not perception_texts:
+            return "No recent perceptions available."
+            
+        return "
+".join(perception_texts[-3:])  # Include only the 3 most recent
+    
+    def _format_memories(self, memories: List[MemoryEvent]) -> str:
+        """Format relevant memories for the prompt."""
+        if not memories:
+            return "No relevant memories available."
+            
+        memory_texts = []
+        for m in memories:
+            if hasattr(m, 'content') and hasattr(m, 'timestamp'):
+                memory_texts.append(f"[{m.timestamp}] {m.content}")
+        
+        if not memory_texts:
+            return "No relevant memories available."
+            
+        return "
+".join(memory_texts[-3:])  # Include only the 3 most recent
+
+# ... (rest of the file)
+
+    def initialize_system_components(self) -> None:
+        """Initialize all system components in the correct dependency order"""
+        system_logger.info("Starting system components initialization in the correct order...")
+        
+        # 1. Initialize Timeline Engine (first in the dependency chain)
+        if timeline_engine:
+            try:
+                system_logger.info("Initializing Timeline Engine...")
+                timeline_instance = timeline_engine.initialize()
+                self.initialized_components['timeline_engine'] = timeline_instance
+                system_logger.info("Timeline Engine initialized successfully")
+                
+                self.memory_manager.add_memory(MemoryEvent(
+                    timestamp=datetime.datetime.now().isoformat(),
+                    event_type="SYSTEM_INITIALIZATION",
+                    content="Timeline Engine initialized successfully",
+                    source="system",
+                    metadata={"component": "timeline_engine"}
+                ))
+            except Exception as e:
+                system_logger.error(f"Failed to initialize Timeline Engine: {e}")
+                traceback.print_exc()
+        else:
+            system_logger.error("Timeline Engine module not found. This is required for system operation.")
+        
+        # 2. Initialize Quantum components
+        quantum_components = {
+            'quantum_physics': quantum_physics,
+            'quantum_bridge': quantum_bridge
+        }
+        
+        for component_name, component in quantum_components.items():
+            if component:
+                try:
+                    system_logger.info(f"Initializing {component_name}...")
+                    
+                    # Pass the timeline engine if the component requires it
+                    if 'timeline_engine' in self.initialized_components:
+                        component_instance = component.initialize(
+                            timeline_engine=self.initialized_components['timeline_engine']
+                        )
+                    else:
+                        component_instance = component.initialize()
+                    
+                    self.initialized_components[component_name] = component_instance
+                    system_logger.info(f"{component_name} initialized successfully")
+                    
+                    self.memory_manager.add_memory(MemoryEvent(
+                        timestamp=datetime.datetime.now().isoformat(),
+                        event_type="SYSTEM_INITIALIZATION",
+                        content=f"{component_name} initialized successfully",
+                        source="system",
+                        metadata={"component": component_name}
+                    ))
+                except Exception as e:
+                    system_logger.error(f"Failed to initialize {component_name}: {e}")
+                    traceback.print_exc()
+            else:
+                system_logger.warning(f"{component_name} module not found or failed to load.")
+        
+        # 3. Initialize Aether Engine (depends on quantum components)
+        if aether_engine:
+            try:
+                system_logger.info("Initializing Aether Engine...")
+                
+                # Pass quantum components if they're initialized
+                kwargs = {}
+                if 'quantum_physics' in self.initialized_components:
+                    kwargs['quantum_physics'] = self.initialized_components['quantum_physics']
+                if 'quantum_bridge' in self.initialized_components:
+                    kwargs['quantum_bridge'] = self.initialized_components['quantum_bridge']
+                if 'timeline_engine' in self.initialized_components:
+                    kwargs['timeline_engine'] = self.initialized_components['timeline_engine']
+                
+                aether_instance = aether_engine.initialize(**kwargs)
+                self.initialized_components['aether_engine'] = aether_instance
+                system_logger.info("Aether Engine initialized successfully")
+                
+                self.memory_manager.add_memory(MemoryEvent(
+                    timestamp=datetime.datetime.now().isoformat(),
+                    event_type="SYSTEM_INITIALIZATION",
+                    content="Aether Engine initialized successfully",
+                    source="system",
+                    metadata={"component": "aether_engine"}
+                ))
+            except Exception as e:
+                system_logger.error(f"Failed to initialize Aether Engine: {e}")
+                traceback.print_exc()
+        else:
+            system_logger.error("Aether Engine module not found. This is required for system operation.")
+        
+        # 4. Initialize Harmonic Engine, Perception Module, and Mind Seed
+        mid_layer_components = {
+            'harmonic_engine': harmonic_engine,
+            'perception_module': perception_module,
+            'mind_seed': mind_seed
+        }
+        
+        for component_name, component in mid_layer_components.items():
+            if component:
+                try:
+                    system_logger.info(f"Initializing {component_name}...")
+                    
+                    # Pass required dependencies
+                    kwargs = {}
+                    if 'aether_engine' in self.initialized_components:
+                        kwargs['aether_engine'] = self.initialized_components['aether_engine']
+                    if 'timeline_engine' in self.initialized_components:
+                        kwargs['timeline_engine'] = self.initialized_components['timeline_engine']
+                    if 'quantum_physics' in self.initialized_components:
+                        kwargs['quantum_physics'] = self.initialized_components['quantum_physics']
+                    if 'quantum_bridge' in self.initialized_components:
+                        kwargs['quantum_bridge'] = self.initialized_components['quantum_bridge']
+                    
+                    component_instance = component.initialize(**kwargs)
+                    self.initialized_components[component_name] = component_instance
+                    system_logger.info(f"{component_name} initialized successfully")
+                    
+                    self.memory_manager.add_memory(MemoryEvent(
+                        timestamp=datetime.datetime.now().isoformat(),
+                        event_type="SYSTEM_INITIALIZATION",
+                        content=f"{component_name} initialized successfully",
+                        source="system",
+                        metadata={"component": component_name}
+                    ))
+                except Exception as e:
+                    system_logger.error(f"Failed to initialize {component_name}: {e}")
+                    traceback.print_exc()
+            else:
+                system_logger.warning(f"{component_name} module not found or failed to load.")
+        
+        # 5. Initialize Planetary Reality Kernel (depends on all previous components)
+        # This will be handled by the initialize_planetary_kernel method
+        
+        # 6. Initialize Paradox Engine (initialized last after everything else)
+        if paradox_engine:
+            try:
+                system_logger.info("Initializing Paradox Engine...")
+                
+                # Pass all initialized components as dependencies
+                paradox_instance = paradox_engine.initialize(
+                    initialized_components=self.initialized_components
+                )
+                self.initialized_components['paradox_engine'] = paradox_instance
+                system_logger.info("Paradox Engine initialized successfully")
+                
+                self.memory_manager.add_memory(MemoryEvent(
+                    timestamp=datetime.datetime.now().isoformat(),
+                    event_type="SYSTEM_INITIALIZATION",
+                    content="Paradox Engine initialized successfully",
+                    source="system",
+                    metadata={"component": "paradox_engine"}
+                ))
+            except Exception as e:
+                system_logger.error(f"Failed to initialize Paradox Engine: {e}")
+                traceback.print_exc()
+        else:
+            system_logger.warning("Paradox Engine module not found or failed to load.")
+        
+        system_logger.info(f"System components initialization complete. Successfully initialized {len(self.initialized_components)} components.")
+    
+    def initialize_planetary_kernel(self) -> None:
+        """Initialize the Planetary Reality Kernel"""
+        try:
+            if not PlanetaryRealityKernel:
+                system_logger.error("Cannot initialize Planetary Reality Kernel: Module not found")
+                return
+            
+            system_logger.info("Initializing Planetary Reality Kernel...")
+            
+            # Pass all initialized components as dependencies
+            kwargs = {
+                'orama_system': self,
+                **self.initialized_components
+            }
+            
+            # Initialize the kernel through the interface function provided in planetary_reality_kernel.py
+            self.kernel = PlanetaryRealityKernel.initialize_from_orama(**kwargs)
+            
+            # Add to initialized components
+            self.initialized_components['planetary_reality_kernel'] = self.kernel
+            
+            system_logger.info("Planetary Reality Kernel initialized successfully")
+            
+            # Record this in memory
+            self.memory_manager.add_memory(MemoryEvent(
+                timestamp=datetime.datetime.now().isoformat(),
+                event_type="SYSTEM_INITIALIZATION",
+                content="Planetary Reality Kernel initialized successfully",
+                source="system",
+                metadata={"kernel_status": "active", "component": "planetary_reality_kernel"}
+            ))
+            
+        except Exception as e:
+            system_logger.error(f"Failed to initialize Planetary Reality Kernel: {e}")
+            traceback.print_exc()
+            self.kernel = None
+    
+    def register_kernel(self, kernel: Any) -> None:
+        """Register an already initialized kernel"""
+        self.kernel = kernel
+        system_logger.info(f"Registered existing Planetary Reality Kernel: {kernel.world_name}")
+
+# ... (rest of the file)
+
+    def interactive_chat_mode(self) -> None:
+        """Run the ORAMA system in interactive chat mode"""
+        print("
+" + "="*60)
+        print("ORAMA INTERACTIVE CHAT MODE")
+        print("Type 'exit' or 'quit' to end the session")
+        print("Type 'command: <cmd>' to execute a terminal command")
+        print("Type 'engine start', 'engine stop', etc. to control the Genesis Cosmos Engine")
+        print("="*60 + "
+")
+
+        if self.kernel:
+            print(f"Planetary Reality Kernel '{self.kernel.world_name}' is ready.")
+        else:
+            print("No kernel initialized. Use 'engine start' to begin.")
+
+        while True:
+            try:
+                user_input = input("ORAMA> ").strip()
+                if user_input.lower() in ['exit', 'quit']:
+                    print("Exiting interactive chat mode. Goodbye!")
+                    break
+                elif user_input.lower().startswith('command:'):
+                    command = user_input[len('command:'):].strip()
+                    output = self.execute_command(command)
+                    print(output)
+                elif user_input.lower().startswith('engine'):
+                    if 'start' in user_input.lower():
+                        print(self._start_cosmos_engine())
+                    elif 'stop' in user_input.lower():
+                        print(self._stop_cosmos_engine())
+                    elif 'pause' in user_input.lower():
+                        print(self._pause_cosmos_engine())
+                    elif 'resume' in user_input.lower():
+                        print(self._resume_cosmos_engine())
+                    elif 'status' in user_input.lower():
+                        print(self._get_cosmos_engine_status())
+                    else:
+                        print("Unknown engine command. Use 'start', 'stop', 'pause', 'resume', or 'status'.")
+                else:
+                    response, context = self.process_query(user_input)
+                    print(response)
+            except KeyboardInterrupt:
+                print("
+Exiting interactive chat mode. Goodbye!")
+                break
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
+    def monitor_and_maintain_engines(self) -> None:
+        """Continuously monitor and maintain all engines to ensure persistence."""
+        while True:
+            try:
+                # Check the status of each engine
+                if 'timeline_engine' in self.initialized_components:
+                    timeline = self.initialized_components['timeline_engine']
+                    if not timeline.is_active():
+                        system_logger.warning("Timeline Engine stopped unexpectedly. Restarting...")
+                        timeline.start()
+
+                if 'quantum_physics' in self.initialized_components:
+                    quantum = self.initialized_components['quantum_physics']
+                    if not quantum.is_active():
+                        system_logger.warning("Quantum Physics Engine stopped unexpectedly. Restarting...")
+                        quantum.start()
+
+                if 'planetary_reality_kernel' in self.initialized_components:
+                    kernel = self.initialized_components['planetary_reality_kernel']
+                    if not kernel.active:
+                        system_logger.warning("Planetary Reality Kernel stopped unexpectedly. Restarting...")
+                        kernel.start()
+
+                # Add checks for other engines as needed
+
+                time.sleep(5)  # Check every 5 seconds
+            except Exception as e:
+                system_logger.error(f"Error monitoring engines: {e}")
+                time.sleep(5)  # Prevent tight loop on error
+
+    def start_persistent_system(self) -> None:
+        """Start the ORAMA system and ensure all engines remain persistent."""
+        # Start all engines
+        self.initialize_planetary_kernel()
+        for component_name, component in self.initialized_components.items():
+            if hasattr(component, 'start') and callable(component.start):
+                try:
+                    component.start()
+                    system_logger.info(f"Started {component_name} successfully.")
+                except Exception as e:
+                    system_logger.error(f"Failed to start {component_name}: {e}")
+
+        # Start the monitoring thread
+        monitoring_thread = threading.Thread(target=self.monitor_and_maintain_engines, daemon=True)
+        monitoring_thread.start()
+
+        # Enter interactive chat mode
+        self.interactive_chat_mode()
+
 
 # Import available modules
 modules = discover_available_modules()
