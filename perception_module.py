@@ -16,7 +16,7 @@ import logging
 from collections import deque
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime%s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("PerceptionModule")
 
 class PerceptionProcessor:
@@ -137,6 +137,7 @@ class ArchetypeResonance(Enum):
     FLUX = "flux"           # Change, transformation, fluidity
     STASIS = "stasis"       # Stability, preservation, resistance
     AETHER = "aether"       # Transcendent, meta-aware, all-connecting
+    ANIMA = "anima"         # Life, growth, creation, nurture
 
 class SymbolicDomain(Enum):
     """Domains that symbolic perception operates within."""
