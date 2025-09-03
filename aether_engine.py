@@ -1178,8 +1178,7 @@ class AetherEngine:
                 raise EncodingError("Input data for quantum encoding cannot be empty")
             
             # Generate deterministic quantum-like state vector
-            seed = int.from_bytes(hashlib.blake2b(data, digest_size=8).digest(), 'big')
-            rng = np.random.RandomState(seed % (2**32))  # Ensure valid seed
+            rng = np.random.RandomState(seed)  # Use full 64-bit seed
             
             # Dynamic state size based on data complexity
             unique_bytes = len(set(data)) if data else 1
