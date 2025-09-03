@@ -953,17 +953,22 @@ class AetherEngine:
             raise EncodingError(f"Symbolic encoding failed: {e}")
 
     def _encode_voxel(self, data: bytes) -> bytes:
-        """3D volumetric encoding with bounds checking"""
+        """3D volumetric encoding with bounds checking and proper array handling"""
         try:
             if not data:
                 raise EncodingError("Input data for voxel encoding cannot be empty")
             
-            arr = np.frombuffer(data, dtype=np.uint8)
+            # Convert to numpy array with proper error handling
+            try:
+                arr = np.frombuffer(data, dtype=np.uint8)
+            except ValueError as e:
+                raise EncodingError(f"Failed to convert data to numpy array: {e}")
+            
             if len(arr) == 0:
                 raise EncodingError("Cannot create voxel array from empty data")
             
-            # Calculate cube size with limits
-            cube_size = max(int(len(arr) ** (1/3)) + 1, 1)
+            # Calculate optimal cube size with performance considerations
+            cube_size = max(int(np.ceil(len(arr) ** (1/3))), 2)  # Minimum cube size of 2
             max_cube_size = self.physics.get('max_voxel_dimension', 100)
             
             if cube_size > max_cube_size:
@@ -971,16 +976,56 @@ class AetherEngine:
                 cube_size = max_cube_size
             
             target_size = cube_size ** 3
-            result = arr.tobytes().ljust(target_size, b'\x00')[:target_size]
-            logger.debug(f"Voxel encoding completed: {len(data)} -> {len(result)} bytes ({cube_size}³)")
-            return result
+            
+            # Reshape data to fit cube dimensions with proper padding/truncation
+            if len(arr) >= target_size:
+                # Truncate if data is larger than target
+                voxel_data = arr[:target_size]
+            else:
+                # Pad with pattern-based filling instead of zeros for better distribution
+                padding_pattern = arr[:min(len(arr), 256)]  # Use first 256 bytes as pattern
+                pad_length = target_size - len(arr)
+                
+                # Create repeating pattern for padding
+                pattern_repeats = (pad_length // len(padding_pattern)) + 1
+                padding = np.tile(padding_pattern, pattern_repeats)[:pad_length]
+                
+                voxel_data = np.concatenate([arr, padding])
+            
+            # Reshape to 3D cube and apply volumetric transformation
+            try:
+                voxel_cube = voxel_data.reshape(cube_size, cube_size, cube_size)
+                
+                # Apply 3D convolution-like operation for spatial encoding
+                kernel = np.array([[[0.125, 0.25, 0.125],
+                                  [0.25, 0.5, 0.25],
+                                  [0.125, 0.25, 0.125]]])
+                
+                # Simple 3D filtering operation
+                filtered_cube = np.zeros_like(voxel_cube, dtype=np.float32)
+                for i in range(1, cube_size-1):
+                    for j in range(1, cube_size-1):
+                        for k in range(1, cube_size-1):
+                            neighborhood = voxel_cube[i-1:i+2, j-1:j+2, k-1:k+2].astype(np.float32)
+                            filtered_cube[i, j, k] = np.sum(neighborhood * kernel)
+                
+                # Convert back to uint8 and flatten
+                result_data = np.clip(filtered_cube, 0, 255).astype(np.uint8).tobytes()
+                
+            except (ValueError, MemoryError) as e:
+                # Fallback to simple reshape if 3D operations fail
+                logger.warning(f"3D operations failed, using simple reshape: {e}")
+                result_data = voxel_data.tobytes()
+            
+            logger.debug(f"Voxel encoding completed: {len(data)} -> {len(result_data)} bytes ({cube_size}³)")
+            return result_data
             
         except Exception as e:
             logger.error(f"Voxel encoding failed: {e}")
             raise EncodingError(f"Voxel encoding failed: {e}")
 
     def _encode_glyph(self, data: bytes) -> bytes:
-        """Visual symbolic encoding with padding validation"""
+        """Visual symbolic encoding with advanced glyph generation"""
         try:
             if not data:
                 raise EncodingError("Input data for glyph encoding cannot be empty")
@@ -991,15 +1036,64 @@ class AetherEngine:
             if len(data) > max_size:
                 raise EncodingError(f"Input data size {len(data)} exceeds maximum {max_size}")
             
-            # Center the data with glyph padding
-            if len(data) >= target_size:
-                result = data[:max_size]
-            else:
-                padding_needed = target_size - len(data)
-                left_pad = padding_needed // 2
-                right_pad = padding_needed - left_pad
-                result = b'\x01' * left_pad + data + b'\x01' * right_pad
+            # Generate glyph symbols based on data entropy
+            data_array = np.frombuffer(data, dtype=np.uint8)
+            entropy_map = self._calculate_local_entropy(data_array)
             
+            # Create glyph patterns based on entropy distribution
+            glyph_patterns = {
+                'low_entropy': b'\x01\x01\x02\x02',    # Repetitive pattern
+                'med_entropy': b'\x03\x05\x07\x0B',    # Prime sequence
+                'high_entropy': b'\x0F\x33\x55\xAA',  # Alternating bits
+                'ultra_entropy': b'\xFF\x00\x5A\xA5'  # Maximum contrast
+            }
+            
+            # Apply entropy-based glyph mapping
+            glyph_data = bytearray()
+            chunk_size = max(1, len(data_array) // target_size) if len(data_array) > target_size else 1
+            
+            for i in range(0, len(data_array), chunk_size):
+                chunk = data_array[i:i + chunk_size]
+                chunk_entropy = np.std(chunk.astype(np.float32))
+                
+                if chunk_entropy < 10:
+                    pattern = glyph_patterns['low_entropy']
+                elif chunk_entropy < 30:
+                    pattern = glyph_patterns['med_entropy']
+                elif chunk_entropy < 60:
+                    pattern = glyph_patterns['high_entropy']
+                else:
+                    pattern = glyph_patterns['ultra_entropy']
+                
+                # XOR chunk data with selected pattern
+                for j, byte_val in enumerate(chunk):
+                    glyph_data.append(byte_val ^ pattern[j % len(pattern)])
+            
+            # Ensure target size with sophisticated padding
+            if len(glyph_data) < target_size:
+                # Create fractal padding pattern
+                seed_pattern = bytes(glyph_data[-min(16, len(glyph_data)):])
+                padding_needed = target_size - len(glyph_data)
+                
+                # Generate fractal-like padding
+                fractal_padding = self._generate_fractal_padding(seed_pattern, padding_needed)
+                glyph_data.extend(fractal_padding)
+            
+            elif len(glyph_data) > target_size:
+                # Compress using sliding window with overlap preservation
+                compression_ratio = len(glyph_data) / target_size
+                compressed_data = bytearray()
+                
+                for i in range(target_size):
+                    source_idx = int(i * compression_ratio)
+                    if source_idx < len(glyph_data):
+                        compressed_data.append(glyph_data[source_idx])
+                    else:
+                        compressed_data.append(0)
+                
+                glyph_data = compressed_data
+            
+            result = bytes(glyph_data[:target_size])
             logger.debug(f"Glyph encoding completed: {len(data)} -> {len(result)} bytes")
             return result
             
@@ -1008,430 +1102,398 @@ class AetherEngine:
             raise EncodingError(f"Glyph encoding failed: {e}")
     
     def _encode_quantum(self, data: bytes) -> bytes:
-        """Probabilistic quantum state encoding with error handling"""
+        """Advanced quantum state encoding with proper normalization"""
         try:
             if not data:
                 raise EncodingError("Input data for quantum encoding cannot be empty")
             
-            # Generate quantum-like state vector
-            seed = int.from_bytes(hashlib.md5(data).digest()[:4], 'big')
-            rng = np.random.RandomState(seed)
+            # Generate deterministic quantum-like state vector
+            seed = int.from_bytes(hashlib.blake2b(data, digest_size=8).digest(), 'big')
+            rng = np.random.RandomState(seed % (2**32))  # Ensure valid seed
             
-            # Create normalized complex state vector
-            state_size = max(64, min(len(data), self.physics.get('max_quantum_states', 1024)))
+            # Dynamic state size based on data complexity
+            data_complexity = len(set(data)) / 256.0  # Normalized complexity
+            base_size = 128
+            complexity_factor = max(0.5, min(2.0, data_complexity * 2))
+            state_size = int(base_size * complexity_factor)
+            state_size = min(state_size, self.physics.get('max_quantum_states', 2048))
             
             try:
+                # Generate complex quantum amplitudes
                 real_parts = rng.normal(0, 1, state_size)
-                phases = rng.uniform(-np.pi, np.pi, state_size)
+                imag_parts = rng.normal(0, 1, state_size)
                 
-                # Normalize to unit vector
-                norm = np.sqrt(np.sum(real_parts**2))
-                if norm > 0:
-                    real_parts = real_parts / norm
+                # Create complex amplitudes
+                amplitudes = real_parts + 1j * imag_parts
                 
-                # Combine real parts and phases into a single byte array
-                wave_bytes = np.concatenate((real_parts, phases)).tobytes()
+                # Proper quantum state normalization
+                norm_squared = np.sum(np.abs(amplitudes) ** 2)
+                if norm_squared > 0:
+                    amplitudes = amplitudes / np.sqrt(norm_squared)
+                else:
+                    # Fallback to uniform superposition
+                    amplitudes = np.ones(state_size, dtype=complex) / np.sqrt(state_size)
                 
-                # Hash for consistency and security
-                result = hashlib.sha3_512(wave_bytes).digest()
-                logger.debug(f"Quantum encoding completed: {len(data)} -> {len(result)} bytes")
+                # Extract phases and magnitudes
+                phases = np.angle(amplitudes)
+                magnitudes = np.abs(amplitudes)
+                
+                # Quantum entanglement simulation through correlation matrix
+                correlation_matrix = np.outer(magnitudes, magnitudes)
+                eigenvals, eigenvecs = np.linalg.eigh(correlation_matrix)
+                
+                # Use top eigenvalues for encoding
+                top_k = min(32, len(eigenvals))
+                top_eigenvals = eigenvals[-top_k:]
+                
+                # Combine quantum features into byte representation
+                quantum_features = np.concatenate([
+                    magnitudes,
+                    phases,
+                    top_eigenvals
+                ])
+                
+                # Normalize to byte range with quantum discretization
+                feature_min, feature_max = quantum_features.min(), quantum_features.max()
+                if feature_max > feature_min:
+                    normalized_features = ((quantum_features - feature_min) / 
+                                         (feature_max - feature_min) * 255).astype(np.uint8)
+                else:
+                    normalized_features = np.full(len(quantum_features), 128, dtype=np.uint8)
+                
+                # Apply quantum hash for final encoding
+                quantum_bytes = normalized_features.tobytes()
+                result = hashlib.blake2b(
+                    quantum_bytes, 
+                    digest_size=64,
+                    key=data[:32].ljust(32, b'\x00')
+                ).digest()
+                
+                logger.debug(f"Quantum encoding completed: {len(data)} -> {len(result)} bytes (state_size: {state_size})")
                 return result
                 
-            except Exception as e:
-                raise EncodingError(f"Quantum state generation failed: {e}")
+            except (np.linalg.LinAlgError, MemoryError) as e:
+                raise EncodingError(f"Quantum state computation failed: {e}")
                 
         except Exception as e:
             logger.error(f"Quantum encoding failed: {e}")
             raise EncodingError(f"Quantum encoding failed: {e}")
 
     def _encode_fractal(self, data: bytes) -> bytes:
-        """Self-similar recursive encoding with bounds checking and error handling"""
+        """Advanced fractal encoding with multi-scale self-similarity"""
         try:
             if not data:
                 raise EncodingError("Input data for fractal encoding cannot be empty")
             
-            # Define recursion depth for fractal generation with limits
-            max_depth = self.physics.get('max_fractal_depth', 5)
-            recursion_depth = min(max_depth, self.physics.get('max_recursion_depth', 3))
+            max_depth = self.physics.get('max_fractal_depth', 6)
+            recursion_depth = min(max_depth, self.physics.get('max_recursion_depth', 4))
             
             if recursion_depth <= 0:
                 raise EncodingError("Invalid recursion depth for fractal encoding")
             
-            # Initialize fractal data with the input data
-            fractal_data = data
+            # Initialize multi-scale fractal encoding
+            fractal_scales = []
+            current_data = np.frombuffer(data, dtype=np.uint8)
             max_size = self.physics.get('max_pattern_size', 1048576)
             
-            # Recursively hash and combine data
-            for iteration in range(recursion_depth):
+            # Generate fractal at multiple scales
+            for scale_level in range(recursion_depth):
                 try:
-                    # Hash the current fractal data
-                    hashed_data = hashlib.sha256(fractal_data).digest()
+                    # Apply fractal transformation at current scale
+                    scale_factor = 2 ** scale_level
+                    if len(current_data) > max_size // scale_factor:
+                        current_data = current_data[:max_size // scale_factor]
                     
-                    # Ensure we don't exceed size limits
-                    if len(fractal_data) > max_size:
-                        fractal_data = fractal_data[:max_size]
-                        logger.warning(f"Fractal data truncated to {max_size} bytes at iteration {iteration}")
+                    # Mandelbrot-inspired transformation
+                    complex_data = self._data_to_complex_plane(current_data)
+                    fractal_result = self._mandelbrot_transform(complex_data, iterations=8)
                     
-                    # Combine the hashed data with the current fractal data
-                    min_length = min(len(fractal_data), len(hashed_data))
-                    fractal_data = bytes((a + b) % 256 for a, b in 
-                                       zip(fractal_data[:min_length], hashed_data[:min_length]))
+                    # Convert back to bytes with proper scaling
+                    scaled_result = (fractal_result * 255).astype(np.uint8)
+                    fractal_scales.append(scaled_result)
                     
-                    # Extend with original pattern if needed
-                    if len(fractal_data) < len(data):
-                        extension = data[:len(data) - len(fractal_data)]
-                        fractal_data = fractal_data + extension
+                    # Prepare for next iteration
+                    if len(scaled_result) > 0:
+                        # Create feedback loop for next scale
+                        hash_feedback = hashlib.sha256(scaled_result.tobytes()).digest()
+                        current_data = np.frombuffer(hash_feedback, dtype=np.uint8)
                     
-                except Exception as e:
-                    raise EncodingError(f"Fractal iteration {iteration} failed: {e}")
+                except (MemoryError, OverflowError) as e:
+                    logger.warning(f"Fractal scale {scale_level} failed: {e}, using fallback")
+                    # Fallback to simple hash iteration
+                    hash_result = hashlib.sha256(current_data.tobytes()).digest()
+                    current_data = np.frombuffer(hash_result, dtype=np.uint8)
+                    fractal_scales.append(current_data)
             
-            # Ensure the result meets size requirements
+            # Combine multi-scale results
+            if not fractal_scales:
+                raise EncodingError("No fractal scales generated")
+            
+            # Weighted combination of scales
+            combined_length = max(len(scale) for scale in fractal_scales)
+            combined_fractal = np.zeros(combined_length, dtype=np.float32)
+            
+            for i, scale_data in enumerate(fractal_scales):
+                weight = 1.0 / (2 ** i)  # Exponential weighting
+                if len(scale_data) < combined_length:
+                    # Tile to match length
+                    repetitions = (combined_length // len(scale_data)) + 1
+                    extended_scale = np.tile(scale_data, repetitions)[:combined_length]
+                else:
+                    extended_scale = scale_data[:combined_length]
+                
+                combined_fractal += extended_scale.astype(np.float32) * weight
+            
+            # Normalize and convert to bytes
+            if combined_fractal.max() > combined_fractal.min():
+                normalized_fractal = ((combined_fractal - combined_fractal.min()) / 
+                                    (combined_fractal.max() - combined_fractal.min()) * 255)
+            else:
+                normalized_fractal = np.full_like(combined_fractal, 128)
+            
+            result_data = normalized_fractal.astype(np.uint8).tobytes()
+            
+            # Ensure minimum size requirements
             min_size = self.physics.get('min_pattern_size', 64)
-            if len(fractal_data) < min_size:
-                fractal_data = fractal_data.ljust(min_size, b'\x00')
+            if len(result_data) < min_size:
+                # Extend using self-similar tiling
+                tiles_needed = (min_size // len(result_data)) + 1
+                result_data = (result_data * tiles_needed)[:min_size]
             
-            logger.debug(f"Fractal encoding completed: {len(data)} -> {len(fractal_data)} bytes ({recursion_depth} iterations)")
-            return fractal_data
+            logger.debug(f"Fractal encoding completed: {len(data)} -> {len(result_data)} bytes ({recursion_depth} scales)")
+            return result_data
             
         except Exception as e:
             logger.error(f"Fractal encoding failed: {e}")
             raise EncodingError(f"Fractal encoding failed: {e}")
 
     def _encode_wave(self, data: bytes) -> bytes:
-        """Frequency/amplitude-based encoding with comprehensive error handling"""
+        """Advanced wave encoding with multi-frequency analysis"""
         try:
             if not data:
                 raise EncodingError("Input data for wave encoding cannot be empty")
             
-            # Convert input data to a NumPy array
-            data_array = np.frombuffer(data, dtype=np.uint8)
+            # Convert to floating point for better precision
+            data_array = np.frombuffer(data, dtype=np.uint8).astype(np.float32)
             
             if len(data_array) == 0:
                 raise EncodingError("Cannot create wave array from empty data")
             
-            # Limit array size for performance
-            max_wave_size = self.physics.get('max_wave_samples', 4096)
+            # Adaptive array sizing for optimal FFT performance
+            max_wave_size = self.physics.get('max_wave_samples', 8192)
             if len(data_array) > max_wave_size:
-                logger.warning(f"Wave data truncated from {len(data_array)} to {max_wave_size} samples")
-                data_array = data_array[:max_wave_size]
+                # Decimate intelligently instead of truncation
+                decimation_factor = len(data_array) // max_wave_size
+                data_array = data_array[::decimation_factor][:max_wave_size]
+                logger.debug(f"Wave data decimated by factor {decimation_factor}")
+            
+            # Pad to next power of 2 for efficient FFT
+            next_pow2 = 2 ** int(np.ceil(np.log2(len(data_array))))
+            if next_pow2 > len(data_array):
+                # Use mirroring for natural continuation
+                mirror_pad = next_pow2 - len(data_array)
+                if mirror_pad <= len(data_array):
+                    padding = data_array[-mirror_pad:][::-1]
+                else:
+                    # Repeat mirroring if needed
+                    repetitions = (mirror_pad // len(data_array)) + 1
+                    padding = np.tile(data_array[::-1], repetitions)[:mirror_pad]
+                data_array = np.concatenate([data_array, padding])
             
             try:
-                # Apply a Fourier transform to generate frequency components
-                frequency_components = np.fft.fft(data_array)
+                # Apply windowing to reduce spectral leakage
+                window = np.hanning(len(data_array))
+                windowed_data = data_array * window
                 
-                # Extract amplitude and phase information
+                # Multi-resolution frequency analysis
+                frequency_components = np.fft.fft(windowed_data)
+                
+                # Extract comprehensive spectral features
                 amplitudes = np.abs(frequency_components)
                 phases = np.angle(frequency_components)
+                power_spectrum = amplitudes ** 2
                 
-                # Validate results
+                # Validate spectral data
                 if np.any(np.isnan(amplitudes)) or np.any(np.isnan(phases)):
                     raise EncodingError("FFT produced NaN values")
                 
-                # Normalize amplitudes to fit within a byte range
-                if amplitudes.max() > 0:
-                    normalized_amplitudes = (amplitudes / amplitudes.max() * 255).astype(np.uint8)
-                else:
-                    normalized_amplitudes = np.zeros_like(amplitudes, dtype=np.uint8)
+                # Spectral centroid and spread for additional features
+                freqs = np.fft.fftfreq(len(data_array))
+                spectral_centroid = np.sum(freqs * power_spectrum) / (np.sum(power_spectrum) + 1e-10)
+                spectral_spread = np.sqrt(np.sum(((freqs - spectral_centroid) ** 2) * power_spectrum) / 
+                                        (np.sum(power_spectrum) + 1e-10))
                 
-                # Normalize phases to byte range
-                normalized_phases = ((phases + np.pi) / (2 * np.pi) * 255).astype(np.uint8)
+                # Mel-scale frequency transformation for perceptual encoding
+                mel_filters = self._create_mel_filterbank(len(amplitudes) // 2, 26)
+                mel_spectrum = np.dot(mel_filters, amplitudes[:len(amplitudes)//2])
                 
-                # Combine amplitudes and phases into a single byte array
-                wave_pattern = np.concatenate((normalized_amplitudes, normalized_phases)).tobytes()
+                # Combine all spectral features
+                spectral_features = np.concatenate([
+                    self._normalize_to_uint8(amplitudes),
+                    self._normalize_to_uint8(phases + np.pi),  # Shift phases to positive
+                    self._normalize_to_uint8(mel_spectrum),
+                    [int(spectral_centroid * 255) % 256,
+                     int(spectral_spread * 255) % 256]
+                ])
                 
-                # Ensure the result meets size requirements
+                wave_pattern = spectral_features.astype(np.uint8).tobytes()
+                
+                # Ensure size requirements with intelligent truncation/padding
                 min_size = self.physics.get('min_pattern_size', 64)
                 max_size = self.physics.get('max_pattern_size', 1048576)
                 
+                # Ensure min_size and max_size are valid integers
+                if min_size is None or not isinstance(min_size, int) or min_size <= 0:
+                    min_size = 64
+                if max_size is None or not isinstance(max_size, int) or max_size <= 0:
+                    max_size = 1048576
+                
+                # Ensure min_size doesn't exceed max_size
+                if min_size > max_size:
+                    min_size = max_size
+                
                 if len(wave_pattern) < min_size:
-                    wave_pattern = wave_pattern.ljust(min_size, b'\x00')
+                    # Pad with harmonics of the original pattern
+                    harmonic_pattern = self._generate_harmonic_padding(wave_pattern, min_size - len(wave_pattern))
+                    wave_pattern = wave_pattern + harmonic_pattern
                 elif len(wave_pattern) > max_size:
-                    wave_pattern = wave_pattern[:max_size]
+                    # Intelligent compression preserving key spectral features
+                    wave_pattern = self._compress_spectral_data(wave_pattern, max_size)
                 
                 logger.debug(f"Wave encoding completed: {len(data)} -> {len(wave_pattern)} bytes")
                 return wave_pattern
                 
-            except Exception as e:
-                raise EncodingError(f"Wave transformation failed: {e}")
+            except np.fft._fftpack.error as e:
+                raise EncodingError(f"FFT computation failed: {e}")
                 
         except Exception as e:
             logger.error(f"Wave encoding failed: {e}")
             raise EncodingError(f"Wave encoding failed: {e}")
 
-    def _handle_combine(self, patterns: List[AetherPattern]) -> AetherPattern:
-        """
-        Combine multiple patterns into a single new pattern.
+    def _calculate_local_entropy(self, data_array: np.ndarray, window_size: int = 8) -> np.ndarray:
+        """Calculate local entropy for glyph pattern selection"""
+        if len(data_array) == 0:
+            return np.array([])
         
-        Args:
-            patterns: List of AetherPattern objects to combine.
+        entropy_values = []
+        for i in range(0, len(data_array), window_size):
+            window = data_array[i:i + window_size]
+            if len(window) > 0:
+                # Calculate Shannon entropy
+                unique_vals, counts = np.unique(window, return_counts=True)
+                probabilities = counts / len(window)
+                entropy = -np.sum(probabilities * np.log2(probabilities + 1e-10))
+                entropy_values.append(entropy)
         
-        Returns:
-            AetherPattern: The resulting combined pattern.
-        """
-        if len(patterns) < 2:
-            raise ValueError("At least two patterns are required to combine.")
+        return np.array(entropy_values)
 
-        # Combine cores by hashing them together
-        combined_core = hashlib.sha3_512(b''.join(p.core for p in patterns)).digest()
-
-        # Merge mutations
-        combined_mutations = tuple(set(m for p in patterns for m in p.mutations))
-
-        # Merge interactions
-        combined_interactions = {}
-        for p in patterns:
-            combined_interactions.update(p.interactions)
-
-        # Determine the highest recursion level
-        max_recursion_level = max(p.recursion_level for p in patterns)
-
-        # Create the combined pattern
-        combined_pattern = AetherPattern(
-            core=combined_core,
-            mutations=combined_mutations,
-            interactions=combined_interactions,
-            encoding_type=patterns[0].encoding_type,  # Assume all patterns have the same encoding type
-            recursion_level=max_recursion_level + 1,
-            metadata={"combined_from": [p.pattern_id for p in patterns]}
-        )
-
-        # Update metrics
-        self.metrics['patterns_created'] += 1
-        self.metrics['interactions_processed'] += 1
-
-        logger.info(f"Combined {len(patterns)} patterns into new pattern {combined_pattern.pattern_id}")
-        return combined_pattern
-
-    def _handle_entangle(self, patterns: List[AetherPattern]) -> AetherPattern:
-        """
-        Create quantum-like entanglement between patterns.
-        """
-        if len(patterns) < 2:
-            raise ValueError("At least two patterns are required to entangle.")
-
-        # Generate a shared entanglement key
-        entanglement_key = hashlib.sha256(b''.join(p.core for p in patterns)).digest()
-
-        # Update metadata to reflect entanglement
-        for p in patterns:
-            p.metadata['entanglement_key'] = entanglement_key.hex()
-
-        logger.info(f"Entangled {len(patterns)} patterns with key {entanglement_key.hex()}")
-        return patterns[0]  # Return the first pattern as a representative
-
-    def _handle_transform(self, pattern: AetherPattern, transformation: Callable) -> AetherPattern:
-        """
-        Apply a state transformation to a pattern.
+    def _generate_fractal_padding(self, seed_pattern: bytes, length: int) -> bytearray:
+        """Generate fractal-like padding pattern"""
+        if not seed_pattern or length <= 0:
+            return bytearray(length)
         
-        Args:
-            pattern: The pattern to transform.
-            transformation: A callable that modifies the pattern's core.
+        padding = bytearray()
+        pattern_array = np.frombuffer(seed_pattern, dtype=np.uint8)
         
-        Returns:
-            AetherPattern: The transformed pattern.
-        """
-        transformed_core = transformation(pattern.core)
-
-        # Create a new pattern with the transformed core
-        transformed_pattern = AetherPattern(
-            core=transformed_core,
-            mutations=pattern.mutations,
-            interactions=pattern.interactions,
-            encoding_type=pattern.encoding_type,
-            recursion_level=pattern.recursion_level + 1,
-            metadata={**pattern.metadata, "transformed": True}
-        )
-
-        logger.info(f"Transformed pattern {pattern.pattern_id} into {transformed_pattern.pattern_id}")
-        return transformed_pattern
-
-    def _handle_cascade(self, patterns: List[AetherPattern]) -> List[AetherPattern]:
-        """
-        Trigger a chain reaction between patterns.
+        while len(padding) < length:
+            # Apply simple fractal transformation
+            next_iteration = ((pattern_array * 1.5) % 256).astype(np.uint8)
+            padding.extend(next_iteration.tobytes())
+            pattern_array = next_iteration
         
-        Args:
-            patterns: List of AetherPattern objects to cascade.
+        return padding[:length]
+
+    def _data_to_complex_plane(self, data: np.ndarray) -> np.ndarray:
+        """Map byte data to complex plane for fractal processing"""
+        if len(data) % 2 == 1:
+            data = np.append(data, [0])
         
-        Returns:
-            List[AetherPattern]: The resulting patterns after the cascade.
-        """
-        cascaded_patterns = []
-        for i, pattern in enumerate(patterns):
-            # Create a new pattern for each step in the cascade
-            new_core = hashlib.sha256(pattern.core + bytes([i])).digest()
-            new_pattern = AetherPattern(
-                core=new_core,
-                mutations=pattern.mutations,
-                interactions=pattern.interactions,
-                encoding_type=pattern.encoding_type,
-                recursion_level=pattern.recursion_level + 1,
-                metadata={**pattern.metadata, "cascade_step": i}
-            )
-            cascaded_patterns.append(new_pattern)
-
-        logger.info(f"Cascaded {len(patterns)} patterns into {len(cascaded_patterns)} new patterns")
-        return cascaded_patterns
-
-    def _handle_resonate(self, patterns: List[AetherPattern]) -> AetherPattern:
-        """
-        Create harmonic resonance between patterns.
+        real_parts = data[::2].astype(np.float32) / 127.5 - 1.0  # Scale to [-1, 1]
+        imag_parts = data[1::2].astype(np.float32) / 127.5 - 1.0
         
-        Args:
-            patterns: List of AetherPattern objects to resonate.
+        return real_parts + 1j * imag_parts
+
+    def _mandelbrot_transform(self, complex_data: np.ndarray, iterations: int = 8) -> np.ndarray:
+        """Apply Mandelbrot-inspired transformation"""
+        c = complex_data
+        z = np.zeros_like(c)
+        result = np.zeros(len(c), dtype=np.float32)
         
-        Returns:
-            AetherPattern: The resulting resonated pattern.
-        """
-        if len(patterns) < 2:
-            raise ValueError("At least two patterns are required to resonate.")
-
-        # Calculate the harmonic mean of the cores
-        combined_core = bytes(
-            int(sum(p.core[i] for p in patterns) / len(patterns)) % 256
-            for i in range(len(patterns[0].core))
-        )
-
-        # Merge mutations and amplify shared mutations
-        combined_mutations = tuple(set(m for p in patterns for m in p.mutations))
-
-        # Merge interactions and amplify shared interactions
-        combined_interactions = {}
-        for p in patterns:
-            for key, value in p.interactions.items():
-                if key in combined_interactions:
-                    combined_interactions[key] = str(
-                        float(combined_interactions[key]) + float(value)
-                    )
-                else:
-                    combined_interactions[key] = value
-
-        # Determine the highest recursion level
-        max_recursion_level = max(p.recursion_level for p in patterns)
-
-        # Create the resonated pattern
-        resonated_pattern = AetherPattern(
-            core=combined_core,
-            mutations=combined_mutations,
-            interactions=combined_interactions,
-            encoding_type=patterns[0].encoding_type,  # Assume all patterns have the same encoding type
-            recursion_level=max_recursion_level + 1,
-            metadata={"resonated_from": [p.pattern_id for p in patterns]}
-        )
-
-        # Update metrics
-        self.metrics['patterns_created'] += 1
-        self.metrics['interactions_processed'] += 1
-
-        logger.info(f"Resonated {len(patterns)} patterns into new pattern {resonated_pattern.pattern_id}")
-        return resonated_pattern
-
-    def _handle_annihilate(self, patterns: List[AetherPattern]) -> Optional[AetherPattern]:
-        """
-        Perform mutual destruction or cancellation of patterns.
+        for i in range(iterations):
+            mask = np.abs(z) <= 2
+            z[mask] = z[mask] ** 2 + c[mask]
+            result[mask] = i / iterations
         
-        Args:
-            patterns: List of AetherPattern objects to annihilate.
+        return result
+
+    def _normalize_to_uint8(self, data: np.ndarray) -> np.ndarray:
+        """Normalize array to uint8 range with proper handling"""
+        if len(data) == 0:
+            return np.array([], dtype=np.uint8)
         
-        Returns:
-            Optional[AetherPattern]: The resulting annihilated pattern, or None if all are destroyed.
-        """
-        if len(patterns) < 2:
-            raise ValueError("At least two patterns are required to annihilate.")
-
-        # Check if patterns cancel each other out
-        annihilation_result = sum(hash(p.core) for p in patterns) % 256 == 0
-
-        if annihilation_result:
-            logger.info(f"Patterns {', '.join(p.pattern_id for p in patterns)} annihilated each other.")
-            return None  # All patterns are destroyed
-
-        # If not fully annihilated, create a residual pattern
-        residual_core = hashlib.sha256(b''.join(p.core for p in patterns)).digest()
-        residual_pattern = AetherPattern(
-            core=residual_core,
-            mutations=(),
-            interactions={},
-            encoding_type=patterns[0].encoding_type,
-            recursion_level=max(p.recursion_level for p in patterns) + 1,
-            metadata={"annihilated_from": [p.pattern_id for p in patterns]}
-        )
-
-        logger.info(f"Patterns {', '.join(p.pattern_id for p in patterns)} partially annihilated into {residual_pattern.pattern_id}.")
-        return residual_pattern
-
-    def _handle_catalyze(self, catalyst: AetherPattern, patterns: List[AetherPattern]) -> List[AetherPattern]:
-        """
-        Facilitate interactions between patterns using a catalyst.
+        data_min, data_max = np.min(data), np.max(data)
+        if data_max > data_min:
+            normalized = ((data - data_min) / (data_max - data_min) * 255).astype(np.uint8)
+        else:
+            normalized = np.full(len(data), 128, dtype=np.uint8)
         
-        Args:
-            catalyst: The catalyst pattern.
-            patterns: List of AetherPattern objects to catalyze.
+        return normalized
+
+    def _create_mel_filterbank(self, n_fft: int, n_mels: int) -> np.ndarray:
+        """Create mel-scale filterbank for perceptual frequency encoding"""
+        # Simplified mel filterbank creation
+        mel_filters = np.zeros((n_mels, n_fft))
+        mel_points = np.linspace(0, n_fft - 1, n_mels + 2, dtype=int)
         
-        Returns:
-            List[AetherPattern]: The resulting patterns after catalysis.
-        """
-        if not patterns:
-            raise ValueError("At least one pattern is required to catalyze.")
-
-        # Modify patterns based on the catalyst's core
-        catalyzed_patterns = []
-        for pattern in patterns:
-            catalyzed_core = bytes((a + b) % 256 for a, b in zip(pattern.core, catalyst.core))
-            catalyzed_pattern = AetherPattern(
-                core=catalyzed_core,
-                mutations=pattern.mutations + catalyst.mutations,
-                interactions={**pattern.interactions, **catalyst.interactions},
-                encoding_type=pattern.encoding_type,
-                recursion_level=pattern.recursion_level + 1,
-                metadata={**pattern.metadata, "catalyzed_by": catalyst.pattern_id}
-            )
-            catalyzed_patterns.append(catalyzed_pattern)
-
-        logger.info(f"Catalyst {catalyst.pattern_id} facilitated interactions for {len(patterns)} patterns.")
-        return catalyzed_patterns
-
-    def serialize(self) -> Dict[str, Any]:
-        """
-        Serialize the engine's state to a dictionary.
+        for i in range(n_mels):
+            left, center, right = mel_points[i:i+3]
+            # Triangular filters
+            mel_filters[i, left:center] = np.linspace(0, 1, center - left)
+            if right > center:
+                mel_filters[i, center:right] = np.linspace(1, 0, right - center)
         
-        Returns:
-            Dict[str, Any]: Serialized state of the engine.
-        """
-        return {
-            "physics_constraints": self.physics.__dict__,
-            "metrics": self.metrics,
-            "patterns": [p.serialize() for p in self.space.patterns],
-            "observers": len(self.observers)
-        }
+        return mel_filters
 
-def initialize(**kwargs):
-    """
-    Initialize the Aether Engine and return the engine instance.
-    
-    Args:
-        **kwargs: Configuration parameters for the Aether Engine
+    def _generate_harmonic_padding(self, pattern: bytes, length: int) -> bytes:
+        """Generate harmonic padding based on spectral analysis"""
+        if length <= 0 or not pattern:
+            return b'\x00' * length
         
-    Returns:
-        AetherEngine instance that was initialized
-    """
-    logger.info("Initializing Aether Engine...")
-    
-    # Extract physics constraints from kwargs
-    physics_constraints = kwargs.get('physics_constraints', {})
-    
-    # Create a new AetherEngine instance
-    aether_instance = AetherEngine(physics_constraints=physics_constraints)
-    
-    # Connect to other physics components if provided
-    physics_components = kwargs.get('physics_components', {})
-    if physics_components:
-        logger.info(f"Connecting to physics components: {list(physics_components.keys())}")
-        aether_instance.connect_physics_engine(physics_components)
-    
-    # Register observers if provided
-    observers = kwargs.get('observers', [])
-    for observer in observers:
-        aether_instance.register_observer(observer)
-    
-    logger.info("Aether Engine initialization complete")
-    return aether_instance
+        # Create harmonic series based on pattern
+        pattern_array = np.frombuffer(pattern, dtype=np.uint8).astype(np.float32)
+        fundamental_freq = np.mean(pattern_array) / 255.0
+        
+        harmonic_pattern = []
+        for i in range(length):
+            # Generate harmonic series
+            phase = (i * fundamental_freq * 2 * np.pi) % (2 * np.pi)
+            harmonic_value = int((np.sin(phase) + 1) * 127.5) % 256
+            harmonic_pattern.append(harmonic_value)
+        
+        return bytes(harmonic_pattern)
+
+    def _compress_spectral_data(self, data: bytes, target_size: int) -> bytes:
+        """Compress spectral data while preserving key features"""
+        if len(data) <= target_size:
+            return data
+        
+        data_array = np.frombuffer(data, dtype=np.uint8).astype(np.float32)
+        compression_ratio = len(data_array) / target_size
+        
+        compressed = []
+        for i in range(target_size):
+            # Sample with anti-aliasing
+            source_idx = i * compression_ratio
+            left_idx = int(np.floor(source_idx))
+            right_idx = min(left_idx + 1, len(data_array) - 1)
+            
+            if left_idx == right_idx:
+                value = data_array[left_idx]
+            else:
+                # Linear interpolation
+                alpha = source_idx - left_idx
+                value = data_array[left_idx] * (1 - alpha) + data_array[right_idx] * alpha
+            
+            compressed.append(int(value) % 256)
+        
+        return bytes(compressed)
