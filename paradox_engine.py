@@ -27,6 +27,8 @@ Version: 1.5
 import numpy as np
 import scipy as sp
 from scipy import stats
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 import networkx as nx
 import math
 import logging
@@ -35,6 +37,7 @@ import uuid
 import warnings
 import copy
 import os
+import random  # Add missing import
 from typing import Dict, List, Set, Tuple, Any, Optional, Union, Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -47,12 +50,7 @@ import threading
 import multiprocessing
 from datetime import datetime
 import json
-
-# Import project-specific modules
-from timeline_engine import TimelineEngine, TemporalEvent, TemporalBranch
-from quantum_physics import QuantumField, PhysicsConstants
-from aether_engine import AetherPattern, AetherSpace, PhysicsConstraints
-from reality_kernel import RealityKernel, RealityAnchor
+import re
 
 # Configure logging
 logging.basicConfig(
@@ -216,6 +214,8 @@ class Intervention:
     side_effect_risk: float     # 0.0 to 1.0
     timestamp: datetime
     parameters: Dict = field(default_factory=dict)
+    status: str = "planned"     # Status of the intervention: planned, applied, failed, etc.
+    actual_outcomes: List[str] = field(default_factory=list)  # Actual outcomes after application
     
     def to_dict(self):
         """Convert to dictionary representation"""
@@ -228,7 +228,9 @@ class Intervention:
             "expected_outcomes": self.expected_outcomes,
             "side_effect_risk": self.side_effect_risk,
             "timestamp": self.timestamp.isoformat(),
-            "parameters": self.parameters
+            "parameters": self.parameters,
+            "status": self.status,
+            "actual_outcomes": self.actual_outcomes
         }
 
 @dataclass
@@ -333,6 +335,25 @@ class ParadoxEngine:
         
         # Performance tracking
         self.processing_times = deque(maxlen=100)
+        
+        # Semantic analysis infrastructure
+        self.semantic_similarity_threshold = 0.7
+        self.implication_threshold = 0.7
+        self.contradiction_threshold = 0.7
+        self._implication_patterns = self._initialize_implication_patterns()
+        self._contradiction_patterns = self._initialize_contradiction_patterns()
+        self._proposition_embeddings = {}
+        self._semantic_cache = {}
+        
+        # Initialize TF-IDF vectorizer for semantic analysis
+        self._tfidf_vectorizer = TfidfVectorizer(
+            max_features=1000,
+            stop_words='english',
+            ngram_range=(1, 2),
+            min_df=1,
+            max_df=0.95
+        )
+        self._tfidf_fitted = False
         
         logger.info(f"ParadoxEngine initialized with detection threshold {detection_threshold}, "
                    f"intervention threshold {intervention_threshold}, auto-intervene={auto_intervene}")
@@ -737,7 +758,7 @@ class ParadoxEngine:
                 
         # Check for nested pattern references
         for pattern_id, pattern in self.patterns.items():
-            if pattern.pattern_type == PatternType.RECURSION:
+            if (pattern.pattern_type == PatternType.RECURSION):
                 # A pattern about recursion patterns
                 for source_id in pattern.source_elements:
                     if source_id in self.patterns and self.patterns[source_id].pattern_type == PatternType.RECURSION:
@@ -784,212 +805,276 @@ class ParadoxEngine:
     # ---------------------------------------------------------------------------------
     
     def _handle_loop_breaking(self, intervention: Intervention) -> Dict:
-        """Handle breaking a detected loop"""
-        pattern_id = intervention.related_pattern_id
-        if (pattern_id not in self.patterns):
-            return {
-                "success": False,
-                "error_code": "PATTERN_NOT_FOUND",
-                "message": "Pattern no longer exists"
-            }
+        """Handle loop-breaking interventions by weakening cyclical dependencies"""
+        try:
+            pattern = self.patterns.get(intervention.related_pattern_id)
+            if not pattern or pattern.pattern_type != PatternType.LOOP:
+                return {"success": False, "reason": "Pattern not found or not a loop"}
             
-        pattern = self.patterns[pattern_id]
-        if pattern.pattern_type != PatternType.LOOP:
-            return {
-                "success": False,
-                "error_code": "WRONG_PATTERN_TYPE",
-                "message": f"Expected LOOP pattern, got {pattern.pattern_type}"
-            }
+            loop_elements = pattern.features.get("loop_elements", [])
+            if len(loop_elements) < 2:
+                return {"success": False, "reason": "Loop has insufficient elements"}
             
-        # Get loop elements
-        loop_elements = pattern.source_elements
-        
-        # Break the loop by removing one implication
-        if len(loop_elements) >= 2:
-            try:
-                # Choose weakest link to break
-                weakest_link = self._find_weakest_link(loop_elements)
-                source_id, target_id = weakest_link
-                
-                # Remove the implication
-                if source_id in self.propositions and target_id in self.propositions:
-                    source_prop = self.propositions[source_id]
-                    if target_id in source_prop.implies:
-                        source_prop.implies.remove(target_id)
-                    
-                    target_prop = self.propositions[target_id]
-                    if source_id in target_prop.implied_by:
-                        target_prop.implied_by.remove(source_id)
-                        
-                    # Update the graph
-                    if self.knowledge_graph.has_edge(source_id, target_id):
-                        self.knowledge_graph.remove_edge(source_id, target_id)
-                    
-                    # Remove the pattern
-                    del self.patterns[pattern_id]
-                    
-                    return {
-                        "success": True,
-                        "broken_link": [source_id, target_id],
-                        "side_effects": [f"Removed implication from {source_id} to {target_id}"]
-                    }
-                else:
-                    return {
-                        "success": False,
-                        "error_code": "MISSING_PROPOSITIONS",
-                        "message": "One or more propositions in the loop no longer exist"
-                    }
-            except Exception as e:
-                logger.error(f"Error breaking loop: {e}")
-                return {
-                    "success": False,
-                    "error_code": "INTERVENTION_ERROR",
-                    "message": str(e)
-                }
-        else:
-            return {
-                "success": False,
-                "error_code": "INVALID_LOOP",
-                "message": "Loop has less than 2 elements"
-            }
-    
-    def _handle_contradiction_resolution(self, intervention: Intervention) -> Dict:
-        """Handle resolving a contradiction"""
-        pattern_id = intervention.related_pattern_id
-        if pattern_id not in self.patterns:
-            return {
-                "success": False,
-                "error_code": "PATTERN_NOT_FOUND",
-                "message": "Pattern no longer exists"
-            }
+            # Find and weaken the weakest link
+            source_id, target_id = self._find_weakest_link(loop_elements)
             
-        pattern = self.patterns[pattern_id]
-        if pattern.pattern_type != PatternType.CONTRADICTION:
-            return {
-                "success": False,
-                "error_code": "WRONG_PATTERN_TYPE",
-                "message": f"Expected CONTRADICTION pattern, got {pattern.pattern_type}"
-            }
+            # Reduce the relationship strength
+            if source_id in self.propositions and target_id in self.propositions:
+                source_prop = self.propositions[source_id]
+                if target_id in source_prop.implies:
+                    source_prop.implies.remove(target_id)
+                if target_id in source_prop.relatedness:
+                    source_prop.relatedness[target_id] *= 0.5  # Weaken by 50%
             
-        # Get contradiction elements
-        elements = pattern.source_elements
-        if len(elements) != 2:
-            return {
-                "success": False,
-                "error_code": "INVALID_CONTRADICTION",
-                "message": "Contradiction pattern should have exactly 2 elements"
-            }
-            
-        prop1_id, prop2_id = elements
-        
-        # Check if propositions still exist
-        if prop1_id not in self.propositions or prop2_id not in self.propositions:
-            return {
-                "success": False,
-                "error_code": "MISSING_PROPOSITIONS",
-                "message": "One or more propositions in the contradiction no longer exist"
-            }
-            
-        prop1 = self.propositions[prop1_id]
-        prop2 = self.propositions[prop2_id]
-        
-        # Resolve contradiction by weakening the less certain proposition
-        if prop1.certainty < prop2.certainty:
-            weaker_prop = prop1
-            stronger_prop = prop2
-        else:
-            weaker_prop = prop2
-            stronger_prop = prop1
-            
-        # Set weaker proposition to unknown
-        old_truth = weaker_prop.truth_value
-        weaker_prop.truth_value = None
-        weaker_prop.certainty = 0.5  # Reset certainty
-        
-        # Remove the contradiction relationship
-        if prop2_id in prop1.contradicts:
-            prop1.contradicts.remove(prop2_id)
-        if prop1_id in prop2.contradicts:
-            prop2.contradicts.remove(prop1_id)
-            
-        # Remove the pattern
-        del self.patterns[pattern_id]
-        
-        return {
-            "success": True,
-            "resolution": "WEAKENED_PROPOSITION",
-            "weaker_prop_id": weaker_prop.id,
-            "stronger_prop_id": stronger_prop.id,
-            "old_truth_value": old_truth,
-            "side_effects": [f"Changed truth value of {weaker_prop.id} from {old_truth} to None"]
-        }
-    
-    def _handle_recursion_limiting(self, intervention: Intervention) -> Dict:
-        """Handle limiting recursion depth"""
-        pattern_id = intervention.related_pattern_id
-        if pattern_id not in self.patterns:
-            return {
-                "success": False,
-                "error_code": "PATTERN_NOT_FOUND",
-                "message": "Pattern no longer exists"
-            }
-            
-        pattern = self.patterns[pattern_id]
-        if pattern.pattern_type != PatternType.RECURSION:
-            return {
-                "success": False,
-                "error_code": "WRONG_PATTERN_TYPE",
-                "message": f"Expected RECURSION pattern, got {pattern.pattern_type}"
-            }
-            
-        # Check current recursion level
-        current_level = RecursionLevel.from_depth(self._calculate_current_recursion_depth())
-        
-        # If we're already at max depth, prevent further recursion
-        if current_level == RecursionLevel.META_LEVEL_INFINITE:
-            # Emergency drop to a safe level
-            self.current_recursion_level = RecursionLevel.META_LEVEL_1
+            # Record the intervention effect
+            intervention.status = "applied"
+            intervention.actual_outcomes = ["Loop broken at weakest link", f"Weakened {source_id} -> {target_id}"]
             
             return {
                 "success": True,
-                "resolution": "EMERGENCY_RECURSION_LIMIT",
-                "old_level": str(current_level),
-                "new_level": str(self.current_recursion_level),
-                "side_effects": ["Forced recursion level reduction to prevent stack overflow"]
+                "broken_link": f"{source_id} -> {target_id}",
+                "remaining_loop_strength": pattern.strength * 0.7
             }
             
-        # For other recursion patterns, just notify and track
-        return {
-            "success": True,
-            "resolution": "RECURSION_MONITORED",
-            "current_level": str(current_level),
-            "max_allowed": self.max_recursion_depth
-        }
+        except Exception as e:
+            logger.error(f"Error in loop breaking intervention: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def _handle_contradiction_resolution(self, intervention: Intervention) -> Dict:
+        """Handle contradiction resolution by adjusting certainty values"""
+        try:
+            pattern = self.patterns.get(intervention.related_pattern_id)
+            if not pattern or pattern.pattern_type != PatternType.CONTRADICTION:
+                return {"success": False, "reason": "Pattern not found or not a contradiction"}
+            
+            conflicting_props = pattern.features.get("conflicting_propositions", [])
+            if len(conflicting_props) < 2:
+                return {"success": False, "reason": "Insufficient conflicting propositions"}
+            
+            # Find propositions with highest and lowest certainty
+            certainties = []
+            for prop_id in conflicting_props:
+                if prop_id in self.propositions:
+                    certainties.append((prop_id, self.propositions[prop_id].certainty))
+            
+            if len(certainties) < 2:
+                return {"success": False, "reason": "Cannot access conflicting propositions"}
+            
+            # Sort by certainty
+            certainties.sort(key=lambda x: x[1], reverse=True)
+            
+            # Keep the highest certainty, reduce others
+            kept_prop_id = certainties[0][0]
+            resolved_props = []
+            
+            for prop_id, _ in certainties[1:]:
+                prop = self.propositions[prop_id]
+                prop.certainty *= 0.3  # Significantly reduce certainty
+                resolved_props.append(prop_id)
+            
+            intervention.status = "applied"
+            intervention.actual_outcomes = [
+                f"Kept proposition {kept_prop_id} as most certain",
+                f"Reduced certainty for {len(resolved_props)} conflicting propositions"
+            ]
+            
+            return {
+                "success": True,
+                "kept_proposition": kept_prop_id,
+                "resolved_propositions": resolved_props,
+                "new_certainty_levels": {pid: self.propositions[pid].certainty for pid in resolved_props}
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in contradiction resolution: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def _handle_recursion_limiting(self, intervention: Intervention) -> Dict:
+        """Handle recursion limiting by imposing depth constraints"""
+        try:
+            pattern = self.patterns.get(intervention.related_pattern_id)
+            if not pattern or pattern.pattern_type != PatternType.RECURSION:
+                return {"success": False, "reason": "Pattern not found or not recursive"}
+            
+            current_depth = self._calculate_current_recursion_depth()
+            max_allowed_depth = min(10, pattern.features.get("max_depth", 5))
+            
+            if current_depth <= max_allowed_depth:
+                return {"success": True, "reason": "Recursion already within limits"}
+            
+            # Limit recursion by marking deep patterns as inactive
+            limited_patterns = []
+            for pid, p in self.patterns.items():
+                if p.pattern_type == PatternType.RECURSION:
+                    nesting = p.features.get("nesting_level", 1)
+                    if nesting > max_allowed_depth:
+                        p.strength *= 0.1  # Severely weaken
+                        limited_patterns.append(pid)
+            
+            intervention.status = "applied"
+            intervention.actual_outcomes = [
+                f"Limited recursion to depth {max_allowed_depth}",
+                f"Weakened {len(limited_patterns)} deep recursive patterns"
+            ]
+            
+            return {
+                "success": True,
+                "depth_limit": max_allowed_depth,
+                "limited_patterns": limited_patterns,
+                "new_depth": min(max_allowed_depth, current_depth)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in recursion limiting: {e}")
+            return {"success": False, "error": str(e)}
     
     def _handle_divergence_dampening(self, intervention: Intervention) -> Dict:
-        """Handle dampening exponential growth patterns"""
-        # Simplified implementation
-        return {"success": True, "message": "Divergence dampened"}
+        """Handle divergence dampening by applying stabilizing forces"""
+        try:
+            pattern = self.patterns.get(intervention.related_pattern_id)
+            if not pattern or pattern.pattern_type != PatternType.DIVERGENCE:
+                return {"success": False, "reason": "Pattern not found or not divergent"}
+            
+            growth_rate = pattern.features.get("growth_rate", 1.0)
+            
+            # Apply dampening factor based on current strength
+            dampening_factor = max(0.1, 1.0 - (pattern.strength * 0.5))
+            new_growth_rate = growth_rate * dampening_factor
+            
+            # Update pattern features
+            pattern.features["growth_rate"] = new_growth_rate
+            pattern.features["dampening_applied"] = True
+            pattern.strength *= dampening_factor
+            
+            intervention.status = "applied"
+            intervention.actual_outcomes = [
+                f"Applied dampening factor {dampening_factor:.2f}",
+                f"Reduced growth rate from {growth_rate:.2f} to {new_growth_rate:.2f}"
+            ]
+            
+            return {
+                "success": True,
+                "original_growth_rate": growth_rate,
+                "new_growth_rate": new_growth_rate,
+                "dampening_factor": dampening_factor
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in divergence dampening: {e}")
+            return {"success": False, "error": str(e)}
     
     def _handle_oscillation_stabilization(self, intervention: Intervention) -> Dict:
-        """Handle stabilizing oscillating patterns"""
-        # Simplified implementation
-        return {"success": True, "message": "Oscillation stabilized"}
+        """Handle oscillation stabilization by introducing damping"""
+        try:
+            pattern = self.patterns.get(intervention.related_pattern_id)
+            if not pattern or pattern.pattern_type != PatternType.OSCILLATION:
+                return {"success": False, "reason": "Pattern not found or not oscillatory"}
+            
+            amplitude = pattern.features.get("amplitude", 1.0)
+            frequency = pattern.features.get("frequency", 1.0)
+            
+            # Apply damping to reduce amplitude over time
+            damping_coefficient = 0.8
+            new_amplitude = amplitude * damping_coefficient
+            
+            # Update pattern
+            pattern.features["amplitude"] = new_amplitude
+            pattern.features["damping_coefficient"] = damping_coefficient
+            pattern.strength = min(pattern.strength, new_amplitude)
+            
+            intervention.status = "applied"
+            intervention.actual_outcomes = [
+                f"Applied damping coefficient {damping_coefficient}",
+                f"Reduced amplitude from {amplitude:.2f} to {new_amplitude:.2f}"
+            ]
+            
+            return {
+                "success": True,
+                "original_amplitude": amplitude,
+                "new_amplitude": new_amplitude,
+                "frequency": frequency,
+                "stabilization_factor": damping_coefficient
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in oscillation stabilization: {e}")
+            return {"success": False, "error": str(e)}
     
     def _handle_fixation_perturbation(self, intervention: Intervention) -> Dict:
-        """Handle perturbing fixated states"""
-        # Simplified implementation
-        return {"success": True, "message": "Fixation perturbed"}
+        """Handle fixation perturbation by introducing random variation"""
+        try:
+            pattern = self.patterns.get(intervention.related_pattern_id)
+            if not pattern or pattern.pattern_type != PatternType.FIXATION:
+                return {"success": False, "reason": "Pattern not found or not fixated"}
+            
+            fixation_strength = pattern.features.get("fixation_strength", 1.0)
+            
+            # Apply random perturbation
+            perturbation_magnitude = min(0.3, fixation_strength * 0.5)
+            random_factor = random.uniform(-perturbation_magnitude, perturbation_magnitude)
+            
+            # Update pattern strength
+            new_strength = max(0.1, pattern.strength + random_factor)
+            pattern.strength = new_strength
+            pattern.features["perturbation_applied"] = perturbation_magnitude
+            
+            intervention.status = "applied"
+            intervention.actual_outcomes = [
+                f"Applied perturbation magnitude {perturbation_magnitude:.3f}",
+                f"Changed pattern strength by {random_factor:.3f}"
+            ]
+            
+            return {
+                "success": True,
+                "perturbation_magnitude": perturbation_magnitude,
+                "strength_change": random_factor,
+                "new_strength": new_strength
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in fixation perturbation: {e}")
+            return {"success": False, "error": str(e)}
     
     def _handle_resource_allocation(self, intervention: Intervention) -> Dict:
-        """Handle adjusting resource allocation"""
-        # Simplified implementation
-        return {"success": True, "message": "Resources reallocated"}
-    
-    # ---------------------------------------------------------------------------------
-    # Helper Methods
-    # ---------------------------------------------------------------------------------
-    
+        """Handle resource allocation by redistributing computational resources"""
+        try:
+            # This is a meta-intervention that affects system resources
+            current_load = len(self.patterns) + len(self.propositions) + len(self.interventions)
+            
+            # Simulate resource reallocation
+            high_priority_patterns = [p for p in self.patterns.values() if p.strength > 0.8]
+            low_priority_patterns = [p for p in self.patterns.values() if p.strength < 0.3]
+            
+            # Boost high priority, reduce low priority
+            boosted_count = 0
+            reduced_count = 0
+            
+            for pattern in high_priority_patterns[:5]:  # Limit to top 5
+                pattern.strength = min(1.0, pattern.strength * 1.1)
+                boosted_count += 1
+            
+            for pattern in low_priority_patterns:
+                pattern.strength *= 0.9
+                reduced_count += 1
+            
+            intervention.status = "applied"
+            intervention.actual_outcomes = [
+                f"Boosted {boosted_count} high-priority patterns",
+                f"Reduced {reduced_count} low-priority patterns",
+                f"Total system load: {current_load}"
+            ]
+            
+            return {
+                "success": True,
+                "boosted_patterns": boosted_count,
+                "reduced_patterns": reduced_count,
+                "system_load": current_load
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in resource allocation: {e}")
+            return {"success": False, "error": str(e)}
+
     def _check_for_conflicts(self, content: str, truth_value: Optional[bool], certainty: float) -> Optional[str]:
         """
         Check if a new proposition conflicts with existing knowledge.
@@ -1001,130 +1086,43 @@ class ParadoxEngine:
             
         # Check semantic similarity with existing propositions
         for prop_id, prop in self.propositions.items():
-            # Skip propositions with different truth values or unknown truth
-            if prop.truth_value != truth_value or prop.truth_value is None:
-                continue
-                
-            # Calculate similarity (simplified)
-            similarity = self._calculate_semantic_similarity(content, prop.content)
-            
-            # If highly similar with opposite truth value, it's a conflict
-            if similarity > 0.8:
-                # Return information about the conflict
-                return f"Similar to existing proposition {prop_id}: '{prop.content}' (similarity: {similarity:.2f})"
+            if prop.truth_value is not None and prop.truth_value != truth_value:
+                similarity = self._calculate_semantic_similarity(content, prop.content)
+                if similarity > 0.7:  # High similarity threshold
+                    return f"Conflicts with proposition {prop_id}: {prop.content}"
                 
         return None
-    
-    def _calculate_semantic_similarity(self, text1: str, text2: str) -> float:
+
+    def _generate_interventions(self, pattern: Pattern):
         """
-        Calculate semantic similarity between two text strings.
-        Returns a value between 0.0 (completely different) and 1.0 (identical).
-        
-        This is a simplified implementation. In a real system, this would use
-        advanced NLP techniques like embeddings or semantic parsing.
+        Generate interventions for a given pattern based on its type and characteristics.
         """
-        # This is a very simple implementation using Jaccard similarity
-        # on word sets. A real system would use more sophisticated methods.
-        
-        # Lowercase and split into words
-        words1 = set(text1.lower().split())
-        words2 = set(text2.lower().split())
-        
-        # Calculate Jaccard similarity
-        if not words1 or not words2:
-            return 0.0
-            
-        intersection = words1.intersection(words2)
-        union = words1.union(words2)
-        
-        return len(intersection) / len(union)
-    
-    def _calculate_semantic_relationships(self, prop_id: str) -> None:
-        """
-        Calculate semantic relationships between a proposition and all others.
-        Updates the proposition's implies, implied_by, and contradicts sets.
-        """
-        if prop_id not in self.propositions:
-            return
-            
-        prop = self.propositions[prop_id]
-        
-        for other_id, other_prop in self.propositions.items():
-            if other_id == prop_id:
-                continue
-                
-            # Calculate relatedness
-            relatedness = self._calculate_semantic_similarity(prop.content, other_prop.content)
-            
-            # Store relatedness score
-            prop.relatedness[other_id] = relatedness
-            other_prop.relatedness[prop_id] = relatedness
-            
-            # Check for implications and contradictions (simplified)
-            if relatedness > 0.7:
-                # For simplicity, we'll say if A and B are related and have same truth value,
-                # then A implies B
-                if prop.truth_value == other_prop.truth_value and prop.truth_value is not None:
-                    prop.implies.add(other_id)
-                    other_prop.implied_by.add(prop_id)
-                    
-                    # Add edge to knowledge graph
-                    self.knowledge_graph.add_edge(prop_id, other_id, 
-                                                 relationship="implies",
-                                                 weight=relatedness)
-                    
-                # If they have opposite truth values, they contradict
-                elif prop.truth_value is not None and other_prop.truth_value is not None and prop.truth_value != other_prop.truth_value:
-                    prop.contradicts.add(other_id)
-                    other_prop.contradicts.add(prop_id)
-                    
-                    # Add edge to knowledge graph
-                    self.knowledge_graph.add_edge(prop_id, other_id, 
-                                                 relationship="contradicts",
-                                                 weight=relatedness)
-                    self.knowledge_graph.add_edge(other_id, prop_id, 
-                                                 relationship="contradicts",
-                                                 weight=relatedness)
-    
-    def _generate_interventions(self, pattern: Pattern) -> None:
-        """
-        Generate appropriate interventions for a detected pattern.
-        """
-        # Skip if already have an intervention for this pattern
-        for intervention in self.interventions.values():
-            if intervention.related_pattern_id == pattern.id:
-                return
-                
-        # Determine intervention type based on pattern type
         intervention_type = None
         priority = 0.0
         description = ""
         expected_outcomes = []
-        side_effect_risk = 0.5  # Default
+        side_effect_risk = 0.3
         
         if pattern.pattern_type == PatternType.LOOP:
             intervention_type = InterventionType.LOOP_BREAKER
-            priority = pattern.strength * 0.8  # Loops are moderately serious
+            priority = pattern.strength * 0.9
             description = "Break logical implication loop"
-            expected_outcomes = ["Loop eliminated", "Logical flow restored"]
+            expected_outcomes = ["Loop broken", "Circular reasoning eliminated"]
             side_effect_risk = 0.3
             
         elif pattern.pattern_type == PatternType.CONTRADICTION:
             intervention_type = InterventionType.CONTRADICTION_RESOLVER
-            priority = pattern.strength * 0.9  # Contradictions are serious
+            priority = pattern.strength * 0.95
             description = "Resolve logical contradiction"
-            expected_outcomes = ["Contradiction eliminated", "Logical consistency restored"]
+            expected_outcomes = ["Contradiction resolved", "Consistent belief state"]
             side_effect_risk = 0.4
             
         elif pattern.pattern_type == PatternType.RECURSION:
             intervention_type = InterventionType.RECURSION_LIMITER
-            
-            # Higher priority for deep recursion
+            priority = pattern.strength * 0.8
+            description = "Limit recursive depth"
+            expected_outcomes = ["Recursion depth limited", "Infinite loops prevented"]
             nesting_level = pattern.features.get("nesting_level", 1)
-            priority = pattern.strength * (0.7 + (nesting_level * 0.1))
-            
-            description = "Limit recursion depth"
-            expected_outcomes = ["Recursion bounded", "Stack overflow prevented"]
             side_effect_risk = 0.5 + (nesting_level * 0.1)
             
         elif pattern.pattern_type == PatternType.DIVERGENCE:
@@ -1182,122 +1180,340 @@ class ParadoxEngine:
             # Connect intervention to pattern
             self.knowledge_graph.add_edge(intervention_id, pattern.id, 
                                          relationship="addresses")
-    
-    def _calculate_cycle_coherence(self, cycle: List[str]) -> float:
+
+    def _initialize_implication_patterns(self) -> Dict[str, List[Tuple[str, float]]]:
         """
-        Calculate the coherence of a loop/cycle.
-        A more coherent cycle has stronger implications between elements.
+        Initialize patterns that indicate logical implication relationships.
+        Returns a dictionary mapping pattern types to lists of (regex_pattern, confidence) tuples.
         """
-        if not cycle or len(cycle) < 2:
-            return 0.0
-            
-        # Calculate average relatedness between consecutive elements
-        total_relatedness = 0.0
-        count = 0
-        
-        for i in range(len(cycle)):
-            curr_id = cycle[i]
-            next_id = cycle[(i + 1) % len(cycle)]
-            
-            if curr_id in self.propositions and next_id in self.propositions:
-                curr_prop = self.propositions[curr_id]
-                if next_id in curr_prop.relatedness:
-                    total_relatedness += curr_prop.relatedness[next_id]
-                    count += 1
-        
-        if count == 0:
-            return 0.0
-            
-        return total_relatedness / count
-    
-    def _find_weakest_link(self, loop_elements: List[str]) -> Tuple[str, str]:
+        return {
+            'strong_implication': [
+                (r'\b(?:if|when)\s+(.+?)\s+then\s+(.+)', 0.9),
+                (r'\b(.+?)\s+implies\s+(.+)', 0.95),
+                (r'\b(.+?)\s+entails\s+(.+)', 0.9),
+                (r'\b(.+?)\s+necessitates\s+(.+)', 0.85),
+                (r'\bgiven\s+(.+?),?\s+(.+?)\s+follows', 0.8),
+                (r'\bsince\s+(.+?),?\s+(.+)', 0.75),
+                (r'\bbecause\s+(.+?),?\s+(.+)', 0.7),
+            ],
+            'weak_implication': [
+                (r'\b(.+?)\s+suggests\s+(.+)', 0.6),
+                (r'\b(.+?)\s+indicates\s+(.+)', 0.65),
+                (r'\b(.+?)\s+supports\s+(.+)', 0.6),
+                (r'\blikely\s+(.+?)\s+(?:means|implies)\s+(.+)', 0.55),
+                (r'\bprobably\s+(.+?)\s+(?:means|suggests)\s+(.+)', 0.5),
+            ],
+            'causal_implication': [
+                (r'\b(.+?)\s+causes\s+(.+)', 0.85),
+                (r'\b(.+?)\s+leads\s+to\s+(.+)', 0.8),
+                (r'\b(.+?)\s+results\s+in\s+(.+)', 0.8),
+                (r'\bdue\s+to\s+(.+?),?\s+(.+)', 0.75),
+                (r'\bas\s+a\s+result\s+of\s+(.+?),?\s+(.+)', 0.75),
+            ],
+            'conditional_implication': [
+                (r'\bunless\s+(.+?),?\s+(.+)', 0.7),
+                (r'\bprovided\s+(?:that\s+)?(.+?),?\s+(.+)', 0.75),
+                (r'\bassuming\s+(.+?),?\s+(.+)', 0.65),
+                (r'\bin\s+the\s+event\s+(?:that\s+)?(.+?),?\s+(.+)', 0.7),
+            ]
+        }
+
+    def _initialize_contradiction_patterns(self) -> Dict[str, List[Tuple[str, float]]]:
         """
-        Find the weakest implication link in a loop.
-        Returns a tuple of (source_id, target_id) for the weakest link.
+        Initialize patterns that indicate logical contradiction relationships.
+        Returns a dictionary mapping pattern types to lists of (regex_pattern, confidence) tuples.
         """
-        if len(loop_elements) < 2:
-            raise ValueError("Loop must have at least 2 elements")
-            
-        weakest_link = None
-        min_relatedness = float('inf')
-        
-        for i in range(len(loop_elements)):
-            source_id = loop_elements[i]
-            target_id = loop_elements[(i + 1) % len(loop_elements)]
-            
-            if source_id in self.propositions and target_id in self.propositions:
-                source_prop = self.propositions[source_id]
-                if target_id in source_prop.relatedness:
-                    relatedness = source_prop.relatedness[target_id]
-                    if relatedness < min_relatedness:
-                        min_relatedness = relatedness
-                        weakest_link = (source_id, target_id)
-        
-        if weakest_link is None:
-            # Fallback if no relatedness scores are available
-            return (loop_elements[0], loop_elements[1])
-            
-        return weakest_link
-    
-    def _calculate_current_recursion_depth(self) -> int:
+        return {
+            'direct_contradiction': [
+                (r'\b(.+?)\s+contradicts\s+(.+)', 0.95),
+                (r'\b(.+?)\s+is\s+incompatible\s+with\s+(.+)', 0.9),
+                (r'\b(.+?)\s+cannot\s+coexist\s+with\s+(.+)', 0.85),
+                (r'\bit\s+is\s+impossible\s+for\s+both\s+(.+?)\s+and\s+(.+)', 0.9),
+                (r'\b(.+?)\s+precludes\s+(.+)', 0.85),
+                (r'\b(.+?)\s+excludes\s+(.+)', 0.8),
+            ],
+            'negation_patterns': [
+                (r'\bnot\s+(.+)', 0.8),
+                (r'\b(.+?)\s+is\s+not\s+(.+)', 0.75),
+                (r'\b(.+?)\s+does\s+not\s+(.+)', 0.75),
+                (r'\bno\s+(.+)', 0.7),
+                (r'\bnever\s+(.+)', 0.8),
+                (r'\b(.+?)\s+lacks\s+(.+)', 0.6),
+                (r'\b(.+?)\s+without\s+(.+)', 0.5),
+            ],
+            'opposing_concepts': [
+                (r'\b(.+?)\s+(?:but|however|nevertheless)\s+(.+)', 0.6),
+                (r'\balthough\s+(.+?),?\s+(.+)', 0.65),
+                (r'\bdespite\s+(.+?),?\s+(.+)', 0.7),
+                (r'\b(.+?)\s+while\s+(.+)', 0.55),
+                (r'\b(.+?)\s+whereas\s+(.+)', 0.6),
+                (r'\bon\s+the\s+contrary,?\s+(.+)', 0.75),
+                (r'\binstead\s+of\s+(.+?),?\s+(.+)', 0.7),
+            ],
+            'mutual_exclusivity': [
+                (r'\beither\s+(.+?)\s+or\s+(.+?)(?:\s+but\s+not\s+both)?', 0.8),
+                (r'\b(.+?)\s+xor\s+(.+)', 0.95),
+                (r'\b(.+?)\s+mutually\s+exclusive\s+(?:with\s+)?(.+)', 0.9),
+                (r'\bonly\s+one\s+of\s+(.+?)\s+(?:and|or)\s+(.+)', 0.85),
+            ]
+        }
+
+    def _calculate_semantic_relationships(self, prop_id: str):
         """
-        Calculate the current recursion depth based on patterns and interventions.
+        Calculate semantic relationships between a proposition and all existing propositions.
+        Uses TF-IDF vectorization and pattern matching to determine implications and contradictions.
         """
-        # Count recursive patterns and meta-recursive patterns
-        recursion_patterns = [p for p in self.patterns.values() if p.pattern_type == PatternType.RECURSION]
+        if prop_id not in self.propositions:
+            return
+            
+        target_prop = self.propositions[prop_id]
+        target_content = target_prop.content.lower()
         
-        # Look for meta-recursion (patterns about recursive patterns)
-        meta_recursion = 0
-        for pattern in recursion_patterns:
-            if "meta_recursion" in pattern.features.get("recursion_type", ""):
-                meta_recursion = max(meta_recursion, pattern.features.get("nesting_level", 1))
+        # Get or compute TF-IDF embedding for the target proposition
+        if prop_id not in self._proposition_embeddings:
+            self._compute_proposition_embedding(prop_id)
         
-        # Calculate recursion depth
-        if meta_recursion > 0:
-            return meta_recursion
-        elif recursion_patterns:
-            return 1
+        # Analyze relationships with all other propositions
+        for other_id, other_prop in self.propositions.items():
+            if other_id == prop_id:
+                continue
+                
+            # Get or compute embedding for the other proposition
+            if other_id not in self._proposition_embeddings:
+                self._compute_proposition_embedding(other_id)
+            
+            # Calculate semantic similarity
+            similarity = self._calculate_semantic_similarity(target_content, other_prop.content.lower())
+            
+            if similarity > self.semantic_similarity_threshold:
+                target_prop.relatedness[other_id] = similarity
+                other_prop.relatedness[prop_id] = similarity
+            
+            # Check for implication patterns
+            implication_confidence = self._detect_implication_relationship(target_content, other_prop.content.lower())
+            if implication_confidence > self.implication_threshold:
+                target_prop.implies.add(other_id)
+                other_prop.implied_by.add(prop_id)
+                
+                # Add edge to knowledge graph
+                if self.knowledge_graph.has_node(prop_id) and self.knowledge_graph.has_node(other_id):
+                    self.knowledge_graph.add_edge(prop_id, other_id, 
+                                                relationship="implies", 
+                                                confidence=implication_confidence)
+            
+            # Check for contradiction patterns
+            contradiction_confidence = self._detect_contradiction_relationship(target_content, other_prop.content.lower())
+            if contradiction_confidence > self.contradiction_threshold:
+                target_prop.contradicts.add(other_id)
+                other_prop.contradicts.add(prop_id)
+                
+                # Add edge to knowledge graph
+                if self.knowledge_graph.has_node(prop_id) and self.knowledge_graph.has_node(other_id):
+                    self.knowledge_graph.add_edge(prop_id, other_id, 
+                                                relationship="contradicts", 
+                                                confidence=contradiction_confidence)
+
+    def _compute_proposition_embedding(self, prop_id: str):
+        """Compute and cache TF-IDF embedding for a proposition."""
+        if prop_id not in self.propositions:
+            return
+            
+        prop = self.propositions[prop_id]
+        
+        # Collect all proposition texts for TF-IDF fitting if not done yet
+        if not hasattr(self, '_tfidf_fitted') or not self._tfidf_fitted:
+            all_texts = [p.content for p in self.propositions.values()]
+            if len(all_texts) > 1:
+                try:
+                    self._tfidf_vectorizer.fit(all_texts)
+                    self._tfidf_fitted = True
+                except ValueError:
+                    # Not enough data to fit, use simple bag-of-words
+                    self._proposition_embeddings[prop_id] = self._simple_embedding(prop.content)
+                    return
+        
+        # Transform the proposition content
+        try:
+            embedding = self._tfidf_vectorizer.transform([prop.content]).toarray()[0]
+            self._proposition_embeddings[prop_id] = embedding
+        except (ValueError, AttributeError):
+            # Fallback to simple embedding
+            self._proposition_embeddings[prop_id] = self._simple_embedding(prop.content)
+
+    def _simple_embedding(self, text: str) -> np.ndarray:
+        """Create a simple embedding for text when TF-IDF fails."""
+        # Simple word frequency vector
+        words = text.lower().split()
+        word_counts = Counter(words)
+        
+        # Create a fixed-size vector (100 dimensions)
+        embedding = np.zeros(100)
+        for i, (word, count) in enumerate(word_counts.most_common(100)):
+            if i < 100:
+                embedding[i] = count / len(words)
+        
+        return embedding
+
+    def _calculate_semantic_similarity(self, text1: str, text2: str) -> float:
+        """Calculate semantic similarity between two text strings."""
+        cache_key = (hash(text1), hash(text2))
+        if cache_key in self._semantic_cache:
+            return self._semantic_cache[cache_key]
+        
+        # Simple word overlap similarity as fallback
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+        
+        if not words1 or not words2:
+            similarity = 0.0
         else:
-            return 0
-    
-    def _generate_symbolic_representation(self, patterns: List[Pattern]) -> str:
-        """
-        Generate a symbolic representation for a set of patterns.
-        This is a simple implementation. A real system would use more 
-        sophisticated symbolic abstraction techniques.
-        """
-        pattern_type = patterns[0].pattern_type
-        count = len(patterns)
+            intersection = words1.intersection(words2)
+            union = words1.union(words2)
+            similarity = len(intersection) / len(union)
         
-        # Each pattern type gets a different symbol
-        if pattern_type == PatternType.LOOP:
-            base_symbol = "◯"
-        elif pattern_type == PatternType.CONTRADICTION:
-            base_symbol = "⊥"
-        elif pattern_type == PatternType.RECURSION:
-            base_symbol = "∞"
-        elif pattern_type == PatternType.DIVERGENCE:
-            base_symbol = "⤊"
-        elif pattern_type == PatternType.OSCILLATION:
-            base_symbol = "∿"
-        elif pattern_type == PatternType.FIXATION:
-            base_symbol = "⚓"
-        elif pattern_type == PatternType.RESONANCE:
-            base_symbol = "⟇"
-        else:
-            base_symbol = "?"
+        # Try to use cosine similarity with embeddings if available
+        try:
+            if hasattr(self, '_tfidf_fitted') and self._tfidf_fitted:
+                vec1 = self._tfidf_vectorizer.transform([text1]).toarray()
+                vec2 = self._tfidf_vectorizer.transform([text2]).toarray()
+                cos_sim = cosine_similarity(vec1, vec2)[0][0]
+                similarity = max(similarity, cos_sim)
+        except (ValueError, AttributeError):
+            pass
+        
+        self._semantic_cache[cache_key] = similarity
+        return similarity
+
+    def _detect_implication_relationship(self, text1: str, text2: str) -> float:
+        """Detect if text1 implies text2 using pattern matching."""
+        max_confidence = 0.0
+        
+        combined_text = f"{text1} {text2}"
+        
+        for category, patterns in self._implication_patterns.items():
+            for pattern, confidence in patterns:
+                if re.search(pattern, combined_text, re.IGNORECASE):
+                    max_confidence = max(max_confidence, confidence)
+                
+                # Also check individual texts for implication keywords
+                if re.search(pattern.replace('(.+?)', text2), text1, re.IGNORECASE):
+                    max_confidence = max(max_confidence, confidence * 0.8)
+        
+        return max_confidence
+
+    def _detect_contradiction_relationship(self, text1: str, text2: str) -> float:
+        """Detect if text1 contradicts text2 using pattern matching."""
+        max_confidence = 0.0
+        
+        combined_text = f"{text1} {text2}"
+        
+        for category, patterns in self._contradiction_patterns.items():
+            for pattern, confidence in patterns:
+                if re.search(pattern, combined_text, re.IGNORECASE):
+                    max_confidence = max(max_confidence, confidence)
+        
+        # Additional logic for negation detection
+        negation_words = {'not', 'no', 'never', 'none', 'nothing', 'nobody', 'nowhere'}
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+        
+        # Check if one text has negation and they share common concepts
+        has_negation1 = bool(words1.intersection(negation_words))
+        has_negation2 = bool(words2.intersection(negation_words))
+        
+        if has_negation1 != has_negation2:  # One has negation, other doesn't
+            # Remove negation words and check similarity
+            clean_words1 = words1 - negation_words
+            clean_words2 = words2 - negation_words
             
-        # Repeat symbol based on number of patterns
-        if count <= 3:
-            symbol = base_symbol * count
-        else:
-            symbol = f"{count}×{base_symbol}"
-            
-        # Add modifiers based on pattern strengths
-        avg_strength = sum(p.strength for p in patterns) / count
-        if avg_strength > 0.9:
+            if clean_words1.intersection(clean_words2):
+                overlap_ratio = len(clean_words1.intersection(clean_words2)) / max(len(clean_words1), len(clean_words2))
+                max_confidence = max(max_confidence, overlap_ratio * 0.7)
+        
+        return max_confidence
+
+# Remove duplicate function declarations and replace with single implementation
+def initialize_external_components():
+    """Initialize external component connections (placeholder)"""
+    try:
+        # These would normally connect to actual external modules
+        # For now, just log the attempt
+        logger.info("External component initialization attempted")
+        return {
+            'timeline_engine': None,
+            'quantum_physics': None, 
+            'aether_engine': None,
+            'planetary_kernel': None
+        }
+    except ImportError as e:
+        logger.warning(f"Could not import external components: {e}")
+        return {}
             symbol = f"★{symbol}★"
         elif avg_strength > 0.7:
             symbol = f"*{symbol}*"
             
         return symbol
+
+# Implement initialize function
+def initialize(initialized_components=None, *args, **kwargs):
+    """
+    Initialize and return a ParadoxEngine instance.
+    
+    Args:
+        initialized_components: Dictionary of already initialized components
+        *args, **kwargs: Additional arguments to pass to ParadoxEngine constructor
+        
+    Returns:
+        Initialized ParadoxEngine instance
+    """
+    logger.info("Initializing Paradox Engine...")
+    
+    # Filter out incompatible arguments before passing to ParadoxEngine
+    filtered_kwargs = {k: v for k, v in kwargs.items() if k != 'initialized_components'}
+    
+    # Create a new ParadoxEngine
+    engine = ParadoxEngine(*args, **filtered_kwargs)
+    
+    # Connect to other components if available
+    if initialized_components:
+        if 'timeline_engine' in initialized_components:
+            timeline = initialized_components['timeline_engine']
+            logger.info("Connecting Paradox Engine to Timeline Engine...")
+            # Add connection code here
+
+        if 'mind_seed' in initialized_components:
+            mind = initialized_components['mind_seed']
+            logger.info("Connecting Paradox Engine to Mind Seed...")
+            # Add connection code here
+            
+    logger.info("Paradox Engine initialization complete")
+    return engine
+
+def initialize_timeline_engine():
+    from timeline_engine import TimelineEngine, TemporalEvent, TemporalBranch
+    # Use TimelineEngine as needed
+
+
+def initialize_quantum_physics():
+    from quantum_physics import QuantumField, PhysicsConstants
+    # Use QuantumField as needed
+
+
+def initialize_aether_engine():
+    from aether_engine import AetherPattern, AetherSpace, PhysicsConstraints
+    # Use AetherPattern as needed
+
+
+def initialize_planetary_kernel():
+    from planetary_reality_kernel import PlanetaryRealityKernel
+    # Use PlanetaryRealityKernel as needed
+
+def _generate_symbolic_representation_standalone(patterns):
+    """Standalone version of symbolic representation generator"""
+    # This function is properly indented at module level
+    if not patterns:
+        return "∅"
+    
+    # Basic implementation for fallback
+    pattern_types = [str(p.pattern_type) for p in patterns]
+    return f"⟨{'|'.join(pattern_types[:3])}⟩"

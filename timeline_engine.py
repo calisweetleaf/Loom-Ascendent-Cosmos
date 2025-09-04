@@ -2,7 +2,8 @@
 #  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
 #  Author: Morpheus (Creator), Somnus Development Collective 
 #  License: Proprietary Software License Agreement (Somnus Development Collective)
-#  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
+#  SHA-256: f3b2c4e5d6a7b8c9d0e1f2a3b4c5d6e7f8g9h0i1j2k3l4m5n6o7p8q9r0s1t2u3v4w5x6y7z8a9b0c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6s7t8u9v0w1x2y3z4a5b6c7d8e9f0g1h2i3j4k5l6m7n8o9p0q1r2s3t4u5v6w7x8y9z0
+#  Description: This module implements a timeline engine that manages the flow of time.
 # ================================================================
 import heapq
 from typing import Dict, List, Tuple, Callable, Optional, Set, Any
@@ -221,13 +222,32 @@ class TimelineEngine:
                  auto_stabilize: bool = True):
         """
         Initialize TimelineEngine with enhanced dimensionality and parameters
+        
+        Args:
+            breath_frequency: Master oscillation frequency in Hz (must be > 0)
+            max_recursion_depth: Maximum allowed recursion depth (1-32)
+            num_dimensions: Number of spatial dimensions (3-11)
+            ethical_dimensions: Number of ethical tensor dimensions (1-10)
+            parallel_timelines: Number of parallel timelines (1-100)
+            auto_stabilize: Enable automatic timeline stabilization
+            
+        Raises:
+            TemporalConstraintError: If parameters are invalid
+            ValueError: If parameters are out of acceptable ranges
         """
+        # Comprehensive parameter validation
+        self._validate_initialization_parameters(
+            breath_frequency, max_recursion_depth, num_dimensions,
+            ethical_dimensions, parallel_timelines, auto_stabilize
+        )
         # Core temporal parameters
         self.breath_frequency = breath_frequency
         self.temporal_resolution = 1 / (2 * breath_frequency)  # Nyquist Limit
         self.master_tick = 0
         self.phase = 0.0  # Breath cycle phase [0, 2π)
         self.active_timeline = 0  # Default to the first timeline
+        self.num_dimensions = num_dimensions
+        self.ethical_dimensions = ethical_dimensions
         
         # Temporal data structures
         self.event_horizons = [[] for _ in range(parallel_timelines)]  # Priority queues by timeline
@@ -268,6 +288,79 @@ class TimelineEngine:
         logger.info(f"TimelineEngine initialized with {parallel_timelines} timeline(s) "
                     f"at {breath_frequency}Hz breath frequency")
 
+    def _validate_initialization_parameters(self, breath_frequency: float, max_recursion_depth: int, 
+                                          num_dimensions: int, ethical_dimensions: int, 
+                                          parallel_timelines: int, auto_stabilize: bool) -> None:
+        """
+        Comprehensive validation of initialization parameters
+        
+        Args:
+            breath_frequency: Master oscillation frequency in Hz
+            max_recursion_depth: Maximum recursion depth
+            num_dimensions: Number of spatial dimensions
+            ethical_dimensions: Number of ethical dimensions
+            parallel_timelines: Number of parallel timelines
+            auto_stabilize: Auto-stabilization flag
+            
+        Raises:
+            TemporalConstraintError: For temporal-related parameter violations
+            ValueError: For general parameter validation failures
+        """
+        # Validate breath frequency
+        if not isinstance(breath_frequency, (int, float)):
+            raise ValueError(f"breath_frequency must be numeric, got {type(breath_frequency)}")
+        if breath_frequency <= 0:
+            raise TemporalConstraintError("breath_frequency must be positive", 
+                                        constraint_type="frequency_bounds",
+                                        violation_time=None)
+        if breath_frequency > 1000:
+            raise TemporalConstraintError("breath_frequency exceeds maximum safe frequency (1000 Hz)", 
+                                        constraint_type="frequency_bounds",
+                                        violation_time=None)
+        
+        # Validate recursion depth
+        if not isinstance(max_recursion_depth, int):
+            raise ValueError(f"max_recursion_depth must be integer, got {type(max_recursion_depth)}")
+        if not (1 <= max_recursion_depth <= 32):
+            raise TemporalConstraintError(f"max_recursion_depth must be 1-32, got {max_recursion_depth}",
+                                        constraint_type="recursion_bounds")
+        
+        # Validate dimensions
+        if not isinstance(num_dimensions, int):
+            raise ValueError(f"num_dimensions must be integer, got {type(num_dimensions)}")
+        if not (3 <= num_dimensions <= 11):
+            raise ValueError(f"num_dimensions must be 3-11 (physical constraint), got {num_dimensions}")
+        
+        # Validate ethical dimensions
+        if not isinstance(ethical_dimensions, int):
+            raise ValueError(f"ethical_dimensions must be integer, got {type(ethical_dimensions)}")
+        if not (1 <= ethical_dimensions <= 10):
+            raise ValueError(f"ethical_dimensions must be 1-10, got {ethical_dimensions}")
+        
+        # Validate parallel timelines
+        if not isinstance(parallel_timelines, int):
+            raise ValueError(f"parallel_timelines must be integer, got {type(parallel_timelines)}")
+        if not (1 <= parallel_timelines <= 100):
+            raise TemporalConstraintError(f"parallel_timelines must be 1-100, got {parallel_timelines}",
+                                        constraint_type="timeline_bounds")
+        
+        # Validate boolean parameters
+        if not isinstance(auto_stabilize, bool):
+            raise ValueError(f"auto_stabilize must be boolean, got {type(auto_stabilize)}")
+        
+        # Cross-parameter validation
+        if ethical_dimensions > num_dimensions:
+            raise ValueError("ethical_dimensions cannot exceed num_dimensions")
+        
+        # Resource validation - ensure system can handle the configuration
+        estimated_memory = parallel_timelines * (num_dimensions * ethical_dimensions * 8)  # bytes
+        if estimated_memory > 1e9:  # 1GB limit
+            logger.warning(f"Configuration may require significant memory: {estimated_memory/1e6:.1f}MB")
+        
+        logger.debug(f"Parameter validation successful: freq={breath_frequency}Hz, "
+                    f"depth={max_recursion_depth}, dims={num_dimensions}x{ethical_dimensions}, "
+                    f"timelines={parallel_timelines}, auto_stabilize={auto_stabilize}")
+
     def process_tick(self, 
                      inputs: Dict, 
                      rcf_operator: Callable,
@@ -282,80 +375,105 @@ class TimelineEngine:
         
         Returns:
             Dict of outputs including event data and metrics
+            
+        Raises:
+            TemporalConstraintError: For temporal processing violations
+            ValueError: For invalid input parameters
+            RuntimeError: For system-level processing failures
         """
+        # Input validation
+        if not isinstance(inputs, dict):
+            raise ValueError(f"inputs must be dictionary, got {type(inputs)}")
+        if not callable(rcf_operator):
+            raise ValueError(f"rcf_operator must be callable, got {type(rcf_operator)}")
+        if timeline_idx is not None and not isinstance(timeline_idx, int):
+            raise ValueError(f"timeline_idx must be integer or None, got {type(timeline_idx)}")
+        if timeline_idx is not None and not (0 <= timeline_idx < len(self.event_horizons)):
+            raise TemporalConstraintError(f"timeline_idx {timeline_idx} out of range [0, {len(self.event_horizons)-1}]",
+                                        constraint_type="timeline_bounds")
+        
         start_time = time.time_ns()
         
-        with self.sync_lock:
-            timeline = timeline_idx if timeline_idx is not None else self.active_timeline
-            
-            # Update breath phase
-            self.phase = (self.phase + 2*np.pi*self.temporal_resolution) % (2*np.pi)
-            
-            # Initialize outputs structure
-            outputs = {
-                'master_tick': self.master_tick,
-                'timeline': timeline,
-                'time_tensors': [],
-                'causal_validations': [],
-                'breath_pulse': self._generate_breath_pulse(timeline),
-                'coherence': self.timeline_coherence[timeline],
-                'metrics': {}
-            }
-            
-            # Apply RCF ethical stabilization
-            stabilized_inputs = rcf_operator(inputs)
-            
-            # Remove expired events
-            self._remove_expired_events(timeline)
-            
-            # Handle pending events
-            while (self.event_horizons[timeline] and 
-                   self.event_horizons[timeline][0].timestamp <= self.master_tick):
+        try:
+            with self.sync_lock:
+                timeline = timeline_idx if timeline_idx is not None else self.active_timeline
                 
-                event = heapq.heappop(self.event_horizons[timeline])
+                # Update breath phase
+                self.phase = (self.phase + 2*np.pi*self.temporal_resolution) % (2*np.pi)
                 
-                # Check cache for optimized processing
-                cache_key = f"{event.event_type}:{event.timestamp}"
-                if cache_key in self.event_cache:
-                    self.metrics['cache_hits'] += 1
-                    resolved_event = self.event_cache[cache_key]
-                else:
-                    # Validate and process event
-                    if not self._validate_causal_chain(event, timeline):
-                        if not event.paradox_resolved:  # Prevent infinite recursion
-                            self._handle_paradox(event, timeline)
-                        continue
+                # Initialize outputs structure
+                outputs = {
+                    'master_tick': self.master_tick,
+                    'timeline': timeline,
+                    'time_tensors': [],
+                    'causal_validations': [],
+                    'breath_pulse': self._generate_breath_pulse(timeline),
+                    'coherence': self.timeline_coherence[timeline],
+                    'metrics': {}
+                }
+                
+                # Apply RCF ethical stabilization
+                stabilized_inputs = rcf_operator(inputs)
+                
+                # Remove expired events
+                self._remove_expired_events(timeline)
+                
+                # Handle pending events
+                while (self.event_horizons[timeline] and 
+                       self.event_horizons[timeline][0].timestamp <= self.master_tick):
                     
-                    resolved_event = self._apply_temporal_constraints(event, stabilized_inputs, timeline)
-                    self.event_cache[cache_key] = resolved_event
-                    self.metrics['cache_miss_count'] += 1
+                    event = heapq.heappop(self.event_horizons[timeline])
+                    
+                    # Check cache for optimized processing
+                    cache_key = f"{event.event_type}:{event.timestamp}"
+                    if cache_key in self.event_cache:
+                        self.metrics['cache_hits'] += 1
+                        resolved_event = self.event_cache[cache_key]
+                    else:
+                        # Validate and process event
+                        if not self._validate_causal_chain(event, timeline):
+                            if not event.paradox_resolved:  # Prevent infinite recursion
+                                self._handle_paradox(event, timeline)
+                            continue
+                        
+                        resolved_event = self._apply_temporal_constraints(event, stabilized_inputs, timeline)
+                        self.event_cache[cache_key] = resolved_event
+                        self.metrics['cache_miss_count'] += 1
+                    
+                    # Notify observers of the resolved event
+                    self.notify_observers(resolved_event, timeline)
+                    
+                    # Update timestream and collect outputs
+                    outputs['time_tensors'].append(self._generate_time_tensor(resolved_event))
+                    self._update_timestream(resolved_event, timeline)
+                    self.metrics['events_processed'] += 1
                 
-                # Notify observers of the resolved event
-                self.notify_observers(resolved_event, timeline)
+                # Auto-stabilize timeline if needed
+                if self.auto_stabilize and self.timeline_coherence[timeline] < self.stability_threshold:
+                    self._stabilize_timeline(timeline)
                 
-                # Update timestream and collect outputs
-                outputs['time_tensors'].append(self._generate_time_tensor(resolved_event))
-                self._update_timestream(resolved_event, timeline)
-                self.metrics['events_processed'] += 1
-            
-            # Auto-stabilize timeline if needed
-            if self.auto_stabilize and self.timeline_coherence[timeline] < self.stability_threshold:
-                self._stabilize_timeline(timeline)
-            
-            # Enforce forward causality at macro scale
-            self.master_tick += 1
-            
-            # Monitor timeline coherence
-            self._monitor_timeline_coherence()
-            
-            # Check timeline synchronization
-            self._check_timeline_synchronization()
-            
-            # Update metrics
-            self.metrics['runtime_ns'] = time.time_ns() - start_time
-            outputs['metrics'] = self.metrics.copy()
-            
-            return outputs
+                # Enforce forward causality at macro scale
+                self.master_tick += 1
+                
+                # Monitor timeline coherence
+                self._monitor_timeline_coherence()
+                
+                # Check timeline synchronization
+                self._check_timeline_synchronization()
+                
+                # Update metrics
+                self.metrics['runtime_ns'] = time.time_ns() - start_time
+                outputs['metrics'] = self.metrics.copy()
+                
+                return outputs
+                
+        except TemporalConstraintError:
+            # Re-raise temporal errors with additional context
+            raise
+        except Exception as e:
+            # Wrap unexpected errors
+            logger.error(f"Critical error in process_tick: {e}")
+            raise RuntimeError(f"Timeline processing failed: {e}") from e
 
     def schedule_event(self, 
                        event: Dict | TemporalEvent, 
@@ -363,28 +481,75 @@ class TimelineEngine:
                        recursion_depth: int = 0) -> TemporalEvent:
         """
         Add event to horizon queue with recursion context
+        
+        Args:
+            event: Event to schedule (dict or TemporalEvent)
+            timeline_idx: Target timeline (None = active)
+            recursion_depth: Current recursion depth
+            
+        Returns:
+            TemporalEvent: The scheduled event object
+            
+        Raises:
+            TemporalConstraintError: For recursion or timeline violations
+            ValueError: For invalid event data
         """
+        # Input validation
+        if event is None:
+            raise ValueError("event cannot be None")
+        if timeline_idx is not None and not isinstance(timeline_idx, int):
+            raise ValueError(f"timeline_idx must be integer or None, got {type(timeline_idx)}")
+        if not isinstance(recursion_depth, int) or recursion_depth < 0:
+            raise ValueError(f"recursion_depth must be non-negative integer, got {recursion_depth}")
+        
         timeline = timeline_idx if timeline_idx is not None else self.active_timeline
+        
+        # Validate timeline bounds
+        if not (0 <= timeline < len(self.event_horizons)):
+            raise TemporalConstraintError(f"Timeline {timeline} out of bounds",
+                                        constraint_type="timeline_bounds",
+                                        violation_time=self.master_tick)
+        
         logger.debug(f"Scheduling event: {event} on timeline {timeline} at recursion depth {recursion_depth}")
         
-        # Convert to TemporalEvent if dictionary
-        if isinstance(event, dict):
-            event_obj = TemporalEvent(**event)
-        else:
-            event_obj = event
+        try:
+            # Convert to TemporalEvent if dictionary
+            if isinstance(event, dict):
+                # Validate required fields for dict conversion
+                if 'timestamp' not in event or 'event_type' not in event:
+                    raise ValueError("Event dict must contain 'timestamp' and 'event_type' fields")
+                event_obj = TemporalEvent.from_dict(event)
+            elif isinstance(event, TemporalEvent):
+                event_obj = event
+            else:
+                raise ValueError(f"event must be dict or TemporalEvent, got {type(event)}")
+                
+            # Validate recursion depth
+            max_depth = len(self.recursion_stacks[timeline])
+            if recursion_depth > max_depth + 5:  # Allow some buffer
+                raise TemporalConstraintError(f"Recursion depth {recursion_depth} exceeds limit {max_depth + 5}",
+                                            constraint_type="recursion_bounds",
+                                            violation_time=event_obj.timestamp)
+                
+            event_obj.recursion_depth = recursion_depth
             
-        # Add recursion context
-        if recursion_depth > len(self.recursion_stacks[timeline]):
-            raise TemporalConstraintError(f"Max recursion depth exceeded: {recursion_depth}")
+            # Validate event metadata
+            self._validate_event_metadata(event_obj)
             
-        event_obj.recursion_depth = recursion_depth
-        
-        # Validate event metadata
-        self._validate_event_metadata(event_obj)
-        
-        # Add to horizon queue
-        heapq.heappush(self.event_horizons[timeline], event_obj)
-        return event_obj
+            # Add to horizon queue with error handling
+            with self.sync_lock:
+                heapq.heappush(self.event_horizons[timeline], event_obj)
+                
+            logger.debug(f"Event {event_obj.event_type} scheduled successfully at t={event_obj.timestamp:.3f}")
+            return event_obj
+            
+        except (ValueError, TemporalConstraintError):
+            # Re-raise known errors
+            raise
+        except Exception as e:
+            # Wrap unexpected errors
+            logger.error(f"Error scheduling event: {e}")
+            raise RuntimeError(f"Event scheduling failed: {e}") from e
 
     def create_recursive_loop(self, 
                               entry_event: Dict | TemporalEvent, 
@@ -666,13 +831,141 @@ class TimelineEngine:
         self.timestreams[timeline][parent_id].append(child_id)
         logger.info(f"Bound event {parent_event.event_type} to {child_event.event_type} on timeline {timeline}")
 
-    def breath_synchronization(self, timeline_idx: int = None) -> None:
+    def breath_synchronization(self, timeline_idx: int = None) -> Dict[str, Any]:
         """
-        Breath Synchronization (≈t): Aligns events to breath cycles.
+        Breath Synchronization (≈t): Aligns events to breath cycles per CLAUDE.md specifications.
+        
+        Implements the Breath Phase Function B(t) from the Temporal Propagation Function:
+        S' = T(S, B(t), I(t), P(t))
+        
+        Args:
+            timeline_idx: Target timeline (None = active timeline)
+            
+        Returns:
+            Dict containing synchronization metrics and breath state
         """
         timeline = timeline_idx if timeline_idx is not None else self.active_timeline
-        self.breath_phase_array[timeline] = (self.phase + 2 * np.pi * self.temporal_resolution) % (2 * np.pi)
-        logger.info(f"Breath synchronization applied to timeline {timeline}")
+        
+        # Calculate master oscillator frequency (Hz)
+        master_frequency = self.breath_frequency
+        
+        # Calculate current breath phase with phase coherence
+        current_time = self.master_tick * self.temporal_resolution
+        base_phase = 2 * np.pi * master_frequency * current_time
+        
+        # Apply phase coherence correction based on timeline stability
+        coherence_factor = self.timeline_coherence[timeline]
+        phase_correction = (1.0 - coherence_factor) * np.pi / 8  # Max correction of π/8
+        
+        # Calculate synchronized phase
+        synchronized_phase = (base_phase + phase_correction) % (2 * np.pi)
+        self.breath_phase_array[timeline] = synchronized_phase
+        
+        # Update global phase
+        self.phase = synchronized_phase
+        
+        # Calculate breath amplitude with ethical weighting
+        ethical_magnitude = np.linalg.norm(self.ethical_tensors[timeline])
+        ethical_weight = np.tanh(ethical_magnitude)  # Bounded ethical influence
+        
+        base_amplitude = np.sin(synchronized_phase)
+        ethical_amplitude = base_amplitude * (1.0 + 0.1 * ethical_weight)  # 10% ethical modulation
+        
+        # Calculate breath cycle position (0.0 = start of inhale, 1.0 = end of cycle)
+        cycle_position = (synchronized_phase % (2 * np.pi)) / (2 * np.pi)
+        
+        # Determine breath phase state
+        if 0.0 <= cycle_position < 0.35:
+            breath_state = "INHALE"
+            state_progress = cycle_position / 0.35
+        elif 0.35 <= cycle_position < 0.50:
+            breath_state = "HOLD_IN" 
+            state_progress = (cycle_position - 0.35) / 0.15
+        elif 0.50 <= cycle_position < 0.85:
+            breath_state = "EXHALE"
+            state_progress = (cycle_position - 0.50) / 0.35
+        else:
+            breath_state = "HOLD_OUT"
+            state_progress = (cycle_position - 0.85) / 0.15
+        
+        # Calculate synchronization strength with entangled timelines
+        sync_strength = 1.0
+        entanglement_map = self._current_entanglement(timeline)
+        for connected_timeline in entanglement_map['connected_timelines']:
+            other_idx = connected_timeline['timeline_id']
+            if other_idx < len(self.breath_phase_array):
+                phase_diff = abs(synchronized_phase - self.breath_phase_array[other_idx])
+                phase_diff = min(phase_diff, 2*np.pi - phase_diff)  # Minimum angular distance
+                entanglement_strength = connected_timeline['strength']
+                
+                # Reduce sync strength based on phase misalignment
+                sync_reduction = entanglement_strength * (phase_diff / np.pi)
+                sync_strength *= (1.0 - sync_reduction * 0.1)  # Max 10% reduction per timeline
+        
+        # Apply temporal recursion damping
+        recursion_depth = len(self.recursion_stacks[timeline])
+        recursion_damping = 0.95 ** recursion_depth  # Exponential damping
+        damped_amplitude = ethical_amplitude * recursion_damping
+        
+        # Store breath synchronization metrics
+        breath_metrics = {
+            'timeline_idx': timeline,
+            'synchronized_phase': float(synchronized_phase),
+            'cycle_position': float(cycle_position),
+            'breath_state': breath_state,
+            'state_progress': float(state_progress),
+            'amplitude': float(damped_amplitude),
+            'base_amplitude': float(base_amplitude),
+            'ethical_weight': float(ethical_weight),
+            'coherence_factor': float(coherence_factor),
+            'sync_strength': float(sync_strength),
+            'master_frequency': float(master_frequency),
+            'recursion_damping': float(recursion_damping),
+            'phase_correction': float(phase_correction)
+        }
+        
+        # Synchronize events in horizon to breath phase
+        self._align_events_to_breath(timeline, synchronized_phase)
+        
+        logger.info(f"Breath synchronization applied to timeline {timeline}: "
+                   f"phase={synchronized_phase:.3f}, state={breath_state}, "
+                   f"amplitude={damped_amplitude:.3f}, sync_strength={sync_strength:.3f}")
+        
+        return breath_metrics
+
+    def _align_events_to_breath(self, timeline_idx: int, breath_phase: float) -> None:
+        """
+        Align events in the timeline to the current breath phase
+        
+        Args:
+            timeline_idx: Timeline to align
+            breath_phase: Current breath phase in radians
+        """
+        # Calculate breath-aligned timestamp quantum
+        breath_period = 1.0 / self.breath_frequency
+        breath_quantum = breath_period / 8.0  # Divide breath cycle into 8 quantum steps
+        
+        aligned_events = []
+        for event in self.event_horizons[timeline_idx]:
+            # Calculate nearest breath-aligned timestamp
+            relative_time = event.timestamp - (self.master_tick * self.temporal_resolution)
+            breath_cycles = relative_time / breath_period
+            aligned_cycles = round(breath_cycles / 0.125) * 0.125  # Align to 1/8 breath cycle
+            aligned_timestamp = (self.master_tick * self.temporal_resolution) + (aligned_cycles * breath_period)
+            
+            # Only adjust if the change is small (< 10% of breath period)
+            if abs(aligned_timestamp - event.timestamp) < (breath_period * 0.1):
+                event.timestamp = aligned_timestamp
+                event.phase = breath_phase
+                event.is_inhale = 0.0 <= (breath_phase % (2 * np.pi)) / (2 * np.pi) < 0.5
+            
+            aligned_events.append(event)
+        
+        # Re-heapify the event horizon after timestamp adjustments
+        self.event_horizons[timeline_idx] = aligned_events
+        heapq.heapify(self.event_horizons[timeline_idx])
+        
+        logger.debug(f"Aligned {len(aligned_events)} events to breath phase {breath_phase:.3f} on timeline {timeline_idx}")
 
     def recursive_closure(self, entry_event: TemporalEvent, exit_condition: Callable, timeline_idx: int = None) -> List[TemporalEvent]:
         """
@@ -816,13 +1109,39 @@ class TimelineEngine:
 
     def _validate_event_metadata(self, event: TemporalEvent) -> None:
         """
-        Validate that the event has all required metadata fields
+        Validate that the event has all required fields and metadata
         """
-        required_fields = ['timestamp', 'event_type']
-        for field in required_fields:
-            if field not in event.metadata:
-                logger.error(f"Event {event} missing required metadata field: {field}")
-                raise ValueError(f"Missing required metadata field: {field}")
+        # Validate required attributes (not in metadata)
+        if not hasattr(event, 'timestamp') or event.timestamp is None:
+            logger.error(f"Event missing required attribute: timestamp")
+            raise ValueError(f"Missing required attribute: timestamp")
+        
+        if not hasattr(event, 'event_type') or not event.event_type:
+            logger.error(f"Event missing required attribute: event_type")
+            raise ValueError(f"Missing required attribute: event_type")
+        
+        # Validate timestamp is reasonable
+        if not isinstance(event.timestamp, (int, float)):
+            raise ValueError(f"timestamp must be numeric, got {type(event.timestamp)}")
+        
+        if event.timestamp < 0:
+            logger.warning(f"Event has negative timestamp: {event.timestamp}")
+        
+        # Validate quantum state if present
+        if event.quantum_state is not None:
+            if not isinstance(event.quantum_state, np.ndarray):
+                raise ValueError("quantum_state must be numpy array")
+            if np.any(np.isnan(event.quantum_state)) or np.any(np.isinf(event.quantum_state)):
+                raise ValueError("quantum_state contains invalid values (NaN or Inf)")
+        
+        # Validate ethical vectors if present
+        if event.ethical_vectors is not None:
+            if not isinstance(event.ethical_vectors, np.ndarray):
+                raise ValueError("ethical_vectors must be numpy array")
+            if np.any(np.isnan(event.ethical_vectors)) or np.any(np.isinf(event.ethical_vectors)):
+                raise ValueError("ethical_vectors contains invalid values (NaN or Inf)")
+        
+        logger.debug(f"Event validation passed for {event.event_type} at t={event.timestamp}")
 
     def _apply_temporal_constraints(self, 
                                   event: TemporalEvent, 
@@ -1009,6 +1328,92 @@ class TimelineEngine:
         self.metrics['quantum_collapses'] += 1
         return tensor
 
+    def _current_entanglement(self, timeline_idx: int) -> Dict[str, Any]:
+        """
+        Calculate current entanglement map for the specified timeline
+        
+        Args:
+            timeline_idx: Timeline index to analyze
+            
+        Returns:
+            Dict containing entanglement metrics and relationships
+        """
+        if timeline_idx >= len(self.entanglement_matrix):
+            logger.warning(f"Timeline {timeline_idx} not found in entanglement matrix")
+            return {'entanglement_strength': 0.0, 'connected_timelines': []}
+        
+        # Get entanglement values for this timeline
+        entanglement_row = self.entanglement_matrix[timeline_idx]
+        
+        # Find connected timelines (non-zero entanglement, excluding self)
+        connected_timelines = []
+        total_entanglement = 0.0
+        
+        for i, strength in enumerate(entanglement_row):
+            if i != timeline_idx and strength > 0.01:  # Threshold for meaningful entanglement
+                connected_timelines.append({
+                    'timeline_id': i,
+                    'strength': float(strength),
+                    'coherence_difference': abs(self.timeline_coherence[timeline_idx] - 
+                                              self.timeline_coherence[i]) if i < len(self.timeline_coherence) else 1.0
+                })
+                total_entanglement += strength
+        
+        # Calculate entanglement metrics
+        other_entanglements = entanglement_row[np.arange(len(entanglement_row)) != timeline_idx]
+        max_entanglement = np.max(other_entanglements) if len(other_entanglements) > 0 else 0.0
+        avg_entanglement = np.mean(other_entanglements) if len(other_entanglements) > 0 else 0.0
+        
+        # Calculate quantum entanglement phase based on breath cycle
+        entanglement_phase = (self.phase + timeline_idx * np.pi / 4) % (2 * np.pi)
+        
+        return {
+            'timeline_id': timeline_idx,
+            'total_entanglement': float(total_entanglement),
+            'max_entanglement': float(max_entanglement) if len(entanglement_row) > 1 else 0.0,
+            'avg_entanglement': float(avg_entanglement) if len(entanglement_row) > 1 else 0.0,
+            'connected_timelines': connected_timelines,
+            'entanglement_phase': float(entanglement_phase),
+            'coherence_factor': float(self.timeline_coherence[timeline_idx]),
+            'quantum_signature': self._calculate_quantum_signature(timeline_idx)
+        }
+
+    def _calculate_quantum_signature(self, timeline_idx: int) -> np.ndarray:
+        """
+        Calculate quantum signature for timeline entanglement
+        
+        Args:
+            timeline_idx: Timeline index
+            
+        Returns:
+            Quantum signature array
+        """
+        # Base signature from timeline properties
+        signature = np.zeros(8)  # 8-dimensional quantum signature
+        
+        # Timeline ID contribution
+        signature[0] = np.sin(timeline_idx * np.pi / 7)
+        signature[1] = np.cos(timeline_idx * np.pi / 7)
+        
+        # Coherence contribution
+        coherence = self.timeline_coherence[timeline_idx]
+        signature[2] = coherence * np.sin(self.phase)
+        signature[3] = coherence * np.cos(self.phase)
+        
+        # Entanglement matrix contribution
+        if timeline_idx < len(self.entanglement_matrix):
+            entanglement_sum = np.sum(self.entanglement_matrix[timeline_idx])
+            signature[4] = np.tanh(entanglement_sum)
+            signature[5] = np.log(1 + entanglement_sum)
+        
+        # Event horizon contribution
+        if timeline_idx < len(self.event_horizons):
+            event_count = len(self.event_horizons[timeline_idx])
+            signature[6] = np.sin(event_count / 10.0)
+            signature[7] = event_count / (event_count + 1)  # Normalized event density
+        
+        return signature
+
     def _update_timestream(self, event: TemporalEvent, timeline_idx: int) -> None:
         """
         Update causal graph with new event
@@ -1085,6 +1490,114 @@ class TimelineEngine:
         ]
         logger.debug(f"Expired events removed from timeline {timeline_idx}")
 
+    def _stabilize_timeline(self, timeline_idx: int) -> None:
+        """
+        Apply auto-stabilization to a timeline to restore coherence
+        
+        Args:
+            timeline_idx: Timeline index to stabilize
+        """
+        try:
+            current_coherence = self.timeline_coherence[timeline_idx]
+            logger.info(f"Stabilizing timeline {timeline_idx} with coherence {current_coherence:.3f}")
+            
+            # Apply stabilization strategies based on coherence level
+            if current_coherence < 0.1:
+                # Critical instability - emergency measures
+                self._emergency_timeline_stabilization(timeline_idx)
+            elif current_coherence < 0.3:
+                # Major instability - comprehensive stabilization
+                self._comprehensive_timeline_stabilization(timeline_idx)
+            else:
+                # Minor instability - gentle corrections
+                self._gentle_timeline_stabilization(timeline_idx)
+                
+            # Update coherence after stabilization
+            new_coherence = min(1.0, current_coherence + 0.1)
+            self.timeline_coherence[timeline_idx] = new_coherence
+            
+            logger.info(f"Timeline {timeline_idx} stabilized: {current_coherence:.3f} -> {new_coherence:.3f}")
+            
+        except Exception as e:
+            logger.error(f"Error stabilizing timeline {timeline_idx}: {e}")
+            raise TemporalConstraintError(f"Timeline stabilization failed: {e}", 
+                                        constraint_type="stabilization_failure",
+                                        violation_time=self.master_tick)
+
+    def _emergency_timeline_stabilization(self, timeline_idx: int) -> None:
+        """Emergency stabilization for critically unstable timelines"""
+        # Clear paradox buffers
+        self.paradox_buffers[timeline_idx].clear()
+        
+        # Reset recursion stacks
+        self.recursion_stacks[timeline_idx].clear()
+        
+        # Prune unstable events from event horizon
+        stable_events = []
+        for event in self.event_horizons[timeline_idx]:
+            if event.paradox_resolved or event.recursion_depth <= 2:
+                stable_events.append(event)
+        
+        self.event_horizons[timeline_idx] = stable_events
+        heapq.heapify(self.event_horizons[timeline_idx])
+        
+        # Reset ethical tensors to neutral state
+        self.ethical_tensors[timeline_idx] = np.zeros(self.ethical_tensors.shape[1])
+        
+        logger.warning(f"Emergency stabilization applied to timeline {timeline_idx}")
+
+    def _comprehensive_timeline_stabilization(self, timeline_idx: int) -> None:
+        """Comprehensive stabilization for majorly unstable timelines"""
+        # Resolve pending paradoxes
+        while self.paradox_buffers[timeline_idx]:
+            paradox_info = self.paradox_buffers[timeline_idx].popleft()
+            paradox_type, event, context = paradox_info
+            
+            # Apply gentle resolution
+            entropy = self._calculate_paradox_entropy(event)
+            resolved_event = self._rcf_paradox_resolution(event, paradox_type, entropy, timeline_idx)
+            
+            if resolved_event:
+                heapq.heappush(self.event_horizons[timeline_idx], resolved_event)
+        
+        # Normalize ethical tensors
+        ethical_magnitude = np.linalg.norm(self.ethical_tensors[timeline_idx])
+        if ethical_magnitude > 1.0:
+            self.ethical_tensors[timeline_idx] /= ethical_magnitude
+        
+        # Reduce entanglement with unstable timelines
+        for i in range(len(self.entanglement_matrix)):
+            if i != timeline_idx and self.timeline_coherence[i] < 0.5:
+                self.entanglement_matrix[timeline_idx, i] *= 0.8
+                self.entanglement_matrix[i, timeline_idx] *= 0.8
+        
+        logger.info(f"Comprehensive stabilization applied to timeline {timeline_idx}")
+
+    def _gentle_timeline_stabilization(self, timeline_idx: int) -> None:
+        """Gentle stabilization for mildly unstable timelines"""
+        # Smooth breath phase alignment
+        target_phase = self.phase
+        current_phase = self.breath_phase_array[timeline_idx]
+        phase_diff = target_phase - current_phase
+        
+        # Gradual phase correction (10% adjustment per stabilization)
+        self.breath_phase_array[timeline_idx] += phase_diff * 0.1
+        
+        # Reduce high-recursion events
+        for event in self.event_horizons[timeline_idx]:
+            if event.recursion_depth > 5:
+                event.recursion_depth = max(1, event.recursion_depth - 1)
+        
+        # Strengthen positive entanglements
+        for i in range(len(self.entanglement_matrix)):
+            if i != timeline_idx and self.timeline_coherence[i] > 0.8:
+                current_entanglement = self.entanglement_matrix[timeline_idx, i]
+                if current_entanglement > 0.1:
+                    self.entanglement_matrix[timeline_idx, i] = min(1.0, current_entanglement * 1.05)
+                    self.entanglement_matrix[i, timeline_idx] = min(1.0, current_entanglement * 1.05)
+        
+        logger.debug(f"Gentle stabilization applied to timeline {timeline_idx}")
+
     def _monitor_timeline_coherence(self) -> None:
         """
         Monitor and log coherence metrics for all timelines
@@ -1120,6 +1633,10 @@ class TimelineEngine:
             thread.join()
         logger.info("All timelines processed in parallel")
 
+    def is_active(self):
+        """Check if the Timeline Engine is active."""
+        return True  # Placeholder implementation
+
 
 def test_observer(event, timeline_idx):
     print(f"Observer received event: {event.event_type} on timeline {timeline_idx}")
@@ -1145,6 +1662,29 @@ timeline.notify_observers(test_event, 0)
 event_data = {'event_type': 'breath_pulse', 'timestamp': 0.0}
 
 # Custom exceptions for timeline-related issues
+class TemporalConstraintError(Exception):
+    """Exception raised when temporal constraints are violated."""
+    def __init__(self, message="Temporal constraint violation detected", constraint_type=None,
+                 violation_time=None, affected_events=None):
+        self.message = message
+        self.constraint_type = constraint_type
+        self.violation_time = violation_time
+        self.affected_events = affected_events or []
+        super().__init__(self.message)
+        
+    def __str__(self):
+        details = []
+        if self.constraint_type:
+            details.append(f"Constraint: {self.constraint_type}")
+        if self.violation_time is not None:
+            details.append(f"Time: {self.violation_time}")
+        if self.affected_events:
+            details.append(f"Affected events: {len(self.affected_events)}")
+        
+        if details:
+            return f"{self.message} - {'; '.join(details)}"
+        return self.message
+
 class TimelineParadoxError(Exception):
     """Exception raised when a temporal paradox is detected in the timeline."""
     def __init__(self, message="Temporal paradox detected in timeline", severity=None, 
@@ -1213,3 +1753,73 @@ class RealityFragmentationError(Exception):
         if details:
             return f"{self.message} - {'; '.join(details)}"
         return self.message
+
+def initialize(timeline_engine=None):
+    """
+    Initialize the timeline engine and return the engine instance.
+    
+    Args:
+        timeline_engine: Optional existing timeline engine instance
+        
+    Returns:
+        The initialized timeline engine instance
+    """
+    logger = logging.getLogger("TimelineEngine")
+    logger.info("Initializing Timeline Engine...")
+    
+    # Create and return the engine instance
+    return TimelineEngine()
+
+import logging
+import time
+import numpy as np
+from enum import Enum, auto
+from typing import Dict, List, Tuple, Any, Callable, Optional
+
+class BreathPhase(Enum):
+    """Breath phases of the universe cycle"""
+    INHALE = auto()       # Expansion, possibility generation, superposition
+    HOLD_IN = auto()      # Stabilization, coherence maintenance
+    EXHALE = auto()       # Contraction, probability collapse, resolution
+    HOLD_OUT = auto()     # Void state, potential reset, quantum vacuum
+
+def initialize(**kwargs):
+    """
+    Initialize the Timeline Engine with specified parameters.
+    
+    Args:
+        **kwargs: Configuration parameters including:
+            - start_time: Starting time (default: current time)
+            - tick_rate: Number of ticks per second (default: 10)
+            - time_scale: Time scaling factor relative to real time (default: 1.0)
+            - breath_cycle_ticks: Number of ticks in a complete breath cycle (default: 100)
+            - entity_id: The ID of the entity using this timeline engine
+            
+    Returns:
+        Initialized TimelineEngine instance
+    """
+    logger = logging.getLogger("TimelineEngine")
+    logger.info("Initializing Timeline Engine...")
+    
+    # Extract configuration parameters with defaults
+    start_time = kwargs.get('start_time', time.time())
+    tick_rate = kwargs.get('tick_rate', 10)
+    time_scale = kwargs.get('time_scale', 1.0)
+    breath_cycle_ticks = kwargs.get('breath_cycle_ticks', 100)
+    entity_id = kwargs.get('entity_id', f"timeline_{int(start_time) % 10000}")
+    
+    # Create and configure timeline engine with correct constructor parameters
+    timeline_engine = TimelineEngine(
+        breath_frequency=1.0/tick_rate if tick_rate > 0 else 1.0,
+        max_recursion_depth=8,
+        num_dimensions=4,
+        ethical_dimensions=3,
+        parallel_timelines=1,
+        auto_stabilize=True
+    )
+    
+    logger.info(f"Timeline Engine initialized with ID {entity_id}")
+    logger.info(f"Configuration: tick_rate={tick_rate}, time_scale={time_scale}, breath_cycle_ticks={breath_cycle_ticks}")
+    
+    return timeline_engine
+

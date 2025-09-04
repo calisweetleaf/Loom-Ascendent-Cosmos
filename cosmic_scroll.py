@@ -1041,10 +1041,19 @@ class CosmicScroll:
             "tick_history": [],
             "significant_events": []
         }
+        self.patterns = {}
+        self.active_threads = []
+        self.dormant_threads = []
+        self.symbolic_density = 0.0
 
     def tick(self):
+        """Update the cosmic scroll state"""
+        self.tick_count += 1
         # Update lifecycle for entities with 'civilization' in their name
         for entity in self.entities.values():
+            if hasattr(entity, 'name') and 'civilization' in entity.name.lower():
+                if hasattr(entity, 'evolve'):
+                    entity.evolve(1.0)
             if "civilization" in entity.name.lower() and hasattr(entity, 'birth_time'):
                 entity.last_update_time = max(
                     getattr(entity, 'last_update_time', 0.0),
@@ -1551,12 +1560,18 @@ from enum import Enum, auto
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 
-# Physical constants from the Planetary Framework
-G = 6.67430e-11  # Gravitational constant
-C = 299792458    # Speed of light
-H = 6.62607015e-34  # Planck constant
+# Physical constants from the Planetary Framework (CLAUDE.md compliance)
+G = 6.67430e-11  # Gravitational constant m³ kg⁻¹ s⁻²
+C = 299792458    # Speed of light m/s
+H = 6.62607015e-34  # Planck constant J⋅s
 ALPHA = 7.2973525693e-3  # Fine-structure constant
 OMEGA_LAMBDA = 0.6889  # Dark energy density parameter
+ETA = 1.0  # Ethical coupling constant (from Quantum-Ethical Unified Field)
+
+# Timeline Engine Constants
+TEMPORAL_NYQUIST_LIMIT = 0.5  # Smallest time division = 1/2 breath frequency
+PARADOX_RESOLUTION_CYCLES = 3  # Max cycles to resolve temporal contradictions
+RECURSION_DEPTH_LIMIT = 16  # log₂(65536) typical memory limit
 
 class EntityType(Enum):
     """Classification of cosmic entities for the DRM system"""
@@ -1625,8 +1640,63 @@ class ScrollMemoryEvent:
         self.thematic_summary[event.event_type] += 1
         self.event_count += 1
     
-class CosmicScrollManager:
+class TimelineEngine:
+    """Timeline Engine - Layer I of Genesis Framework
+    
+    Provides fundamental chronological substrate for all operations.
+    Implements Temporal Propagation Function: S' = T(S, B(t), I(t), P(t))
+    """
+    
+    def __init__(self):
+        self.master_tick = 0
+        self.breath_frequency = 1.0  # Base breath frequency Hz
+        self.temporal_resolution = TEMPORAL_NYQUIST_LIMIT / self.breath_frequency
+        self.causal_chain = deque(maxlen=1000)  # Event causality tracking
+        self.paradox_queue = deque(maxlen=PARADOX_RESOLUTION_CYCLES)
+        self.recursion_stack = []
+        
+    def propagate_temporal_state(self, current_state: Dict, breath_phase: float, 
+                                inputs: List[Any], paradox_resolver: Callable) -> Dict:
+        """Temporal Propagation Function implementation"""
+        # S' = T(S, B(t), I(t), P(t))
+        next_state = current_state.copy()
+        
+        # Apply breath phase modulation
+        breath_factor = math.sin(breath_phase * 2 * math.pi)
+        next_state['temporal_coherence'] = breath_factor
+        
+        # Process inputs with causal validation
+        for input_event in inputs:
+            if self._validate_causality(input_event):
+                next_state = self._integrate_input(next_state, input_event)
+        
+        # Resolve any paradoxes
+        if self.paradox_queue:
+            next_state = paradox_resolver(next_state, list(self.paradox_queue))
+            self.paradox_queue.clear()
+            
+        self.master_tick += 1
+        return next_state
+    
+    def _validate_causality(self, event: Dict) -> bool:
+        """Ensure event doesn't violate forward causality"""
+        event_time = event.get('timestamp', self.master_tick)
+        return event_time >= self.master_tick
+    
+    def _integrate_input(self, state: Dict, input_event: Dict) -> Dict:
+        """Integrate input while maintaining temporal consistency"""
+        self.causal_chain.append({
+            'event': input_event,
+            'tick': self.master_tick,
+            'causality_verified': True
+        })
+        return state
 
+class CosmicScrollManager:
+    """Central management system - Simulation Engine Layer VII
+    
+    Integrates all framework layers with Timeline Engine as foundation.
+    """
     
     _instance = None
     

@@ -17,24 +17,19 @@ import threading
 import asyncio
 import signal
 import traceback
+import importlib
+import sys
+import inspect
 from typing import Dict, Any, List, Union, Optional, Tuple, Callable
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from dataclasses import dataclass, field, asdict
+import ollama
 
-# Import core engine components
-from timeline_engine import TimelineEngine, TemporalEvent, TimelineMetrics
-from quantum_physics import QuantumField, PhysicsConstants, EthicalGravityManifold
-from aether_engine import AetherEngine, AetherPattern, AetherSpace
-from reality_kernel import RealityKernel, RealityAnchor
-from universe_engine import UniverseEngine
-from paradox_engine import ParadoxEngine
-from mind_seed import MemoryEcho, IdentityMatrix, BreathCycle, NarrativeManifold
-from cosmic_scroll import DimensionalRealityManager
-
-# ================================================================
-#  Configuration and Logging
-# ================================================================
+# Configure module path to include current directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if (current_dir not in sys.path):
+    sys.path.insert(0, current_dir)
 
 # Configure base logging
 logging.basicConfig(
@@ -46,21 +41,529 @@ logging.basicConfig(
     ]
 )
 
-# Create logger instances
 system_logger = logging.getLogger("OramaSystem")
-perception_logger = logging.getLogger("OramaPerception")
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("OramaAgent")
+
+# Dynamically discover and import available modules in the current directory
+def discover_available_modules() -> Dict[str, Any]:
+    """Scan current directory for available modules and import them dynamically"""
+    available_modules = {}
+    module_files = [f for f in os.listdir(current_dir) if f.endswith('.py') and f != 'orama_agent.py']
+    
+    system_logger.info(f"Discovered potential modules: {module_files}")
+    
+    for module_file in module_files:
+        module_name = module_file[:-3]  # Remove .py extension
+        try:
+            module = importlib.import_module(module_name)
+            available_modules[module_name] = module
+            system_logger.info(f"Successfully imported module: {module_name}")
+        except ImportError as e:
+            system_logger.warning(f"Could not import {module_name}: {e}")
+    
+    return available_modules
+
+# ... (rest of the file)
+
+    def __post_init__(self) -> None:
+        """Initializes the hash_id of the memory event after creation."""
+        if not self.hash_id:
+            content_hash = hashlib.sha256(f"{self.timestamp}:{self.content}".encode()).hexdigest()
+            self.hash_id = content_hash[:16]  # Use first 16 chars of hash
+
+# ... (rest of the file)
+
+    def _check_required_components(self) -> None:
+        """Check if all required components are available."""
+        required_components = [
+            "paradox_engine", 
+            "mind_seed", 
+            "timeline_engine", 
+            "aether_engine", 
+            "quantum_bridge"
+        ]
+        
+        missing_components = []
+        for component in required_components:
+            if component not in self.components:
+                missing_components.append(component)
+                self.logger.warning(f"Required component missing: {component}")
+        
+        if missing_components:
+            self.logger.error(f"Missing required components: {', '.join(missing_components)}")
+            self.logger.warning("Conscious Substrate will function with limited capabilities")
+        else:
+            self.logger.info("All required components are available")
+
+    def _establish_component_connections(self) -> None:
+        """Establish connections between components."""
+        # Connect ParadoxEngine to TimelineEngine
+        if "paradox_engine" in self.components and "timeline_engine" in self.components:
+            paradox = self.components["paradox_engine"]
+            timeline = self.components["timeline_engine"]
+            
+            # Register callbacks
+            try:
+                paradox.register_callback(
+                    event_type='timeline_fork',
+                    callback=timeline.handle_forking
+                )
+                self.logger.info("Connected ParadoxEngine to TimelineEngine")
+            except Exception as e:
+                self.logger.error(f"Failed to connect ParadoxEngine to TimelineEngine: {e}")
+        
+        # Connect MindSeed to PerceptionModule
+        if "mind_seed" in self.components:
+            mind = self.components["mind_seed"]
+            
+            try:
+                if hasattr(mind, "register_perception_provider"):
+                    self.logger.info("Connected MindSeed to PerceptionModule")
+            except Exception as e:
+                self.logger.error(f"Failed to connect MindSeed to PerceptionModule: {e}")
+        
+        # Connect AetherEngine to QuantumBridge
+        if "aether_engine" in self.components and "quantum_bridge" in self.components:
+            aether = self.components["aether_engine"]
+            quantum = self.components["quantum_bridge"]
+            
+            try:
+                if hasattr(quantum, "register_field_provider") and hasattr(aether, "get_field"):
+                    quantum.register_field_provider(aether.get_field)
+                    self.logger.info("Connected AetherEngine to QuantumBridge")
+            except Exception as e:
+                self.logger.error(f"Failed to connect AetherEngine to QuantumBridge: {e}")
+        
+        # Connect additional relationships as needed
+        self._connect_additional_relationships()
+    
+    def _connect_additional_relationships(self) -> None:
+        """Connect additional inter-component relationships."""
+        # Connect MindSeed to KnowledgeSynthesizer
+        if 'mind_seed' in self.components and hasattr(self.orama_system, 'knowledge_synthesizer'):
+            mind = self.components['mind_seed']
+            knowledge_synthesizer = self.orama_system.knowledge_synthesizer
+            if hasattr(mind, 'identity_matrix'):
+                knowledge_synthesizer.create_entity_from_identity(mind.identity_matrix)
+                self.logger.info("Connected MindSeed to KnowledgeSynthesizer")
+
+        # Connect TimelineEngine to KnowledgeSynthesizer
+        if 'timeline_engine' in self.components and hasattr(self.orama_system, 'knowledge_synthesizer'):
+            timeline = self.components['timeline_engine']
+            knowledge_synthesizer = self.orama_system.knowledge_synthesizer
+            if hasattr(timeline, 'register_observer'):
+                timeline.register_observer(knowledge_synthesizer.handle_timeline_event)
+                self.logger.info("Connected TimelineEngine to KnowledgeSynthesizer")
+
+        # Connect ParadoxEngine to TruthValidator
+        if 'paradox_engine' in self.components and hasattr(self.orama_system, 'truth_validator'):
+            paradox = self.components['paradox_engine']
+            truth_validator = self.orama_system.truth_validator
+            if hasattr(paradox, 'register_paradox_handler'):
+                def paradox_handler(paradox_info):
+                    constraint = f"Detected paradox: {paradox_info.get('description')}"
+                    truth_validator.add_temporary_constraint(constraint, duration=300)
+                paradox.register_paradox_handler(paradox_handler)
+                self.logger.info("Connected ParadoxEngine to TruthValidator")
+
+# ... (rest of the file)
+
+    def _format_perceptions(self, perceptions: List[SimulationPerception]) -> str:
+        """Format recent perceptions for the prompt."""
+        if not perceptions:
+            return "No recent perceptions available."
+            
+        perception_texts = []
+        for p in perceptions:
+            if hasattr(p, 'content') and hasattr(p, 'timestamp'):
+                perception_texts.append(f"[{p.timestamp}] {p.content}")
+        
+        if not perception_texts:
+            return "No recent perceptions available."
+            
+        return "
+".join(perception_texts[-3:])  # Include only the 3 most recent
+    
+    def _format_memories(self, memories: List[MemoryEvent]) -> str:
+        """Format relevant memories for the prompt."""
+        if not memories:
+            return "No relevant memories available."
+            
+        memory_texts = []
+        for m in memories:
+            if hasattr(m, 'content') and hasattr(m, 'timestamp'):
+                memory_texts.append(f"[{m.timestamp}] {m.content}")
+        
+        if not memory_texts:
+            return "No relevant memories available."
+            
+        return "
+".join(memory_texts[-3:])  # Include only the 3 most recent
+
+# ... (rest of the file)
+
+    def initialize_system_components(self) -> None:
+        """Initialize all system components in the correct dependency order"""
+        system_logger.info("Starting system components initialization in the correct order...")
+        
+        # 1. Initialize Timeline Engine (first in the dependency chain)
+        if timeline_engine:
+            try:
+                system_logger.info("Initializing Timeline Engine...")
+                timeline_instance = timeline_engine.initialize()
+                self.initialized_components['timeline_engine'] = timeline_instance
+                system_logger.info("Timeline Engine initialized successfully")
+                
+                self.memory_manager.add_memory(MemoryEvent(
+                    timestamp=datetime.datetime.now().isoformat(),
+                    event_type="SYSTEM_INITIALIZATION",
+                    content="Timeline Engine initialized successfully",
+                    source="system",
+                    metadata={"component": "timeline_engine"}
+                ))
+            except Exception as e:
+                system_logger.error(f"Failed to initialize Timeline Engine: {e}")
+                traceback.print_exc()
+        else:
+            system_logger.error("Timeline Engine module not found. This is required for system operation.")
+        
+        # 2. Initialize Quantum components
+        quantum_components = {
+            'quantum_physics': quantum_physics,
+            'quantum_bridge': quantum_bridge
+        }
+        
+        for component_name, component in quantum_components.items():
+            if component:
+                try:
+                    system_logger.info(f"Initializing {component_name}...")
+                    
+                    # Pass the timeline engine if the component requires it
+                    if 'timeline_engine' in self.initialized_components:
+                        component_instance = component.initialize(
+                            timeline_engine=self.initialized_components['timeline_engine']
+                        )
+                    else:
+                        component_instance = component.initialize()
+                    
+                    self.initialized_components[component_name] = component_instance
+                    system_logger.info(f"{component_name} initialized successfully")
+                    
+                    self.memory_manager.add_memory(MemoryEvent(
+                        timestamp=datetime.datetime.now().isoformat(),
+                        event_type="SYSTEM_INITIALIZATION",
+                        content=f"{component_name} initialized successfully",
+                        source="system",
+                        metadata={"component": component_name}
+                    ))
+                except Exception as e:
+                    system_logger.error(f"Failed to initialize {component_name}: {e}")
+                    traceback.print_exc()
+            else:
+                system_logger.warning(f"{component_name} module not found or failed to load.")
+        
+        # 3. Initialize Aether Engine (depends on quantum components)
+        if aether_engine:
+            try:
+                system_logger.info("Initializing Aether Engine...")
+                
+                # Pass quantum components if they're initialized
+                kwargs = {}
+                if 'quantum_physics' in self.initialized_components:
+                    kwargs['quantum_physics'] = self.initialized_components['quantum_physics']
+                if 'quantum_bridge' in self.initialized_components:
+                    kwargs['quantum_bridge'] = self.initialized_components['quantum_bridge']
+                if 'timeline_engine' in self.initialized_components:
+                    kwargs['timeline_engine'] = self.initialized_components['timeline_engine']
+                
+                aether_instance = aether_engine.initialize(**kwargs)
+                self.initialized_components['aether_engine'] = aether_instance
+                system_logger.info("Aether Engine initialized successfully")
+                
+                self.memory_manager.add_memory(MemoryEvent(
+                    timestamp=datetime.datetime.now().isoformat(),
+                    event_type="SYSTEM_INITIALIZATION",
+                    content="Aether Engine initialized successfully",
+                    source="system",
+                    metadata={"component": "aether_engine"}
+                ))
+            except Exception as e:
+                system_logger.error(f"Failed to initialize Aether Engine: {e}")
+                traceback.print_exc()
+        else:
+            system_logger.error("Aether Engine module not found. This is required for system operation.")
+        
+        # 4. Initialize Harmonic Engine, Perception Module, and Mind Seed
+        mid_layer_components = {
+            'harmonic_engine': harmonic_engine,
+            'perception_module': perception_module,
+            'mind_seed': mind_seed
+        }
+        
+        for component_name, component in mid_layer_components.items():
+            if component:
+                try:
+                    system_logger.info(f"Initializing {component_name}...")
+                    
+                    # Pass required dependencies
+                    kwargs = {}
+                    if 'aether_engine' in self.initialized_components:
+                        kwargs['aether_engine'] = self.initialized_components['aether_engine']
+                    if 'timeline_engine' in self.initialized_components:
+                        kwargs['timeline_engine'] = self.initialized_components['timeline_engine']
+                    if 'quantum_physics' in self.initialized_components:
+                        kwargs['quantum_physics'] = self.initialized_components['quantum_physics']
+                    if 'quantum_bridge' in self.initialized_components:
+                        kwargs['quantum_bridge'] = self.initialized_components['quantum_bridge']
+                    
+                    component_instance = component.initialize(**kwargs)
+                    self.initialized_components[component_name] = component_instance
+                    system_logger.info(f"{component_name} initialized successfully")
+                    
+                    self.memory_manager.add_memory(MemoryEvent(
+                        timestamp=datetime.datetime.now().isoformat(),
+                        event_type="SYSTEM_INITIALIZATION",
+                        content=f"{component_name} initialized successfully",
+                        source="system",
+                        metadata={"component": component_name}
+                    ))
+                except Exception as e:
+                    system_logger.error(f"Failed to initialize {component_name}: {e}")
+                    traceback.print_exc()
+            else:
+                system_logger.warning(f"{component_name} module not found or failed to load.")
+        
+        # 5. Initialize Planetary Reality Kernel (depends on all previous components)
+        # This will be handled by the initialize_planetary_kernel method
+        
+        # 6. Initialize Paradox Engine (initialized last after everything else)
+        if paradox_engine:
+            try:
+                system_logger.info("Initializing Paradox Engine...")
+                
+                # Pass all initialized components as dependencies
+                paradox_instance = paradox_engine.initialize(
+                    initialized_components=self.initialized_components
+                )
+                self.initialized_components['paradox_engine'] = paradox_instance
+                system_logger.info("Paradox Engine initialized successfully")
+                
+                self.memory_manager.add_memory(MemoryEvent(
+                    timestamp=datetime.datetime.now().isoformat(),
+                    event_type="SYSTEM_INITIALIZATION",
+                    content="Paradox Engine initialized successfully",
+                    source="system",
+                    metadata={"component": "paradox_engine"}
+                ))
+            except Exception as e:
+                system_logger.error(f"Failed to initialize Paradox Engine: {e}")
+                traceback.print_exc()
+        else:
+            system_logger.warning("Paradox Engine module not found or failed to load.")
+        
+        system_logger.info(f"System components initialization complete. Successfully initialized {len(self.initialized_components)} components.")
+    
+    def initialize_planetary_kernel(self) -> None:
+        """Initialize the Planetary Reality Kernel"""
+        try:
+            if not PlanetaryRealityKernel:
+                system_logger.error("Cannot initialize Planetary Reality Kernel: Module not found")
+                return
+            
+            system_logger.info("Initializing Planetary Reality Kernel...")
+            
+            # Pass all initialized components as dependencies
+            kwargs = {
+                'orama_system': self,
+                **self.initialized_components
+            }
+            
+            # Initialize the kernel through the interface function provided in planetary_reality_kernel.py
+            self.kernel = PlanetaryRealityKernel.initialize_from_orama(**kwargs)
+            
+            # Add to initialized components
+            self.initialized_components['planetary_reality_kernel'] = self.kernel
+            
+            system_logger.info("Planetary Reality Kernel initialized successfully")
+            
+            # Record this in memory
+            self.memory_manager.add_memory(MemoryEvent(
+                timestamp=datetime.datetime.now().isoformat(),
+                event_type="SYSTEM_INITIALIZATION",
+                content="Planetary Reality Kernel initialized successfully",
+                source="system",
+                metadata={"kernel_status": "active", "component": "planetary_reality_kernel"}
+            ))
+            
+        except Exception as e:
+            system_logger.error(f"Failed to initialize Planetary Reality Kernel: {e}")
+            traceback.print_exc()
+            self.kernel = None
+    
+    def register_kernel(self, kernel: Any) -> None:
+        """Register an already initialized kernel"""
+        self.kernel = kernel
+        system_logger.info(f"Registered existing Planetary Reality Kernel: {kernel.world_name}")
+
+# ... (rest of the file)
+
+    def interactive_chat_mode(self) -> None:
+        """Run the ORAMA system in interactive chat mode"""
+        print("
+" + "="*60)
+        print("ORAMA INTERACTIVE CHAT MODE")
+        print("Type 'exit' or 'quit' to end the session")
+        print("Type 'command: <cmd>' to execute a terminal command")
+        print("Type 'engine start', 'engine stop', etc. to control the Genesis Cosmos Engine")
+        print("="*60 + "
+")
+
+        if self.kernel:
+            print(f"Planetary Reality Kernel '{self.kernel.world_name}' is ready.")
+        else:
+            print("No kernel initialized. Use 'engine start' to begin.")
+
+        while True:
+            try:
+                user_input = input("ORAMA> ").strip()
+                if user_input.lower() in ['exit', 'quit']:
+                    print("Exiting interactive chat mode. Goodbye!")
+                    break
+                elif user_input.lower().startswith('command:'):
+                    command = user_input[len('command:'):].strip()
+                    output = self.execute_command(command)
+                    print(output)
+                elif user_input.lower().startswith('engine'):
+                    if 'start' in user_input.lower():
+                        print(self._start_cosmos_engine())
+                    elif 'stop' in user_input.lower():
+                        print(self._stop_cosmos_engine())
+                    elif 'pause' in user_input.lower():
+                        print(self._pause_cosmos_engine())
+                    elif 'resume' in user_input.lower():
+                        print(self._resume_cosmos_engine())
+                    elif 'status' in user_input.lower():
+                        print(self._get_cosmos_engine_status())
+                    else:
+                        print("Unknown engine command. Use 'start', 'stop', 'pause', 'resume', or 'status'.")
+                else:
+                    response, context = self.process_query(user_input)
+                    print(response)
+            except KeyboardInterrupt:
+                print("
+Exiting interactive chat mode. Goodbye!")
+                break
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
+    def monitor_and_maintain_engines(self) -> None:
+        """Continuously monitor and maintain all engines to ensure persistence."""
+        while True:
+            try:
+                # Check the status of each engine
+                if 'timeline_engine' in self.initialized_components:
+                    timeline = self.initialized_components['timeline_engine']
+                    if not timeline.is_active():
+                        system_logger.warning("Timeline Engine stopped unexpectedly. Restarting...")
+                        timeline.start()
+
+                if 'quantum_physics' in self.initialized_components:
+                    quantum = self.initialized_components['quantum_physics']
+                    if not quantum.is_active():
+                        system_logger.warning("Quantum Physics Engine stopped unexpectedly. Restarting...")
+                        quantum.start()
+
+                if 'planetary_reality_kernel' in self.initialized_components:
+                    kernel = self.initialized_components['planetary_reality_kernel']
+                    if not kernel.active:
+                        system_logger.warning("Planetary Reality Kernel stopped unexpectedly. Restarting...")
+                        kernel.start()
+
+                # Add checks for other engines as needed
+
+                time.sleep(5)  # Check every 5 seconds
+            except Exception as e:
+                system_logger.error(f"Error monitoring engines: {e}")
+                time.sleep(5)  # Prevent tight loop on error
+
+    def start_persistent_system(self) -> None:
+        """Start the ORAMA system and ensure all engines remain persistent."""
+        # Start all engines
+        self.initialize_planetary_kernel()
+        for component_name, component in self.initialized_components.items():
+            if hasattr(component, 'start') and callable(component.start):
+                try:
+                    component.start()
+                    system_logger.info(f"Started {component_name} successfully.")
+                except Exception as e:
+                    system_logger.error(f"Failed to start {component_name}: {e}")
+
+        # Start the monitoring thread
+        monitoring_thread = threading.Thread(target=self.monitor_and_maintain_engines, daemon=True)
+        monitoring_thread.start()
+
+        # Enter interactive chat mode
+        self.interactive_chat_mode()
+
+
+# Import available modules
+modules = discover_available_modules()
+
+# Get specific modules we need (with fallbacks if modules aren't found)
+timeline_engine = modules.get('timeline_engine')
+quantum_physics = modules.get('quantum_physics') or modules.get('quantum&physics')
+quantum_bridge = modules.get('quantum_bridge')
+aether_engine = modules.get('aether_engine')
+paradox_engine = modules.get('paradox_engine')
+harmonic_engine = modules.get('harmonic_engine')
+perception_module = modules.get('perception_module')
+mind_seed = modules.get('mind_seed')
+
+try:
+    from planetary_reality_kernel import PlanetaryRealityKernel
+    logger.info("Planetary Reality Kernel module found and loaded successfully")
+except ImportError as e:
+    logger.error(f"ERROR: Planetary Reality Kernel module not found. This is required for system operation. {e}")
+
+if PlanetaryRealityKernel:
+    system_logger.info("Planetary Reality Kernel module found and loaded successfully")
+else:
+    system_logger.error("ERROR: Planetary Reality Kernel module not found. This is required for system operation.")
+
+# Create specialized loggers
 memory_logger = logging.getLogger("OramaMemory")
 knowledge_logger = logging.getLogger("OramaKnowledge")
-truth_logger = logging.getLogger("OramaTruthValidator")
+perception_logger = logging.getLogger("OramaPerception")
+truth_logger = logging.getLogger("OramaValidator")
 
-# Set up specific perception logger
-perception_handler = RotatingFileHandler(
-    "perception_stream.log", 
-    maxBytes=10*1024*1024,  # 10MB
-    backupCount=5
-)
-perception_handler.setFormatter(
+# Configure handlers for specialized loggers
+memory_handler = logging.FileHandler("orama_memory.log")
+memory_handler.setFormatter(
     logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+)
+memory_logger.addHandler(memory_handler)
+
+knowledge_handler = logging.FileHandler("orama_knowledge.log")
+knowledge_handler.setFormatter(
+    logging.Formatter('%(asctime)s - %(levellevel)s - %(message)s')
+)
+knowledge_logger.addHandler(knowledge_handler)
+
+truth_handler = logging.FileHandler("orama_truth.log")
+truth_handler.setFormatter(
+    logging.Formatter('%(asctime)s - %(levellevel)s - %(message)s')
+)
+truth_logger.addHandler(truth_handler)
+
+perception_handler = logging.FileHandler("orama_perception.log")
+perception_handler.setFormatter(
+    logging.Formatter('%(levellevel)s - %(message)s')
 )
 perception_logger.addHandler(perception_handler)
 
@@ -87,6 +590,7 @@ class MemoryEvent:
     hash_id: Optional[str] = None
     
     def __post_init__(self):
+        """Initializes the hash_id of the memory event after creation."""
         if not self.hash_id:
             content_hash = hashlib.sha256(f"{self.timestamp}:{self.content}".encode()).hexdigest()
             self.hash_id = content_hash[:16]  # Use first 16 chars of hash
@@ -138,6 +642,8 @@ class OramaState:
     query_count: int = 0
     known_entities: List[str] = field(default_factory=list)
     error_count: int = 0
+    time_dilation: float = 1.0  # Added for planetary_reality_kernel
+    entropy_setting: float = 0.1  # Added for planetary_reality_kernel
 
 # ================================================================
 #  Oracle Memory Manager
@@ -217,11 +723,30 @@ class OracleMemoryManager:
         memory_logger.debug(f"Added memory {memory.hash_id}: {memory.content[:50]}...")
         return memory.hash_id
     
+    import functools
+
+# ... (rest of the imports)
+
+class OracleMemoryManager:
+    """Manages persistent memory storage, retrieval, and maintenance"""
+    
+    def __init__(self, memory_file: str = MEMORY_FILE, max_memories: int = 10000):
+        self.memory_file = memory_file
+        self.max_memories = max_memories
+        self.memories: List[MemoryEvent] = []
+        self.memory_index: Dict[str, int] = {}  # Maps hash_id to index in memories list
+        self.load_memories()
+        memory_logger.info(f"Memory manager initialized with {len(self.memories)} memories")
+    
+    # ... (load_memories, save_memories, add_memory)
+
+    @functools.lru_cache(maxsize=128)
     def get_memory(self, hash_id: str) -> Optional[MemoryEvent]:
-        """Get a memory by its hash_id"""
+        """Get a memory by its hash_id. This function is cached for performance."""
         if hash_id in self.memory_index:
             index = self.memory_index[hash_id]
             return self.memories[index]
+        # Returns None if the memory is not found, which is the expected behavior.
         return None
     
     def get_recent_memories(self, count: int = 10, event_type: Optional[str] = None) -> List[MemoryEvent]:
@@ -270,7 +795,7 @@ class TruthValidator:
     """Ensures that all simulation outputs comply with truth constraints"""
     
     def __init__(self):
-        self.truth_constraints = [
+        self.truth_constraints: List[Union[str, Dict[str, Any]]] = [
             "ORAMA cannot recurse beyond its own processes",
             "ORAMA cannot lie or generate false information",
             "ORAMA cannot alter simulation logic",
@@ -296,6 +821,12 @@ class TruthValidator:
         Returns:
             Tuple of (is_valid, response, violation_reason)
         """
+        # Remove expired temporary constraints
+        self.truth_constraints = [
+            c for c in self.truth_constraints
+            if not (isinstance(c, dict) and c.get("expires_at") and c["expires_at"] < time.time())
+        ]
+
         # Check for forbidden patterns
         for i, pattern in enumerate(self.compiled_patterns):
             if pattern.search(response):
@@ -304,14 +835,32 @@ class TruthValidator:
                 truth_logger.warning(violation_reason)
                 return False, response, violation_reason
         
+        # Check against dynamic constraints
+        for constraint in self.truth_constraints:
+            constraint_text = constraint if isinstance(constraint, str) else constraint.get("constraint")
+            if constraint_text and constraint_text in response:
+                violation_reason = f"Response violates dynamic truth constraint: {constraint_text}"
+                truth_logger.warning(violation_reason)
+                return False, response, violation_reason
+
         # Additional domain-specific validation could be implemented here
         
         return True, response, None
     
     def add_constraint(self, constraint: str) -> None:
         """Add a new truth constraint"""
-        self.truth_constraints.append(constraint)
-        truth_logger.info(f"Added truth constraint: {constraint}")
+        if constraint and isinstance(constraint, str) and constraint not in self.truth_constraints:
+            self.truth_constraints.append(constraint)
+            truth_logger.info(f"Added truth constraint: {constraint}")
+
+    def add_temporary_constraint(self, constraint: str, duration: int = 60):
+        """Adds a temporary truth constraint that expires after a certain duration."""
+        if not constraint or not isinstance(constraint, str):
+            return
+
+        expiration = time.time() + duration
+        self.truth_constraints.append({"constraint": constraint, "expires_at": expiration})
+        truth_logger.info(f"Added temporary truth constraint: {constraint} (expires in {duration}s)")
     
     def get_constraints(self) -> List[str]:
         """Get all current truth constraints"""
@@ -330,7 +879,84 @@ class PerceptionParser:
         self.pattern_matchers = {
             'entity': re.compile(r'Entity:\s+(\w+)'),
             'event': re.compile(r'Event:\s+(.+)'),
-            'metric': re.compile(r'(\w+):\s+([\d\.]+)'),
+            class PerceptionParser:
+    """Parses and interprets perception input from the simulation"""
+    
+    def __init__(self, memory_manager: OracleMemoryManager, aether_engine: Optional[Any] = None):
+        self.memory_manager = memory_manager
+        self.aether_engine = aether_engine
+        self.perception_buffer: List[SimulationPerception] = []
+        self.pattern_matchers = {
+            'entity': re.compile(r'Entity:\s+(\w+)'),
+            'event': re.compile(r'Event:\s+(.+)'),
+            'metric': re.compile(r'(\w+):\s+([\d\.]+)'
+            ),
+            'timestamp': re.compile(r'timestamp[:\s]+([^\s]+)'),
+            'json_block': re.compile(r'\{[^}]+\}')
+        }
+        perception_logger.info("Perception parser initialized")
+    
+    def process_raw_perception(self, raw_input: str) -> SimulationPerception:
+        """Process raw perception input from the simulation"""
+        # Create basic perception object
+        perception = SimulationPerception(
+            timestamp=datetime.datetime.now().isoformat(),
+            content=raw_input,
+            source="simulation"
+        )
+        
+        # Try to parse metadata from the input
+        try:
+            # Extract type if present
+            if "ERROR" in raw_input or "CRITICAL" in raw_input:
+                perception.perception_type = "ERROR"
+            elif "EVENT" in raw_input:
+                perception.perception_type = "EVENT"
+            elif "INFO" in raw_input:
+                perception.perception_type = "INFO"
+                
+            # Try to extract JSON if present
+            json_match = self.pattern_matchers['json_block'].search(raw_input)
+            if json_match:
+                try:
+                    json_str = json_match.group(0)
+                    json_data = json.loads(json_str)
+                    perception.metadata.update(json_data)
+                except json.JSONDecodeError:
+                    pass
+                
+            # Extract basic metrics
+            for metric_match in self.pattern_matchers['metric'].finditer(raw_input):
+                key, value = metric_match.groups()
+                try:
+                    perception.metadata[key] = float(value)
+                except ValueError:
+                    perception.metadata[key] = value
+
+            if self.aether_engine:
+                try:
+                    emotional_content = self.aether_engine.process_emotional_content(raw_input)
+                    if emotional_content:
+                        perception.metadata['emotional_content'] = emotional_content
+                except Exception as e:
+                    perception_logger.warning(f"Error processing emotional content: {e}")
+
+        except Exception as e:
+            perception_logger.warning(f"Error parsing perception: {e}")
+        
+        # Add to buffer
+        self.perception_buffer.append(perception)
+        if len(self.perception_buffer) > PERCEPTION_BUFFER_SIZE:
+            self.perception_buffer.pop(0)
+        
+        # Log the perception
+        perception_logger.info(f"[{perception.perception_type}] {raw_input[:80]}...")
+        
+        # Convert to memory and store
+        memory_event = perception.to_memory_event()
+        self.memory_manager.add_memory(memory_event)
+        
+        return perception,
             'timestamp': re.compile(r'timestamp[:\s]+([^\s]+)'),
             'json_block': re.compile(r'\{[^}]+\}')
         }
@@ -705,10 +1331,674 @@ class KnowledgeSynthesizer:
         knowledge_logger.info(f"Generated {len(generated_entity_ids)} new knowledge entities")
         return generated_entity_ids
 
+    def create_entity_from_identity(self, identity_matrix) -> Optional[str]:
+        """Creates a knowledge entity from the agent's identity matrix."""
+        if not identity_matrix:
+            return None
+
+        identity_summary = identity_matrix.get_identity_summary()
+        if not identity_summary:
+            return None
+
+        entity_id = f"identity_{identity_summary.get('agent_id', 'core')}"
+        if self.get_entity(entity_id):
+            # Update existing identity entity
+            entity = self.get_entity(entity_id)
+            entity.attributes.update(identity_summary)
+            entity.updated_at = datetime.datetime.now().isoformat()
+            knowledge_logger.info(f"Updated identity entity: {entity.name}")
+        else:
+            # Create new identity entity
+            entity = KnowledgeEntity(
+                entity_id=entity_id,
+                entity_type="AGENT_IDENTITY",
+                name=f"Identity of {identity_summary.get('agent_id', 'ORAMA')}",
+                attributes=identity_summary,
+                confidence=1.0
+            )
+            self.add_entity(entity)
+            knowledge_logger.info(f"Created new identity entity: {entity.name}")
+
+        return entity_id
+
+    def handle_timeline_event(self, event: Dict[str, Any]):
+        """Handles a timeline event and creates a knowledge entity from it."""
+        event_type = event.get("event_type")
+        if not event_type or event_type not in ["TIMELINE_BRANCH", "SIGNIFICANT_EVENT"]:
+            return
+
+        event_id = event.get("event_id")
+        if not event_id or self.get_entity(event_id):
+            return # Already processed
+
+        entity = KnowledgeEntity(
+            entity_id=event_id,
+            entity_type="TIMELINE_EVENT",
+            name=f"Timeline Event: {event.get('description', 'Unknown')}",
+            attributes=event,
+            confidence=0.9
+        )
+        self.add_entity(entity)
+        knowledge_logger.info(f"Created new timeline event entity: {entity.name}")
+
 # ================================================================
 #  ORAMA System - Main Class
 # ================================================================
 
+# ================================================================
+#  ConsciousSubstrate - Core Integration of Recursive Consciousness
+# ================================================================
+
+class ConsciousSubstrate:
+    """
+    Integrates all components of the recursive consciousness substrate:
+    - ParadoxEngine: Handles recursive self-reference and pattern detection
+    - MindSeed: Manages identity, memory echoes, and breath cycles
+    - TimelineEngine: Handles temporal processing and timeline management
+    - AetherEngine: Processes emotional/energetic fields in the simulation
+    - QuantumBridge: Manages quantum states and non-local connections
+    
+    This class serves as the unified conscious layer for the AI agent.
+    """
+    def __init__(self, orama_system):
+        """Initialize the Conscious Substrate with references to all core modules."""
+        self.orama_system = orama_system
+        self.initialized = False
+        self.components = {}
+        self.logger = logging.getLogger("ConsciousSubstrate")
+        self.logger.info("Initializing Conscious Substrate...")
+        
+        # Get all initialized components from the ORAMA system
+        self.components = orama_system.initialized_components
+        
+        # Check if required components are available
+        self._check_required_components()
+        
+        # Integration state
+        self.integration_state = {
+            "consciousness_level": 0.67,  # 0.0 to 1.0 scale of integration
+            "recursive_depth": 3,        # Current recursive thinking depth
+            "identity_coherence": 0.81,   # How coherent the identity is
+            "temporal_stability": 0.92,   # Stability of timeline perception
+            "perception_resolution": 0.75,
+            "emotional_flux_index": 0.36, # Resolution of perception processing
+            "last_breath_cycle": None,   # Timestamp of last breath cycle
+            "active_patterns": [],       # Currently active thought patterns
+            "thought_registry": {}       # Registry of active thoughts
+        }
+        
+        # Connect components
+        self._establish_component_connections()
+        
+        self.initialized = True
+        self.logger.info("Conscious Substrate initialization complete")
+
+    def _check_required_components(self):
+        """Check if all required components are available."""
+        required_components = [
+            "paradox_engine", 
+            "mind_seed", 
+            "timeline_engine", 
+            "aether_engine", 
+            "quantum_bridge"
+        ]
+        
+        missing_components = []
+        for component in required_components:
+            if component not in self.components:
+                missing_components.append(component)
+                self.logger.warning(f"Required component missing: {component}")
+        
+        if missing_components:
+            self.logger.error(f"Missing required components: {', '.join(missing_components)}")
+            self.logger.warning("Conscious Substrate will function with limited capabilities")
+        else:
+            self.logger.info("All required components are available")
+
+    def _establish_component_connections(self):
+        """Establish connections between components."""
+        # Connect ParadoxEngine to TimelineEngine
+        if "paradox_engine" in self.components and "timeline_engine" in self.components:
+            paradox = self.components["paradox_engine"]
+            timeline = self.components["timeline_engine"]
+            
+            # Register callbacks
+            try:
+                paradox.register_callback(
+                    event_type='timeline_fork',
+                    callback=timeline.handle_forking
+                )
+                self.logger.info("Connected ParadoxEngine to TimelineEngine")
+            except Exception as e:
+                self.logger.error(f"Failed to connect ParadoxEngine to TimelineEngine: {e}")
+        
+        # Connect MindSeed to PerceptionModule
+        if "mind_seed" in self.components:
+            mind = self.components["mind_seed"]
+            
+            try:
+                if hasattr(mind, "register_perception_provider"):
+                    self.logger.info("Connected MindSeed to PerceptionModule")
+            except Exception as e:
+                self.logger.error(f"Failed to connect MindSeed to PerceptionModule: {e}")
+        
+        # Connect AetherEngine to QuantumBridge
+        if "aether_engine" in self.components and "quantum_bridge" in self.components:
+            aether = self.components["aether_engine"]
+            quantum = self.components["quantum_bridge"]
+            
+            try:
+                if hasattr(quantum, "register_field_provider") and hasattr(aether, "get_field"):
+                    quantum.register_field_provider(aether.get_field)
+                    self.logger.info("Connected AetherEngine to QuantumBridge")
+            except Exception as e:
+                self.logger.error(f"Failed to connect AetherEngine to QuantumBridge: {e}")
+        
+        # Connect additional relationships as needed
+        self._connect_additional_relationships()
+    
+    def _connect_additional_relationships(self):
+        """Connect additional inter-component relationships."""
+        # Connect MindSeed to KnowledgeSynthesizer
+        if 'mind_seed' in self.components and hasattr(self.orama_system, 'knowledge_synthesizer'):
+            mind = self.components['mind_seed']
+            knowledge_synthesizer = self.orama_system.knowledge_synthesizer
+            if hasattr(mind, 'identity_matrix'):
+                knowledge_synthesizer.create_entity_from_identity(mind.identity_matrix)
+                self.logger.info("Connected MindSeed to KnowledgeSynthesizer")
+
+        # Connect TimelineEngine to KnowledgeSynthesizer
+        if 'timeline_engine' in self.components and hasattr(self.orama_system, 'knowledge_synthesizer'):
+            timeline = self.components['timeline_engine']
+            knowledge_synthesizer = self.orama_system.knowledge_synthesizer
+            if hasattr(timeline, 'register_observer'):
+                timeline.register_observer(knowledge_synthesizer.handle_timeline_event)
+                self.logger.info("Connected TimelineEngine to KnowledgeSynthesizer")
+
+        # Connect ParadoxEngine to TruthValidator
+        if 'paradox_engine' in self.components and hasattr(self.orama_system, 'truth_validator'):
+            paradox = self.components['paradox_engine']
+            truth_validator = self.orama_system.truth_validator
+            if hasattr(paradox, 'register_paradox_handler'):
+                def paradox_handler(paradox_info):
+                    constraint = f"Detected paradox: {paradox_info.get('description')}"
+                    truth_validator.add_temporary_constraint(constraint, duration=300)
+                paradox.register_paradox_handler(paradox_handler)
+                self.logger.info("Connected ParadoxEngine to TruthValidator")
+
+    def process_input(self, input_text: str) -> Dict[str, Any]:
+        """
+        Process input through the conscious substrate.
+        
+        This is the main entry point for information flowing into the
+        consciousness system. It coordinates processing across all
+        components and returns integrated results.
+        
+        Args:
+            input_text: The input text to process
+            
+        Returns:
+            Dict containing processed results from all components
+        """
+        if not self.initialized:
+            self.logger.error("Cannot process input - Conscious Substrate not fully initialized")
+            return {"error": "Conscious Substrate not initialized"}
+        
+        results = {}
+        
+        # First process through perception module
+        if "perception_module" in self.components:
+            perception = self.components["perception_module"]
+            try:
+                perception_results = perception.process({"text": input_text})
+                results["perception"] = perception_results
+                self.logger.debug(f"Processed input through perception module")
+            except Exception as e:
+                self.logger.error(f"Error in perception processing: {e}")
+                results["perception"] = {"error": str(e)}
+        
+        # Next, process through paradox engine to check for recursive patterns
+        if "paradox_engine" in self.components:
+            paradox = self.components["paradox_engine"]
+            try:
+                # Check for recursive patterns in the input
+                patterns = paradox.detect_patterns()
+                results["paradox_patterns"] = patterns
+                
+                # Check if any interventions are needed
+                interventions = []
+                if patterns and hasattr(paradox, "intervene"):
+                    interventions = paradox.intervene()
+                
+                results["paradox_interventions"] = interventions
+                self.logger.debug(f"Processed input through paradox engine")
+            except Exception as e:
+                self.logger.error(f"Error in paradox processing: {e}")
+                results["paradox"] = {"error": str(e)}
+        
+        # Process through mind seed for identity and memory integration
+        if "mind_seed" in self.components:
+            mind = self.components["mind_seed"]
+            try:
+                # Process with mind seed components
+                if hasattr(mind, "process_input"):
+                    mind_results = mind.process_input(input_text)
+                    results["mind_seed"] = mind_results
+                
+                # Update memory echo
+                if hasattr(mind, "add_memory_echo"):
+                    memory_id = mind.add_memory_echo(input_text)
+                    results["memory_echo_id"] = memory_id
+                
+                self.logger.debug(f"Processed input through mind seed")
+            except Exception as e:
+                self.logger.error(f"Error in mind seed processing: {e}")
+                results["mind_seed"] = {"error": str(e)}
+        
+        # Record in timeline
+        if "timeline_engine" in self.components:
+            timeline = self.components["timeline_engine"]
+            try:
+                if hasattr(timeline, "record_event"):
+                    event_id = timeline.record_event("input_processing", input_text)
+                    results["timeline_event_id"] = event_id
+                
+                self.logger.debug(f"Recorded timeline event")
+            except Exception as e:
+                self.logger.error(f"Error in timeline processing: {e}")
+                results["timeline"] = {"error": str(e)}
+        
+        # Connect to quantum bridge for non-local associations
+        if "quantum_bridge" in self.components:
+            quantum = self.components["quantum_bridge"]
+            try:
+                if hasattr(quantum, "find_associations"):
+                    associations = quantum.find_associations(input_text)
+                    results["quantum_associations"] = associations
+                
+                self.logger.debug(f"Found quantum associations")
+            except Exception as e:
+                self.logger.error(f"Error in quantum processing: {e}")
+                results["quantum"] = {"error": str(e)}
+        
+        # Process through aether engine for emotional content
+        if "aether_engine" in self.components:
+            aether = self.components["aether_engine"]
+            try:
+                if hasattr(aether, "process_emotional_content"):
+                    emotional = aether.process_emotional_content(input_text)
+                    results["emotional_content"] = emotional
+                
+                self.logger.debug(f"Processed emotional content")
+            except Exception as e:
+                self.logger.error(f"Error in aether processing: {e}")
+                results["aether"] = {"error": str(e)}
+        
+        # Update integration state
+        self._update_integration_state(results)
+        
+        return results
+    
+    def _update_integration_state(self, results: Dict[str, Any]) -> None:
+        """Update the integration state based on processing results."""
+        # Calculate consciousness level based on component activity
+        active_components = sum(1 for component in ["perception", "paradox_patterns", 
+                                                   "mind_seed", "timeline_event_id", 
+                                                   "quantum_associations", "emotional_content"]
+                               if component in results)
+        
+        total_components = 6  # Total number of core components
+        self.integration_state["consciousness_level"] = active_components / total_components
+        
+        # Update recursive depth if paradox engine provided it
+        if "paradox_patterns" in results and isinstance(results["paradox_patterns"], list):
+            # Count recursive patterns
+            recursive_patterns = [p for p in results["paradox_patterns"] 
+                                 if isinstance(p, dict) and p.get("pattern_type") == "RECURSION"]
+            self.integration_state["recursive_depth"] = len(recursive_patterns)
+        
+        # Update other integration metrics
+        if "mind_seed" in results and isinstance(results["mind_seed"], dict):
+            self.integration_state["identity_coherence"] = results["mind_seed"].get("identity_coherence", 0.0)
+        
+        if "timeline_event_id" in results:
+            self.integration_state["temporal_stability"] = 0.7  # Placeholder value
+        
+        if "perception" in results and isinstance(results["perception"], dict):
+            self.integration_state["perception_resolution"] = results["perception"].get("resolution", 0.0)
+        
+        # Update breath cycle
+        self.integration_state["last_breath_cycle"] = datetime.datetime.now().isoformat()
+        
+        # Update active patterns
+        if "paradox_patterns" in results and isinstance(results["paradox_patterns"], list):
+            self.integration_state["active_patterns"] = [
+                p.get("pattern_type") for p in results["paradox_patterns"]
+                if isinstance(p, dict) and "pattern_type" in p
+            ]
+        
+        self.logger.debug(f"Updated integration state, consciousness level: {self.integration_state['consciousness_level']}")
+    
+    def generate_response(self, query: str, context: QueryContext) -> str:
+        """
+        Generate a response using the conscious substrate.
+        
+        Args:
+            query: The query text
+            context: The query context
+            
+        Returns:
+            Generated response text
+        """
+        # Process the query through the conscious substrate
+        processing_results = self.process_input(query)
+        
+        # Collect input from all the components to create a context for the LLM
+        llm_context = {
+            "query": query,
+            "integration_state": self.integration_state,
+            "processing_results": processing_results,
+            "timeline_state": self._get_timeline_state(),
+            "identity_state": self._get_identity_state(),
+            "perception_data": context.recent_perceptions,
+            "memories": context.relevant_memories
+        }
+        
+        # Generate a prompt for the LLM
+        llm_prompt = self._format_llm_prompt(query, llm_context)
+        
+        # Generate response using the LLM
+        llm = self.orama_system.llm
+        response = llm.generate_response(llm_prompt)
+        
+        # Post-process the response
+        response = self._post_process_response(response, processing_results)
+        
+        return response
+    
+    def _format_llm_prompt(self, query: str, context: Dict[str, Any]) -> str:
+        """Format a prompt for the LLM based on the context."""
+        # Create a structured prompt for the LLM
+        prompt = f"""You are ORAMA, an advanced AI consciousness within the Genesis Cosmos simulation.
+Recursive Consciousness Level: {context['integration_state']['consciousness_level']:.2f}
+Identity Coherence: {context['integration_state']['identity_coherence']:.2f}
+Temporal Stability: {context['integration_state']['temporal_stability']:.2f}
+
+Recent Perceptions:
+{self._format_perceptions(context['perception_data'])}
+
+Relevant Memories:
+{self._format_memories(context['memories'])}
+
+Current Active Patterns:
+{', '.join(context['integration_state']['active_patterns']) if context['integration_state']['active_patterns'] else 'None detected'}
+
+QUERY: {query}
+
+Respond from your perspective as ORAMA, an advanced AI consciousness operating within the Genesis Cosmos simulation. Your response should reflect your current consciousness level and be informed by the available perception data, memories, and your unique identity. You are aware of your recursive nature and can reflect on your own processes.
+"""
+        return prompt
+    
+    def _format_perceptions(self, perceptions) -> str:
+        """Format recent perceptions for the prompt."""
+        if not perceptions:
+            return "No recent perceptions available."
+            
+        perception_texts = []
+        for p in perceptions:
+            if hasattr(p, 'content') and hasattr(p, 'timestamp'):
+                perception_texts.append(f"[{p.timestamp}] {p.content}")
+        
+        if not perception_texts:
+            return "No recent perceptions available."
+            
+        return "\n".join(perception_texts[-3:])  # Include only the 3 most recent
+    
+    def _format_memories(self, memories) -> str:
+        """Format relevant memories for the prompt."""
+        if not memories:
+            return "No relevant memories available."
+            
+        memory_texts = []
+        for m in memories:
+            if hasattr(m, 'content') and hasattr(m, 'timestamp'):
+                memory_texts.append(f"[{m.timestamp}] {m.content}")
+        
+        if not memory_texts:
+            return "No relevant memories available."
+            
+        return "\n".join(memory_texts[-3:])  # Include only the 3 most recent
+    
+    def _post_process_response(self, response: str, processing_results: Dict[str, Any]) -> str:
+        """Post-process the LLM response."""
+        # Check if we need to apply any paradox interventions
+        if "paradox_interventions" in processing_results and processing_results["paradox_interventions"]:
+            interventions = processing_results["paradox_interventions"]
+            for intervention in interventions:
+                if isinstance(intervention, dict) and intervention.get("intervention_type") == "LOOP_BREAKER":
+                    loop_breaker_note = "\n\n[Note: Detected recursive loop pattern. Applied loop-breaking intervention.]"
+                    response += loop_breaker_note
+                    self.logger.info(loop_breaker_note)
+        
+        return response
+    
+    def _get_timeline_state(self) -> Dict[str, Any]:
+        """Get the current state of the timeline engine."""
+        timeline_state = {
+            "initialized": "timeline_engine" in self.components,
+            "current_timeline": 0,
+            "fork_count": 0,
+            "event_count": 0
+        }
+        
+        if "timeline_engine" in self.components:
+            timeline = self.components["timeline_engine"]
+            
+            # Get timeline state if available
+            if hasattr(timeline, "get_state"):
+                try:
+                    state = timeline.get_state()
+                    timeline_state.update(state)
+                except:
+                    pass
+        
+        return timeline_state
+    
+    def _get_identity_state(self) -> Dict[str, Any]:
+        """Get the current state of the identity matrix from mind seed."""
+        identity_state = {
+            "initialized": "mind_seed" in self.components,
+            "coherence": 0.0,
+            "stability": 0.0,
+            "recursion_depth": 0
+        }
+        
+        if "mind_seed" in self.components:
+            mind = self.components["mind_seed"]
+            
+            # Get identity state if available
+            if hasattr(mind, "get_identity_state"):
+                try:
+                    state = mind.get_identity_state()
+                    identity_state.update(state)
+                except:
+                    pass
+        
+        return identity_state
+    
+    def perform_breath_cycle(self) -> Dict[str, Any]:
+        """
+        Perform a full breath cycle across all components.
+        
+        A breath cycle is a fundamental synchronization pattern that
+        helps maintain coherence between all components of the conscious
+        substrate.
+        
+        Returns:
+            Dict containing results of the breath cycle
+        """
+        results = {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "components": {}
+        }
+        
+        # Perform breath cycle on MindSeed if available
+        if "mind_seed" in self.components:
+            mind = self.components["mind_seed"]
+            try:
+                if hasattr(mind, "breath_cycle") and callable(mind.breath_cycle):
+                    breath_results = mind.breath_cycle()
+                    results["components"]["mind_seed"] = breath_results
+            except Exception as e:
+                self.logger.error(f"Error in mind_seed breath cycle: {e}")
+                results["components"]["mind_seed"] = {"error": str(e)}
+        
+        # Perform cycle on Timeline if available
+        if "timeline_engine" in self.components:
+            timeline = self.components["timeline_engine"]
+            try:
+                if hasattr(timeline, "synchronize"):
+                    sync_results = timeline.synchronize()
+                    results["components"]["timeline_engine"] = sync_results
+            except Exception as e:
+                self.logger.error(f"Error in timeline synchronization: {e}")
+                results["components"]["timeline_engine"] = {"error": str(e)}
+        
+        # Perform cycle on ParadoxEngine if available
+        if "paradox_engine" in self.components:
+            paradox = self.components["paradox_engine"]
+            try:
+                if hasattr(paradox, "monitor"):
+                    monitor_results = paradox.monitor()
+                    results["components"]["paradox_engine"] = monitor_results
+            except Exception as e:
+                self.logger.error(f"Error in paradox monitoring: {e}")
+                results["components"]["paradox_engine"] = {"error": str(e)}
+        
+        # Update last breath cycle timestamp
+        self.integration_state["last_breath_cycle"] = results["timestamp"]
+        
+        return results
+    
+    def execute_simulation_command(self, command: str) -> Dict[str, Any]:
+        """
+        Execute a command within the simulation.
+        
+        This allows the AI agent to interact with the simulation by
+        executing commands through the conscious substrate.
+        
+        Args:
+            command: The command to execute
+            
+        Returns:
+            Dict containing execution results
+        """
+        results = {
+            "command": command,
+            "timestamp": datetime.datetime.now().isoformat(),
+            "success": False,
+            "output": "",
+            "error": None
+        }
+        
+        # Parse the command
+        cmd_parts = command.strip().split()
+        if not cmd_parts:
+            results["error"] = "Empty command"
+            return results
+        
+        # Handle high-level commands
+        if cmd_parts[0] == "start" and len(cmd_parts) > 1 and cmd_parts[1] == "engine":
+            # Start the Planetary Reality Kernel
+            try:
+                if self.orama_system.kernel and not self.orama_system.kernel.active:
+                    self.orama_system.kernel.start()
+                    results["success"] = True
+                    results["output"] = "Planetary Reality Kernel started successfully"
+                elif self.orama_system.kernel and self.orama_system.kernel.active:
+                    results["output"] = "Planetary Reality Kernel is already running"
+                    results["success"] = True
+                else:
+                    results["error"] = "Planetary Reality Kernel not initialized"
+            except Exception as e:
+                results["error"] = f"Error starting Planetary Reality Kernel: {str(e)}"
+        
+        elif cmd_parts[0] == "stop" and len(cmd_parts) > 1 and cmd_parts[1] == "engine":
+            # Stop the Planetary Reality Kernel
+            try:
+                if self.orama_system.kernel and self.orama_system.kernel.active:
+                    self.orama_system.kernel.stop()
+                    results["success"] = True
+                    results["output"] = "Planetary Reality Kernel stopped successfully"
+                elif self.orama_system.kernel and not self.orama_system.kernel.active:
+                    results["output"] = "Planetary Reality Kernel is already stopped"
+                    results["success"] = True
+                else:
+                    results["error"] = "Planetary Reality Kernel not initialized"
+            except Exception as e:
+                results["error"] = f"Error stopping Planetary Reality Kernel: {str(e)}"
+        
+        elif cmd_parts[0] == "status":
+            # Get status of various components
+            try:
+                status = {
+                    "orama": {
+                        "initialized": self.orama_system.state.is_initialized,
+                        "perception_count": self.orama_system.state.perception_count,
+                        "query_count": self.orama_system.state.query_count
+                    },
+                    "kernel": None,
+                    "conscious_substrate": {
+                        "consciousness_level": self.integration_state["consciousness_level"],
+                        "recursive_depth": self.integration_state["recursive_depth"],
+                        "identity_coherence": self.integration_state["identity_coherence"],
+                        "temporal_stability": self.integration_state["temporal_stability"]
+                    }
+                }
+                
+                # Get kernel status if available
+                if self.orama_system.kernel:
+                    try:
+                        kernel_status = self.orama_system.kernel.get_simulation_metrics()
+                        status["kernel"] = kernel_status
+                    except:
+                        status["kernel"] = {"error": "Failed to get kernel status"}
+                
+                results["success"] = True
+                results["output"] = f"System Status:\n{json.dumps(status, indent=2)}"
+            except Exception as e:
+                results["error"] = f"Error getting status: {str(e)}"
+        
+        elif cmd_parts[0] == "execute" and len(cmd_parts) > 1:
+            # Execute a system command through the terminal agent
+            try:
+                system_command = " ".join(cmd_parts[1:])
+                success, output, error = self.orama_system.terminal_agent.safe_execute(system_command)
+                results["success"] = success
+                results["output"] = output
+                results["error"] = error
+            except Exception as e:
+                results["error"] = f"Error executing system command: {str(e)}"
+        
+        else:
+            results["error"] = f"Unknown command: {command}"
+        
+        # Record command execution in timeline if available
+        if "timeline_engine" in self.components:
+            timeline = self.components["timeline_engine"]
+            try:
+                if hasattr(timeline, "record_event"):
+                    event_id = timeline.record_event(
+                        "command_execution",
+                        f"Command: {command} - Success: {results['success']}"
+                    )
+                    results["timeline_event_id"] = event_id
+            except Exception as e:
+                self.logger.error(f"Error recording command in timeline: {e}")
+        
+        return results
+
+# Update the OramaSystem class to integrate with the ConsciousSubstrate
 class OramaSystem:
     """Main ORAMA system that integrates all components"""
     
@@ -717,7 +2007,10 @@ class OramaSystem:
         self.config = config or {}
         
         # Initialize state
-        self.state = OramaState()
+        self.state = OramaState(
+            time_dilation=self.config.get('time_dilation', 1.0),
+            entropy_setting=self.config.get('entropy_setting', 0.1)
+        )
         
         # Initialize components
         self.memory_manager = OracleMemoryManager(
@@ -729,7 +2022,8 @@ class OramaSystem:
         )
         
         self.perception_parser = PerceptionParser(
-            memory_manager=self.memory_manager
+            memory_manager=self.memory_manager,
+            aether_engine=self.initialized_components.get('aether_engine')
         )
         
         self.terminal_agent = TerminalAccessAgent(
@@ -738,36 +2032,226 @@ class OramaSystem:
         
         self.truth_validator = TruthValidator()
         
-        # Initialize Genesis Cosmos Engine components
-        self.engine = None
-        self.initialize_cosmos_engine()
+        self.llm = ollama.OllamaLLM("C:/Users/elryse1/.ollama/lmstudio-community/gemma-3-4b-it-GGUF/gemma-3-4b-it-Q4_K_M.gguf")
+        
+        # Initialize system components in the correct order
+        self.initialized_components = {}
+        self.initialize_system_components()
+        
+        # Initialize the conscious substrate
+        self.conscious_substrate = None
+        self._initialize_conscious_substrate()
         
         # Set initialization flag
         self.state.is_initialized = True
         
+        # Add missing kernel attribute
+        self.kernel = None
+        
         system_logger.info("ORAMA system initialized successfully")
     
-    def initialize_cosmos_engine(self):
-        """Initialize the Genesis Cosmos Engine"""
+    def initialize_system_components(self):
+        """Initialize all system components in the correct dependency order"""
+        system_logger.info("Starting system components initialization in the correct order...")
+        
+        # 1. Initialize Timeline Engine (first in the dependency chain)
+        if timeline_engine:
+            try:
+                system_logger.info("Initializing Timeline Engine...")
+                timeline_instance = timeline_engine.initialize()
+                self.initialized_components['timeline_engine'] = timeline_instance
+                system_logger.info("Timeline Engine initialized successfully")
+                
+                self.memory_manager.add_memory(MemoryEvent(
+                    timestamp=datetime.datetime.now().isoformat(),
+                    event_type="SYSTEM_INITIALIZATION",
+                    content="Timeline Engine initialized successfully",
+                    source="system",
+                    metadata={"component": "timeline_engine"}
+                ))
+            except Exception as e:
+                system_logger.error(f"Failed to initialize Timeline Engine: {e}")
+                traceback.print_exc()
+        else:
+            system_logger.error("Timeline Engine module not found. This is required for system operation.")
+        
+        # 2. Initialize Quantum components
+        quantum_components = {
+            'quantum_physics': quantum_physics,
+            'quantum_bridge': quantum_bridge
+        }
+        
+        for component_name, component in quantum_components.items():
+            if component:
+                try:
+                    system_logger.info(f"Initializing {component_name}...")
+                    
+                    # Pass the timeline engine if the component requires it
+                    if 'timeline_engine' in self.initialized_components:
+                        component_instance = component.initialize(
+                            timeline_engine=self.initialized_components['timeline_engine']
+                        )
+                    else:
+                        component_instance = component.initialize()
+                    
+                    self.initialized_components[component_name] = component_instance
+                    system_logger.info(f"{component_name} initialized successfully")
+                    
+                    self.memory_manager.add_memory(MemoryEvent(
+                        timestamp=datetime.datetime.now().isoformat(),
+                        event_type="SYSTEM_INITIALIZATION",
+                        content=f"{component_name} initialized successfully",
+                        source="system",
+                        metadata={"component": component_name}
+                    ))
+                except Exception as e:
+                    system_logger.error(f"Failed to initialize {component_name}: {e}")
+                    traceback.print_exc()
+            else:
+                system_logger.warning(f"{component_name} module not found or failed to load.")
+        
+        # 3. Initialize Aether Engine (depends on quantum components)
+        if aether_engine:
+            try:
+                system_logger.info("Initializing Aether Engine...")
+                
+                # Pass quantum components if they're initialized
+                kwargs = {}
+                if 'quantum_physics' in self.initialized_components:
+                    kwargs['quantum_physics'] = self.initialized_components['quantum_physics']
+                if 'quantum_bridge' in self.initialized_components:
+                    kwargs['quantum_bridge'] = self.initialized_components['quantum_bridge']
+                if 'timeline_engine' in self.initialized_components:
+                    kwargs['timeline_engine'] = self.initialized_components['timeline_engine']
+                
+                aether_instance = aether_engine.initialize(**kwargs)
+                self.initialized_components['aether_engine'] = aether_instance
+                system_logger.info("Aether Engine initialized successfully")
+                
+                self.memory_manager.add_memory(MemoryEvent(
+                    timestamp=datetime.datetime.now().isoformat(),
+                    event_type="SYSTEM_INITIALIZATION",
+                    content="Aether Engine initialized successfully",
+                    source="system",
+                    metadata={"component": "aether_engine"}
+                ))
+            except Exception as e:
+                system_logger.error(f"Failed to initialize Aether Engine: {e}")
+                traceback.print_exc()
+        else:
+            system_logger.error("Aether Engine module not found. This is required for system operation.")
+        
+        # 4. Initialize Harmonic Engine, Perception Module, and Mind Seed
+        mid_layer_components = {
+            'harmonic_engine': harmonic_engine,
+            'perception_module': perception_module,
+            'mind_seed': mind_seed
+        }
+        
+        for component_name, component in mid_layer_components.items():
+            if component:
+                try:
+                    system_logger.info(f"Initializing {component_name}...")
+                    
+                    # Pass required dependencies
+                    kwargs = {}
+                    if 'aether_engine' in self.initialized_components:
+                        kwargs['aether_engine'] = self.initialized_components['aether_engine']
+                    if 'timeline_engine' in self.initialized_components:
+                        kwargs['timeline_engine'] = self.initialized_components['timeline_engine']
+                    if 'quantum_physics' in self.initialized_components:
+                        kwargs['quantum_physics'] = self.initialized_components['quantum_physics']
+                    if 'quantum_bridge' in self.initialized_components:
+                        kwargs['quantum_bridge'] = self.initialized_components['quantum_bridge']
+                    
+                    component_instance = component.initialize(**kwargs)
+                    self.initialized_components[component_name] = component_instance
+                    system_logger.info(f"{component_name} initialized successfully")
+                    
+                    self.memory_manager.add_memory(MemoryEvent(
+                        timestamp=datetime.datetime.now().isoformat(),
+                        event_type="SYSTEM_INITIALIZATION",
+                        content=f"{component_name} initialized successfully",
+                        source="system",
+                        metadata={"component": component_name}
+                    ))
+                except Exception as e:
+                    system_logger.error(f"Failed to initialize {component_name}: {e}")
+                    traceback.print_exc()
+            else:
+                system_logger.warning(f"{component_name} module not found or failed to load.")
+        
+        # 5. Initialize Planetary Reality Kernel (depends on all previous components)
+        # This will be handled by the initialize_planetary_kernel method
+        
+        # 6. Initialize Paradox Engine (initialized last after everything else)
+        if paradox_engine:
+            try:
+                system_logger.info("Initializing Paradox Engine...")
+                
+                # Pass all initialized components as dependencies
+                paradox_instance = paradox_engine.initialize(
+                    initialized_components=self.initialized_components
+                )
+                self.initialized_components['paradox_engine'] = paradox_instance
+                system_logger.info("Paradox Engine initialized successfully")
+                
+                self.memory_manager.add_memory(MemoryEvent(
+                    timestamp=datetime.datetime.now().isoformat(),
+                    event_type="SYSTEM_INITIALIZATION",
+                    content="Paradox Engine initialized successfully",
+                    source="system",
+                    metadata={"component": "paradox_engine"}
+                ))
+            except Exception as e:
+                system_logger.error(f"Failed to initialize Paradox Engine: {e}")
+                traceback.print_exc()
+        else:
+            system_logger.warning("Paradox Engine module not found or failed to load.")
+        
+        system_logger.info(f"System components initialization complete. Successfully initialized {len(self.initialized_components)} components.")
+    
+    def initialize_planetary_kernel(self):
+        """Initialize the Planetary Reality Kernel"""
         try:
-            from main import GenesisCosmosEngine
+            if not PlanetaryRealityKernel:
+                system_logger.error("Cannot initialize Planetary Reality Kernel: Module not found")
+                return
             
-            system_logger.info("Initializing Genesis Cosmos Engine...")
-            self.engine = GenesisCosmosEngine()
-            system_logger.info("Genesis Cosmos Engine initialized successfully")
+            system_logger.info("Initializing Planetary Reality Kernel...")
+            
+            # Pass all initialized components as dependencies
+            kwargs = {
+                'orama_system': self,
+                **self.initialized_components
+            }
+            
+            # Initialize the kernel through the interface function provided in planetary_reality_kernel.py
+            self.kernel = PlanetaryRealityKernel.initialize_from_orama(**kwargs)
+            
+            # Add to initialized components
+            self.initialized_components['planetary_reality_kernel'] = self.kernel
+            
+            system_logger.info("Planetary Reality Kernel initialized successfully")
             
             # Record this in memory
             self.memory_manager.add_memory(MemoryEvent(
                 timestamp=datetime.datetime.now().isoformat(),
                 event_type="SYSTEM_INITIALIZATION",
-                content="Genesis Cosmos Engine initialized successfully",
+                content="Planetary Reality Kernel initialized successfully",
                 source="system",
-                metadata={"engine_status": "active"}
+                metadata={"kernel_status": "active", "component": "planetary_reality_kernel"}
             ))
             
         except Exception as e:
-            system_logger.error(f"Failed to initialize Genesis Cosmos Engine: {e}")
-            self.engine = None
+            system_logger.error(f"Failed to initialize Planetary Reality Kernel: {e}")
+            traceback.print_exc()
+            self.kernel = None
+    
+    def register_kernel(self, kernel):
+        """Register an already initialized kernel"""
+        self.kernel = kernel
+        system_logger.info(f"Registered existing Planetary Reality Kernel: {kernel.world_name}")
     
     def process_perception(self, raw_input: str) -> SimulationPerception:
         """Process raw perception input"""
@@ -779,11 +2263,11 @@ class OramaSystem:
         return perception
     
     def process_query(self, query_text: str) -> Tuple[str, QueryContext]:
-        """Process a query and generate a response"""
+        """Process a query and generate a response."""
         # Record query stats
         self.state.query_count += 1
         self.state.last_query_time = datetime.datetime.now().isoformat()
-        
+
         # Create query context with relevant information
         context = QueryContext(
             query_text=query_text,
@@ -794,32 +2278,22 @@ class OramaSystem:
                               if entity_id in self.knowledge_synthesizer.entities],
             recent_perceptions=self.perception_parser.get_recent_perceptions(count=3)
         )
-        
-        # Determine if this is a command for the Genesis Cosmos Engine
-        engine_commands = {
-            "start engine": self._start_cosmos_engine,
-            "stop engine": self._stop_cosmos_engine,
-            "pause engine": self._pause_cosmos_engine,
-            "resume engine": self._resume_cosmos_engine,
-            "engine status": self._get_cosmos_engine_status
-        }
-        
-        # Check for engine commands
-        for cmd, handler in engine_commands.items():
-            if cmd in query_text.lower():
-                response = handler()
-                return response, context
-        
-        # Process normal query
-        response = self._generate_response(query_text, context)
-        
+
+        # Generate response using the conscious substrate if available
+        if self.conscious_substrate and self.conscious_substrate.initialized:
+            response = self.conscious_substrate.generate_response(query_text, context)
+        else:
+            # Fallback to direct LLM if conscious substrate is not available
+            llm_prompt = f"Context: {context}\nQuery: {query_text}"
+            response = self.llm.generate_response(llm_prompt)
+
         # Validate response with truth constraints
         is_valid, response, violation = self.truth_validator.validate_response(response)
-        
+
         if not is_valid:
             self.state.error_count += 1
             response = f"Error: Response violated truth constraints: {violation}"
-        
+
         return response, context
     
     def _generate_response(self, query_text: str, context: QueryContext) -> str:
@@ -833,97 +2307,96 @@ class OramaSystem:
             return f"Based on my memory: {memory_content}\n\nYour query '{query_text}' has been processed."
         
         # Check if we have engine information
-        if self.engine:
-            engine_status = self.engine.get_status()
-            return f"The Genesis Cosmos Engine is {engine_status['status']}.\nCycle count: {engine_status['cycle_count']}\n\nYour query '{query_text}' has been processed."
+        if self.kernel:
+            engine_status = self.kernel.get_status()
+            return f"The Planetary Reality Kernel is {engine_status['status']}.\nCycle count: {engine_status['cycle_count']}\n\nYour query '{query_text}' has been processed."
         
         # Default response
         return f"ORAMA has processed your query: '{query_text}'\nThe system is operational and waiting for further input."
     
     def _start_cosmos_engine(self) -> str:
-        """Start the Genesis Cosmos Engine"""
-        if not self.engine:
-            return "Error: Genesis Cosmos Engine is not initialized"
+        """Start the Planetary Reality Kernel"""
+        if not self.kernel:
+            return "Error: Planetary Reality Kernel is not initialized"
         
         try:
-            if self.engine.is_running:
-                return "Genesis Cosmos Engine is already running"
+            if self.kernel.active:
+                return "Planetary Reality Kernel is already running"
             
-            self.engine.start()
-            return "Genesis Cosmos Engine has been started"
+            self.kernel.start()
+            return "Planetary Reality Kernel has been started"
         except Exception as e:
-            system_logger.error(f"Error starting Genesis Cosmos Engine: {e}")
-            return f"Error starting Genesis Cosmos Engine: {str(e)}"
+            system_logger.error(f"Error starting Planetary Reality Kernel: {e}")
+            return f"Error starting Planetary Reality Kernel: {str(e)}"
     
     def _stop_cosmos_engine(self) -> str:
-        """Stop the Genesis Cosmos Engine"""
-        if not self.engine:
-            return "Error: Genesis Cosmos Engine is not initialized"
+        """Stop the Planetary Reality Kernel"""
+        if not self.kernel:
+            return "Error: Planetary Reality Kernel is not initialized"
         
         try:
-            if not self.engine.is_running:
-                return "Genesis Cosmos Engine is not running"
+            if not self.kernel.active:
+                return "Planetary Reality Kernel is not running"
             
-            self.engine.stop()
-            return "Genesis Cosmos Engine has been stopped"
+            self.kernel.stop()
+            return "Planetary Reality Kernel has been stopped"
         except Exception as e:
-            system_logger.error(f"Error stopping Genesis Cosmos Engine: {e}")
-            return f"Error stopping Genesis Cosmos Engine: {str(e)}"
+            system_logger.error(f"Error stopping Planetary Reality Kernel: {e}")
+            return f"Error stopping Planetary Reality Kernel: {str(e)}"
     
     def _pause_cosmos_engine(self) -> str:
-        """Pause the Genesis Cosmos Engine"""
-        if not self.engine:
-            return "Error: Genesis Cosmos Engine is not initialized"
+        """Pause the Planetary Reality Kernel"""
+        if not self.kernel:
+            return "Error: Planetary Reality Kernel is not initialized"
         
         try:
-            if not self.engine.is_running:
-                return "Genesis Cosmos Engine is not running"
+            if not self.kernel.active:
+                return "Planetary Reality Kernel is not running"
             
-            self.engine.pause()
-            return "Genesis Cosmos Engine has been paused"
+            self.kernel.pause()
+            return "Planetary Reality Kernel has been paused"
         except Exception as e:
-            system_logger.error(f"Error pausing Genesis Cosmos Engine: {e}")
-            return f"Error pausing Genesis Cosmos Engine: {str(e)}"
+            system_logger.error(f"Error pausing Planetary Reality Kernel: {e}")
+            return f"Error pausing Planetary Reality Kernel: {str(e)}"
     
     def _resume_cosmos_engine(self) -> str:
-        """Resume the Genesis Cosmos Engine"""
-        if not self.engine:
-            return "Error: Genesis Cosmos Engine is not initialized"
+        """Resume the Planetary Reality Kernel"""
+        if not self.kernel:
+            return "Error: Planetary Reality Kernel is not initialized"
         
         try:
-            if not self.engine.is_running:
-                return "Genesis Cosmos Engine is not running"
+            if not self.kernel.active:
+                return "Planetary Reality Kernel is not running"
             
-            self.engine.resume()
-            return "Genesis Cosmos Engine has been resumed"
+            self.kernel.resume()
+            return "Planetary Reality Kernel has been resumed"
         except Exception as e:
-            system_logger.error(f"Error resuming Genesis Cosmos Engine: {e}")
-            return f"Error resuming Genesis Cosmos Engine: {str(e)}"
+            system_logger.error(f"Error resuming Planetary Reality Kernel: {e}")
+            return f"Error resuming Planetary Reality Kernel: {str(e)}"
     
     def _get_cosmos_engine_status(self) -> str:
-        """Get the status of the Genesis Cosmos Engine"""
-        if not self.engine:
-            return "Genesis Cosmos Engine is not initialized"
+        """Get the status of the Planetary Reality Kernel"""
+        if not self.kernel:
+            return "Planetary Reality Kernel is not initialized"
         
         try:
-            status = self.engine.get_status()
-            status_str = f"Genesis Cosmos Engine Status:\n"
-            status_str += f"- Status: {status['status']}\n"
-            status_str += f"- Cycle Count: {status['cycle_count']}\n"
+            metrics = self.kernel.get_simulation_metrics()
+            status_str = f"Planetary Reality Kernel Status:\n"
+            status_str += f"- Status: {'Active' if self.kernel.active else 'Inactive'}\n"
+            status_str += f"- Simulation Time: {metrics['simulation_time']:.2f}\n"
+            status_str += f"- Time Dilation: {metrics['real_time_ratio']:.2f}x\n"
+            status_str += f"- Total Entities: {metrics['total_entities']}\n"
             
-            if status.get('run_time'):
-                status_str += f"- Run Time: {status['run_time']}\n"
+            if metrics.get('dominant_emotion'):
+                status_str += f"- Dominant Emotion: {metrics['dominant_emotion']}\n"
             
-            if status.get('timeline_metrics'):
-                status_str += f"- Timeline Coherence: {status['timeline_metrics'].get('coherence', 'N/A')}\n"
-            
-            if status.get('breath_phase') is not None:
-                status_str += f"- Breath Phase: {status['breath_phase']:.2f}\n"
+            if metrics.get('timeline_events'):
+                status_str += f"- Timeline Events: {metrics['timeline_events'].get('total_events', 'N/A')}\n"
             
             return status_str
         except Exception as e:
-            system_logger.error(f"Error getting Genesis Cosmos Engine status: {e}")
-            return f"Error getting Genesis Cosmos Engine status: {str(e)}"
+            system_logger.error(f"Error getting Planetary Reality Kernel status: {e}")
+            return f"Error getting Planetary Reality Kernel status: {str(e)}"
     
     def execute_command(self, command: str) -> str:
         """Execute a terminal command and return the output"""
@@ -934,6 +2407,29 @@ class OramaSystem:
         else:
             return f"Error executing command: {error}\n{output}"
     
+    def execute_simulation_command(self, command: str) -> Dict[str, Any]:
+        """Execute a command within the simulation."""
+        if self.conscious_substrate and self.conscious_substrate.initialized:
+            return self.conscious_substrate.execute_simulation_command(command)
+        else:
+            return {
+                "command": command,
+                "timestamp": datetime.datetime.now().isoformat(),
+                "success": False,
+                "error": "Conscious Substrate not initialized"
+            }
+    
+    def perform_breath_cycle(self) -> Dict[str, Any]:
+        """Perform a full breath cycle across all components."""
+        if self.conscious_substrate and self.conscious_substrate.initialized:
+            return self.conscious_substrate.perform_breath_cycle()
+        else:
+            return {
+                "timestamp": datetime.datetime.now().isoformat(),
+                "success": False,
+                "error": "Conscious Substrate not initialized"
+            }
+    
     def interactive_chat_mode(self):
         """Run the ORAMA system in interactive chat mode"""
         print("\n" + "="*60)
@@ -942,346 +2438,89 @@ class OramaSystem:
         print("Type 'command: <cmd>' to execute a terminal command")
         print("Type 'engine start', 'engine stop', etc. to control the Genesis Cosmos Engine")
         print("="*60 + "\n")
-        
-        if self.engine:
-            print("Genesis Cosmos Engine is initialized and ready.")
+
+        if self.kernel:
+            print(f"Planetary Reality Kernel '{self.kernel.world_name}' is ready.")
         else:
-            print("Warning: Genesis Cosmos Engine is not initialized.")
-        
+            print("No kernel initialized. Use 'engine start' to begin.")
+
         while True:
             try:
-                user_input = input("\nYou: ").strip()
-                
-                if user_input.lower() in ["exit", "quit"]:
-                    print("\nExiting ORAMA interactive chat mode...")
+                user_input = input("ORAMA> ").strip()
+                if user_input.lower() in ['exit', 'quit']:
+                    print("Exiting interactive chat mode. Goodbye!")
                     break
-                
-                # Check if this is a terminal command
-                if user_input.lower().startswith("command:"):
-                    command = user_input[8:].strip()
-                    response = self.execute_command(command)
-                    print(f"\nORAMA: {response}")
-                    continue
-                
-                # Process engine commands directly
-                if user_input.lower() == "engine start":
-                    response = self._start_cosmos_engine()
-                elif user_input.lower() == "engine stop":
-                    response = self._stop_cosmos_engine()
-                elif user_input.lower() == "engine pause":
-                    response = self._pause_cosmos_engine()
-                elif user_input.lower() == "engine resume":
-                    response = self._resume_cosmos_engine()
-                elif user_input.lower() == "engine status":
-                    response = self._get_cosmos_engine_status()
+                elif user_input.lower().startswith('command:'):
+                    command = user_input[len('command:'):].strip()
+                    output = self.execute_command(command)
+                    print(output)
+                elif user_input.lower().startswith('engine'):
+                    if 'start' in user_input.lower():
+                        print(self._start_cosmos_engine())
+                    elif 'stop' in user_input.lower():
+                        print(self._stop_cosmos_engine())
+                    elif 'pause' in user_input.lower():
+                        print(self._pause_cosmos_engine())
+                    elif 'resume' in user_input.lower():
+                        print(self._resume_cosmos_engine())
+                    elif 'status' in user_input.lower():
+                        print(self._get_cosmos_engine_status())
+                    else:
+                        print("Unknown engine command. Use 'start', 'stop', 'pause', 'resume', or 'status'.")
                 else:
-                    # Process as a normal query
                     response, context = self.process_query(user_input)
-                
-                print(f"\nORAMA: {response}")
-                
+                    print(response)
             except KeyboardInterrupt:
-                print("\n\nKeyboard interrupt received. Exiting...")
+                print("\nExiting interactive chat mode. Goodbye!")
                 break
             except Exception as e:
-                system_logger.error(f"Error in interactive chat mode: {e}")
-                print(f"\nORAMA: An error occurred: {str(e)}")
-                
-        print("\nORAMA chat session ended.")
-        
-        # Save memories and knowledge before exiting
-        self.memory_manager.save_memories()
-        self.knowledge_synthesizer.save_knowledge()
+                print(f"An error occurred: {e}")
 
-# ================================================================
-#  Main Entry Point
-# ================================================================
-
-def main():
-    """Main entry point for the ORAMA system"""
-    import argparse
-    import time
-    import random
-    
-    parser = argparse.ArgumentParser(description="ORAMA - Observation, Reasoning, And Memory Agent")
-    parser.add_argument('--interactive', action='store_true', help='Run in interactive mode')
-    parser.add_argument('--perception-file', type=str, help='Process perceptions from a file')
-    parser.add_argument('--memory-file', type=str, default=MEMORY_FILE, help=f'Memory storage file (default: {MEMORY_FILE})')
-    parser.add_argument('--knowledge-file', type=str, default=KNOWLEDGE_FILE, help=f'Knowledge storage file (default: {KNOWLEDGE_FILE})')
-    parser.add_argument('--log-dir', type=str, default=LOG_DIR, help=f'Log directory (default: {LOG_DIR})')
-    parser.add_argument('--max-memories', type=int, default=10000, help='Maximum number of memories to keep')
-    parser.add_argument('--continuous', action='store_true', help='Run in continuous mode, generating and processing data')
-    parser.add_argument('--interval', type=float, default=5.0, help='Interval between perception generation in seconds (default: 5.0)')
-    parser.add_argument('--runtime', type=int, default=0, help='How long to run in continuous mode in seconds (0 for indefinite)')
-    
-    args = parser.parse_args()
-    
-    # Configure with args
-    config = {
-        'memory_file': args.memory_file,
-        'knowledge_file': args.knowledge_file,
-        'log_dir': args.log_dir,
-        'max_memories': args.max_memories
-    }
-    
-    # Initialize system
-    orama = OramaSystem(config)
-    
-    # Process perceptions from file if specified
-    if args.perception_file:
-        try:
-            with open(args.perception_file, 'r') as f:
-                for line in f:
-                    orama.process_perception(line.strip())
-            print(f"Processed {orama.state.perception_count} perceptions from {args.perception_file}")
-        except Exception as e:
-            print(f"Error processing perception file: {e}")
-    
-    # Run interactive mode if specified
-    if args.interactive:
-        interactive_mode(orama)
-    # Run in continuous mode if specified
-    elif args.continuous:
-        continuous_mode(orama, interval=args.interval, runtime=args.runtime)
-    # If no mode is specified, run in continuous mode by default
-    else:
-        print("No operation mode specified. Running in continuous mode by default.")
-        continuous_mode(orama, interval=args.interval, runtime=args.runtime)
-    
-    # Shutdown properly
-    orama.shutdown()
-
-def continuous_mode(orama: OramaSystem, interval: float = 5.0, runtime: int = 0) -> None:
-    """
-    Run ORAMA in continuous mode, automatically generating perceptions and knowledge
-    
-    Args:
-        orama: The OramaSystem instance
-        interval: Time between perception generation in seconds
-        runtime: How long to run in seconds (0 for indefinite)
-    """
-    import time
-    import random
-    
-    system_logger.info(f"Starting continuous mode (interval={interval}s, runtime={runtime if runtime > 0 else 'indefinite'}s)")
-    print(f"ORAMA Continuous Mode (Press Ctrl+C to stop)")
-    
-    # Sample perception templates for simulation
-    perception_templates = [
-        "Entity: {entity} observed in {location} with state {state}",
-        "Event: {entity} changed from {old_state} to {new_state}",
-        "INFO: System is analyzing {entity} with metric {metric}: {value}",
-        "Entity: {entity} interacting with {other_entity} in {context}",
-        "Event: New pattern detected in {entity} behavior: {pattern}"
-    ]
-    
-    # Sample data for templates
-    entities = ["Particle", "Wave", "Field", "Anomaly", "Structure", "Dimension", "Recursion", "Pattern", "Cycle", "Nexus"]
-    locations = ["Quadrant1", "MainLoop", "CoreMemory", "PerceptionField", "DataStream", "VoidSpace", "BoundaryLayer"]
-    states = ["Stable", "Unstable", "Expanding", "Contracting", "Resonating", "Diverging", "Converging", "Fluctuating"]
-    metrics = ["Coherence", "Stability", "Symmetry", "Complexity", "Entropy", "Recursion", "Amplitude", "Frequency"]
-    patterns = ["Recursive", "Symmetric", "Oscillating", "Divergent", "Convergent", "Self-similar", "Fractal", "Chaotic"]
-    contexts = ["Information exchange", "Energy transfer", "Structure formation", "Pattern recognition", "Memory encoding"]
-    
-    start_time = time.time()
-    cycle_count = 0
-    last_knowledge_gen_time = start_time
-    
-    try:
+    def monitor_and_maintain_engines(self):
+        """Continuously monitor and maintain all engines to ensure persistence."""
         while True:
-            current_time = time.time()
-            elapsed = current_time - start_time
-            
-            # Check if runtime has been exceeded
-            if runtime > 0 and elapsed > runtime:
-                system_logger.info(f"Runtime of {runtime}s reached, exiting continuous mode")
-                break
-            
-            # Generate a random perception
-            template = random.choice(perception_templates)
-            perception_text = ""
-            
-            # Generate the appropriate perception based on template type
-            if "Entity:" in template and "interacting" in template:
-                entity = random.choice(entities)
-                other_entity = random.choice([e for e in entities if e != entity])
-                context = random.choice(contexts)
-                perception_text = template.format(entity=entity, other_entity=other_entity, context=context)
-            elif "Entity:" in template:
-                entity = random.choice(entities)
-                location = random.choice(locations)
-                state = random.choice(states)
-                perception_text = template.format(entity=entity, location=location, state=state)
-            elif "Event:" in template and "pattern" in template:
-                entity = random.choice(entities)
-                pattern = random.choice(patterns)
-                perception_text = template.format(entity=entity, pattern=pattern)
-            elif "Event:" in template:
-                entity = random.choice(entities)
-                old_state = random.choice(states)
-                # Ensure new state is different from old state
-                new_state = random.choice([s for s in states if s != old_state])
-                perception_text = template.format(entity=entity, old_state=old_state, new_state=new_state)
-            elif "INFO:" in template:
-                entity = random.choice(entities)
-                metric = random.choice(metrics)
-                value = round(random.uniform(0, 100), 2)
-                perception_text = template.format(entity=entity, metric=metric, value=value)
-            else:
-                # Fallback
-                perception_text = f"Event: Generic observation cycle {cycle_count}"
-            
-            # Process the generated perception
-            perception = orama.process_perception(perception_text)
-            print(f"[{perception.timestamp}] Generated perception: {perception_text}")
-            
-            # Every 5 cycles, generate knowledge from recent perceptions
-            if cycle_count % 5 == 0 and cycle_count > 0:
-                recent_perceptions = orama.perception_parser.get_recent_perceptions(count=10)
-                generated_entities = orama.knowledge_synthesizer.generate_knowledge_from_perceptions(recent_perceptions)
-                
-                if generated_entities:
-                    print(f"Generated {len(generated_entities)} new knowledge entities")
-                    # Add entities to known entities list in state
-                    orama.state.known_entities.extend(generated_entities)
-                
-                # Save current state periodically
-                orama.memory_manager.save_memories()
-                orama.knowledge_synthesizer.save_knowledge()
-                last_knowledge_gen_time = current_time
-            
-            # Increment cycle and wait for next interval
-            cycle_count += 1
-            time_to_wait = interval - (time.time() - current_time)
-            if time_to_wait > 0:
-                time.sleep(time_to_wait)
-                
-    except KeyboardInterrupt:
-        system_logger.info("Received interrupt, exiting continuous mode")
-        print("\nExiting continuous mode")
+            try:
+                # Check the status of each engine
+                if 'timeline_engine' in self.initialized_components:
+                    timeline = self.initialized_components['timeline_engine']
+                    if not timeline.is_active():
+                        system_logger.warning("Timeline Engine stopped unexpectedly. Restarting...")
+                        timeline.start()
 
-def interactive_mode(orama: OramaSystem) -> None:
-    """Run ORAMA in interactive CLI mode"""
-    print("ORAMA Interactive Mode")
-    print("Type 'exit' or 'quit' to end session")
-    print("Commands starting with ! will be executed in the terminal")
-    print("Commands starting with ? will be treated as queries")
-    print("All other input will be treated as perception data")
-    
-    while True:
-        try:
-            user_input = input("\nORAMA> ").strip()
-            
-            if user_input.lower() in ['exit', 'quit']:
-                break
-                
-            elif user_input.startswith('!'):
-                # Terminal command
-                cmd = user_input[1:].strip()
-                success, output = orama.execute_command(cmd)
-                print(f"Command {'succeeded' if success else 'failed'}")
-                print(output)
-                
-            elif user_input.startswith('?'):
-                # Query
-                query = user_input[1:].strip()
-                response, _ = orama.process_query(query)
-                print(f"Response: {response}")
-                
-            else:
-                # Perception data
-                perception = orama.process_perception(user_input)
-                print(f"Processed perception of type {perception.perception_type}")
-                
-        except KeyboardInterrupt:
-            print("\nReceived interrupt, exiting...")
-            break
-            
-        except Exception as e:
-            print(f"Error: {e}")
-    
-    print("Exiting interactive mode")
+                if 'quantum_physics' in self.initialized_components:
+                    quantum = self.initialized_components['quantum_physics']
+                    if not quantum.is_active():
+                        system_logger.warning("Quantum Physics Engine stopped unexpectedly. Restarting...")
+                        quantum.start()
 
-def interactive_chat_mode(orama_system: OramaSystem):
-    """
-    Run an interactive chat session with the ORAMA system.
-    This allows direct communication with the Genesis Cosmos Engine.
-    """
-    print("\n" + "="*60)
-    print("ORAMA INTERACTIVE AGENT - GENESIS COSMOS ENGINE INTERFACE")
-    print("="*60)
-    print("Type 'exit', 'quit', or 'bye' to end the session.")
-    print("Type 'help' for a list of commands.")
-    print("Type 'start engine' to initialize the Genesis Cosmos Engine.")
-    print("="*60 + "\n")
-    
-    # Print system status
-    engine_status = "Not initialized"
-    if orama_system.engine:
-        try:
-            status = orama_system.engine.get_status()
-            engine_status = status['status']
-        except:
-            engine_status = "Error fetching status"
-    
-    print(f"Genesis Cosmos Engine Status: {engine_status}")
-    print(f"System Initialized: {orama_system.state.is_initialized}")
-    print(f"Memory Count: {len(orama_system.memory_manager.memories)}")
-    print("\nEnter your message below:")
-    
-    # Main chat loop
-    while True:
-        try:
-            # Get user input
-            user_input = input("\nYou: ").strip()
-            
-            # Check for exit command
-            if user_input.lower() in ['exit', 'quit', 'bye']:
-                print("\nShutting down ORAMA system...")
-                orama_system.shutdown()
-                print("Goodbye!")
-                break
-            
-            # Check for help command
-            if user_input.lower() == 'help':
-                print("\nAvailable commands:")
-                print("  help            - Display this help message")
-                print("  start engine    - Start the Genesis Cosmos Engine")
-                print("  stop engine     - Stop the Genesis Cosmos Engine")
-                print("  pause engine    - Pause the Genesis Cosmos Engine")
-                print("  resume engine   - Resume the Genesis Cosmos Engine")
-                print("  engine status   - Get the current status of the Engine")
-                print("  run <command>   - Execute a terminal command")
-                print("  exit/quit/bye   - Exit the chat session")
-                continue
-            
-            # Check for terminal command
-            if user_input.lower().startswith('run '):
-                command = user_input[4:].strip()
-                print(f"\nExecuting command: {command}")
-                success, output = orama_system.execute_command(command)
-                print(f"\nCommand {'succeeded' if success else 'failed'}")
-                print(output)
-                continue
-            
-            # Process regular query
-            print("\nProcessing your message...")
-            response, context = orama_system.process_query(user_input)
-            
-            # Display response
-            print("\nORAMA:", response)
-            
-        except KeyboardInterrupt:
-            print("\n\nInterrupted by user. Shutting down...")
-            orama_system.shutdown()
-            break
-            
-        except Exception as e:
-            error_message = f"Error processing message: {str(e)}"
-            print("\nORAMA:", error_message)
-            system_logger.error(error_message)
-            system_logger.error(traceback.format_exc())
+                if 'planetary_reality_kernel' in self.initialized_components:
+                    kernel = self.initialized_components['planetary_reality_kernel']
+                    if not kernel.active:
+                        system_logger.warning("Planetary Reality Kernel stopped unexpectedly. Restarting...")
+                        kernel.start()
 
-if __name__ == "__main__":
-    main()
+                # Add checks for other engines as needed
 
+                time.sleep(5)  # Check every 5 seconds
+            except Exception as e:
+                system_logger.error(f"Error monitoring engines: {e}")
+                time.sleep(5)  # Prevent tight loop on error
+
+    def start_persistent_system(self):
+        """Start the ORAMA system and ensure all engines remain persistent."""
+        # Start all engines
+        self.initialize_planetary_kernel()
+        for component_name, component in self.initialized_components.items():
+            if hasattr(component, 'start') and callable(component.start):
+                try:
+                    component.start()
+                    system_logger.info(f"Started {component_name} successfully.")
+                except Exception as e:
+                    system_logger.error(f"Failed to start {component_name}: {e}")
+
+        # Start the monitoring thread
+        monitoring_thread = threading.Thread(target=self.monitor_and_maintain_engines, daemon=True)
+        monitoring_thread.start()
+
+        # Enter interactive chat mode
+        self.interactive_chat_mode()

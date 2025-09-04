@@ -11,10 +11,124 @@ from enum import Enum
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Set, Optional, Union, Any, Callable
 import numpy as np
+from scipy.signal import convolve2d
+
+import logging
+from collections import deque
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime%s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("PerceptionModule")
+
+class PerceptionProcessor:
+    """
+    Processes perception data extracted from the environment.
+    This is a standalone component that doesn't depend on other ORAMA modules.
+    """
+    def __init__(self, config=None):
+        self.config = config or {}
+        self.perception_history = deque(maxlen=100)
+        self.signal_filters = {
+            "noise_reduction": 0.85,
+            "pattern_enhancement": 0.65,
+            "semantic_amplification": 0.75
+        }
+
+    def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Process perception data and return enhanced version"""
+        # Store raw data in history
+        self.perception_history.append(data)
+
+        # Apply signal processing
+        processed_data = self._filter_noise(data)
+        processed_data = self._enhance_patterns(processed_data)
+        processed_data = self._amplify_semantics(processed_data)
+
+        return processed_data
+
+    def _filter_noise(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Filter noise from perception data"""
+        filtered = {}
+        threshold = self.signal_filters["noise_reduction"]
+
+        for key, value in data.items():
+            # Skip metadata keys
+            if key.startswith('_'):
+                filtered[key] = value
+                continue
+
+            # Handle different value types
+            if isinstance(value, (int, float)):
+                # Only keep values above threshold
+                if abs(value) >= threshold:
+                    filtered[key] = value
+            elif isinstance(value, str):
+                filtered[key] = value
+            elif isinstance(value, dict):
+                # Recursively filter nested dictionaries
+                filtered[key] = self._filter_noise(value)
+            elif isinstance(value, list):
+                # Filter lists
+                filtered[key] = [v for v in value if not isinstance(v, (int, float)) or abs(v) >= threshold]
+            else:
+                # Default behavior for other types
+                filtered[key] = value
+
+        return filtered
+
+    def _enhance_patterns(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhance patterns in perception data"""
+        # Implementation for pattern enhancement
+        return data
+
+    def _amplify_semantics(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Amplify semantic components in perception data"""
+        # Implementation for semantic amplification
+        return data
+
+class PerceptionField:
+    """
+    Represents a field of perception with specific modalities and characteristics.
+    """
+    def __init__(self, name: str, dimensions: int = 3, resolution: int = 64):
+        self.name = name
+        self.dimensions = dimensions
+        self.resolution = resolution
+        self.field_data = np.zeros([resolution] * dimensions)
+        self.active_regions = []
+
+    def add_perception(self, coordinates, intensity, radius=1.0):
+        """Add a perception event to the field"""
+        # Implementation for adding perception to field
+        pass
+
+    def get_activity_map(self):
+        """Get the current activity map of this perception field"""
+        return self.field_data
+
+    def detect_patterns(self, threshold=0.5):
+        """Detect patterns in the perception field"""
+        # Implementation for pattern detection
+        return []
+
+# Signal processing utilities
+def apply_perception_filter(signal, filter_type="lowpass", cutoff=0.5):
+    """Apply filter to perception signal"""
+    # Implementation for signal filtering
+    return signal
+
+def extract_perception_features(signal, feature_types=None):
+    """Extract features from perception signal"""
+    # Implementation for feature extraction
+    return {}
+
+def merge_perception_fields(field1, field2, weight1=0.5, weight2=0.5):
+    """Merge two perception fields"""
+    # Implementation for field merging
+    return field1
 
 class ArchetypeResonance(Enum):
     """Fundamental patterns of being that shape perception."""
-    ANIMA = "anima"         # Life-bringing, nurturing, creative
     UMBRA = "umbra"         # Shadow, hidden, depth-seeking
     NEXUS = "nexus"         # Connecting, mediating, balancing
     LOGOS = "logos"         # Order, structure, deterministic
@@ -334,6 +448,12 @@ class HarmonicProcessor:
         
         # Detect golden ratio emergence
         golden_ratio = 1.618
+        # Calculate actual_ratios once before the loop
+        actual_ratios = np.zeros(6)
+        for j in range(6):
+            if current[j] > 0.01:  # Avoid division by zero
+                actual_ratios[j] = current[j+1] / current[j]
+        
         golden_found = False
         for i in range(6):
             if 1.5 < actual_ratios[i] < 1.7:
@@ -1261,6 +1381,7 @@ class PerceptionIntegrator:
         self.attention_focus = None
     
     def perceive(self, universal_state: Dict[str, Any]) -> Dict[str, Any]:
+        from perception_module_core import PerceptionProcessor  # Local import to avoid circular dependency
         """
         Generate subjective experience from universal state.
         This is the main perception function that ties everything together.
@@ -1884,6 +2005,7 @@ class SensoryFilter:
         if channel in self.sensory_thresholds:
             idx = list(self.sensory_thresholds.keys()).index(channel)
             self.attention_weights[idx] = max(0.1, min(2.0, level))
+        return self
     
     def add_filter(self, channel: str, filter_name: str, filter_function: Callable):
         """
@@ -3259,3 +3381,57 @@ class TemporalPerceptionGenerator:
         consistency = 1.0 / (1.0 + cv)
         
         return consistency
+
+def initialize(**kwargs):
+    """
+    Initialize the perception module and return a PerceptionIntegrator instance.
+    
+    Args:
+        **kwargs: Configuration parameters for the perception module, including:
+            - entity_id: The ID of the entity using this perception system
+            - perception_channels: Optional dictionary of perception channel definitions
+            - identity_matrix: Optional predefined identity matrix
+            - memory_configuration: Optional memory configuration
+            
+    Returns:
+        PerceptionIntegrator instance that was initialized
+    """
+    logger = logging.getLogger("PerceptionModule")
+    logger.info("Initializing Perception Module...")
+    
+    # Extract entity ID from kwargs
+    entity_id = kwargs.get('entity_id', f"entity_{hash(str(kwargs)) % 10000}")
+    
+    # Create a new PerceptionIntegrator instance
+    perception_instance = PerceptionIntegrator(entity_id=entity_id)
+    
+    # Setup additional configurations if provided
+    perception_channels = kwargs.get('perception_channels', {})
+    if perception_channels:
+        logger.info(f"Configuring perception channels: {list(perception_channels.keys())}")
+        for channel_name, config in perception_channels.items():
+            # Apply channel configuration
+            pass
+    
+    # Setup custom identity matrix if provided
+    identity_matrix = kwargs.get('identity_matrix', None)
+    if identity_matrix:
+        logger.info(f"Setting custom identity matrix for {entity_id}")
+        # Apply identity matrix settings to perception_instance.identity
+        for attribute, value in identity_matrix.items():
+            if hasattr(perception_instance.identity, attribute):
+                setattr(perception_instance.identity, attribute, value)
+    
+    # Setup memory configuration if provided
+    memory_config = kwargs.get('memory_configuration', None)
+    if memory_config:
+        logger.info(f"Configuring memory for {entity_id}")
+        if hasattr(perception_instance, 'memory') and hasattr(perception_instance.memory, 'capacity'):
+            perception_instance.memory.capacity = memory_config.get('capacity', perception_instance.memory.capacity)
+            perception_instance.memory.decay_rate = memory_config.get('decay_rate', perception_instance.memory.decay_rate)
+            perception_instance.memory.integration_threshold = memory_config.get('threshold', perception_instance.memory.integration_threshold)
+    
+    logger.info(f"Perception Module initialization complete for entity {entity_id}")
+    return perception_instance
+
+__all__ = ["PerceptionProcessor", "PerceptionIntegrator", "TemporalEvent", "TemporalBranch", "TemporalPerception"]

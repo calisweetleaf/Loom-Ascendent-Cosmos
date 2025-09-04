@@ -68,6 +68,8 @@ generated_data/
 # Git
 .git/
 .gitmodules
+.github/
+.gitignore
 
 # Backup editors
 *.bak
@@ -94,3 +96,8 @@ build/
 *.mindloop
 *.recursion
 remaining_Scroll_Modules.md
+QWEN.md
+test_python_doctor.py
+.gitignore
+python_doctor_config.py
+.github/copilot-instructions.md

@@ -1,101 +1,31 @@
-# ================================================================
-#  LOOM ASCENDANT COSMOS — RECURSIVE SYSTEM MODULE
-#  Author: Morpheus (Creator), Somnus Development Collective 
-#  License: Proprietary Software License Agreement (Somnus Development Collective)
-#  Integrity Hash (SHA-256): d3ab9688a5a20b8065990cd9b91805e3d892d6e72472f69dd9afe719250c5e37
-# ================================================================
 import numpy as np
 from typing import Dict, List, Tuple, Any, Optional, Set
 from dataclasses import dataclass, field
 import logging
-from collections import defaultdict, deque
-import importlib
-import sys
+from collections import defaultdict
 from aether_engine import AetherPattern, AetherSpace, PhysicsConstraints, EncodingType
 from timeline_engine import TimelineEngine, TemporalEvent
-from quantum_physics import QuantumField, QuantumMonteCarlo, PhysicsConstants, WaveFunction, SymbolicOperators, AMRGrid, SimulationConfig, EthicalGravityManifold, QuantumStateVector
+from quantum_physics import QuantumField, QuantumMonteCarlo, PhysicsConstants
 import heapq
 import matplotlib.pyplot as plt
-from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import eigsh
-import time
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Configure logging
 logger = logging.getLogger("UniverseEngine")
 
-# File handler for persistent logging
-file_handler = logging.FileHandler("universe_evolution.log")
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-logger.addHandler(file_handler)
-
-class UniverseMetrics:
-    """Tracks and analyzes universe evolution metrics and performance"""
-    
-    def __init__(self, sampling_rate: int = 100):
-        self.sampling_rate = sampling_rate
-        self.coherence_history = deque(maxlen=sampling_rate)
-        self.expansion_history = deque(maxlen=sampling_rate)
-        self.complexity_history = deque(maxlen=sampling_rate)
-        self.entropy_history = deque(maxlen=sampling_rate)
-        self.structure_count_history = deque(maxlen=sampling_rate)
-        self.ethical_balance_history = deque(maxlen=sampling_rate)
-        self.total_mass = 0.0
-        self.total_energy = 0.0
-        self.hubble_parameter = 0.0
-        self.recursive_depth_avg = 0
-        self.last_update = time.time()
-    
-    def update(self, universe_state: Dict[str, Any]) -> Dict[str, Any]:
-        """Update metrics based on current universe state"""
-        self.coherence_history.append(universe_state.get('coherence', 1.0))
-        self.expansion_history.append(universe_state.get('scale_factor', 1.0))
-        self.complexity_history.append(universe_state.get('avg_complexity', 0.5))
-        self.entropy_history.append(universe_state.get('entropy', 0.0))
-        self.structure_count_history.append(universe_state.get('structure_count', 0))
-        self.ethical_balance_history.append(universe_state.get('ethical_balance', 0.5))
-        
-        self.total_mass = universe_state.get('total_mass', self.total_mass)
-        self.total_energy = universe_state.get('total_energy', self.total_energy)
-        self.hubble_parameter = universe_state.get('hubble_parameter', self.hubble_parameter)
-        self.recursive_depth_avg = universe_state.get('recursive_depth_avg', self.recursive_depth_avg)
-        self.last_update = time.time()
-        
-        return self.get_summary()
-    
-    def get_summary(self) -> Dict[str, Any]:
-        """Generate comprehensive metrics summary"""
-        return {
-            'coherence': sum(self.coherence_history) / len(self.coherence_history) if self.coherence_history else 1.0,
-            'expansion_rate': sum(self.expansion_history) / len(self.expansion_history) if self.expansion_history else 1.0,
-            'avg_complexity': sum(self.complexity_history) / len(self.complexity_history) if self.complexity_history else 0.5,
-            'entropy': sum(self.entropy_history) / len(self.entropy_history) if self.entropy_history else 0.0,
-            'structure_count': sum(self.structure_count_history) / len(self.structure_count_history) if self.structure_count_history else 0,
-            'ethical_balance': sum(self.ethical_balance_history) / len(self.ethical_balance_history) if self.ethical_balance_history else 0.5,
-            'total_mass': self.total_mass,
-            'total_energy': self.total_energy,
-            'hubble_parameter': self.hubble_parameter,
-            'recursive_depth_avg': self.recursive_depth_avg,
-            'last_update': self.last_update
-        }
-    
-    def measure_coherence(self) -> float:
-        """Measure current universe coherence level"""
-        return sum(self.coherence_history) / len(self.coherence_history) if self.coherence_history else 1.0
-    
-    def reset(self) -> None:
-        """Reset all metrics"""
-        self.coherence_history.clear()
-        self.expansion_history.clear()
-        self.complexity_history.clear()
-        self.entropy_history.clear()
-        self.structure_count_history.clear()
-        self.ethical_balance_history.clear()
-        self.total_mass = 0.0
-        self.total_energy = 0.0
-        self.hubble_parameter = 0.0
-        self.recursive_depth_avg = 0
-        self.last_update = time.time()
+@dataclass
+class SimulationConfig:
+    """Configuration for simulation parameters"""
+    grid_resolution: int = 128
+    temporal_resolution: float = 1e-35
+    adaptive_resolution: bool = True
+    intelligent_resource_allocation: bool = True
+    perception_priority_regions: bool = True
+    entity_focused_detail: bool = True
+    recursion_limit: int = 12
+    max_quantum_iterations: int = 1000
+    visualization_frequency: int = 100
+    conservation_tolerance: float = 1e-6
+    debug_mode: bool = False
 
 class ConservationError(Exception):
     """Exception raised when conservation laws are violated in cosmic simulation"""
@@ -115,32 +45,6 @@ class ConservationError(Exception):
         if details:
             return f"{self.message} - {'; '.join(details)}"
         return self.message
-
-@dataclass
-class SimulationConfig:
-    """Configuration for simulation parameters"""
-    grid_resolution: int = 128
-    temporal_resolution: float = 1e-35  # Planck time units
-    recursion_limit: int = 12
-    max_quantum_iterations: int = 1000
-    visualization_frequency: int = 100
-    conservation_tolerance: float = 1e-6
-    debug_mode: bool = False
-
-class SimulationConfigWrapper:
-    def __init__(self, config: SimulationConfig):
-        self._config = config
-
-    @property
-    def grid_size(self) -> int:
-        return self._config.grid_resolution
-
-    @grid_size.setter
-    def grid_size(self, value: int) -> None:
-        self._config.grid_resolution = value
-
-    def __getattr__(self, name):
-        return getattr(self._config, name)
 
 @dataclass
 class CosmicStructure:
@@ -738,7 +642,7 @@ class UniverseEngine:
             if self.evolution_metrics['entropy']:
                 # Add generated entropy to the system
                 current_entropy = self.evolution_metrics['entropy'][-1][1]
-                self.evolution_metrics['entropy'][-1] = (self.current_time, current_entropy + entropy_generated)
+                self.evolution_metrics['entropy'][-1] = (current_entropy + entropy_generated,)
 
     def _compute_quantum_states(self) -> Dict[str, np.ndarray]:
         """
@@ -912,454 +816,254 @@ class UniverseEngine:
         logger.debug(f"Updated metric: scale_factor={scale_factor:.6e}, Hubble parameter={hubble_parameter:.6e}")
 
     def _form_structures(self) -> List[CosmicStructure]:
-        """
-        Form new cosmic structures from density fluctuations
-        Implements Structure Formation (⊛𝕌) operator from Genesis Framework
-        """
-        # Threshold density for structure formation - decreases with universe age
-        density_threshold = 1e20 / (1 + self.current_time * 1e30)
-        
-        # Extract energy density from spacetime manifold
-        energy_density = self.manifold.energy_density
-        
-        # Find regions of high density (potential structure formation sites)
-        high_density_regions = []
-        
-        # Use median + standard deviation for adaptive threshold
-        if np.any(energy_density):
-            median_density = np.median(energy_density)
-            std_density = np.std(energy_density)
-            adaptive_threshold = median_density + 2 * std_density
-            density_threshold = max(density_threshold, adaptive_threshold)
-        
-        # Find high-density regions
-        for idx in np.ndindex(energy_density.shape):
-            if energy_density[idx] > density_threshold:
-                # Convert grid coordinates to spacetime position
-                # Scale to reasonable cosmic coordinates (-1e10 to 1e10 light years)
-                position = tuple(idx[i] * 2e10 / self.config.grid_resolution - 1e10 
-                                for i in range(len(idx)))
-                # Add time component (current time)
-                position = position + (self.current_time,)
-                
-                high_density_regions.append((position, energy_density[idx]))
-        
-        # Sort by density (highest first)
-        high_density_regions.sort(key=lambda x: x[1], reverse=True)
-        
-        # Limit number of new structures per step
-        max_new_structures = min(5, len(high_density_regions))
-        
-        # Create structures
+        """Form new cosmic structures based on energy density concentrations"""
         new_structures = []
-        for i in range(max_new_structures):
-            if i >= len(high_density_regions):
-                break
-                
-            position, density = high_density_regions[i]
+        
+        # Find high-density regions in the manifold
+        density_threshold = np.mean(self.manifold.energy_density) + 2 * np.std(self.manifold.energy_density)
+        
+        if density_threshold <= 0:
+            return new_structures
+        
+        # Identify peaks in energy density
+        peak_positions = []
+        for i in range(1, self.manifold.energy_density.shape[0] - 1):
+            for j in range(1, self.manifold.energy_density.shape[1] - 1):
+                for k in range(1, self.manifold.energy_density.shape[2] - 1):
+                    if self.manifold.energy_density[i, j, k] > density_threshold:
+                        # Check if it's a local maximum
+                        is_peak = True
+                        for di in [-1, 0, 1]:
+                            for dj in [-1, 0, 1]:
+                                for dk in [-1, 0, 1]:
+                                    if di == dj == dk == 0:
+                                        continue
+                                    if (self.manifold.energy_density[i+di, j+dj, k+dk] >= 
+                                        self.manifold.energy_density[i, j, k]):
+                                        is_peak = False
+                                        break
+                                if not is_peak:
+                                    break
+                            if not is_peak:
+                                break
+                        
+                        if is_peak:
+                            peak_positions.append((i, j, k))
+        
+        # Create structures at peak positions
+        for pos in peak_positions:
+            mass = float(self.manifold.energy_density[pos]) * 1e30  # Scale to stellar masses
+            density = mass / (4/3 * np.pi * (0.1)**3)  # Assume 0.1 unit radius
             
-            # Calculate mass from density and volume
-            cell_volume = (2e10 / self.config.grid_resolution) ** 3  # cubic light years
-            mass = density * cell_volume / (self.constants.c ** 2)  # E=mc^2 -> m=E/c^2
+            # Create aether pattern for this structure
+            pattern = self._create_structure_pattern(pos, mass, density)
             
-            # Scale mass to reasonable values for cosmic structures
-            # Adjust mass based on universe age (early universe has smaller structures)
-            universe_age_factor = min(1.0, (self.current_time / 1e-12) ** 0.5)
-            
-            if self.current_time < 1e-30:  # Very early universe - quantum fluctuations
-                mass *= 1e-20
-                structure_type = "quantum_fluctuation"
-            elif self.current_time < 1e-12:  # Early universe - first stars forming
-                mass *= 1e10 * universe_age_factor
-                structure_type = "protogalaxy"
-            else:  # Later universe - galaxies and clusters
-                mass *= 1e30 * universe_age_factor
-                structure_type = "galaxy"
-            
-            # Generate structure-specific Aether pattern
-            structure_pattern = self._create_structure_pattern(position, mass, density)
-            
-            # Generate unique ID
-            structure_id = f"{structure_type}_{len(self.structural_hierarchy) + len(new_structures)}"
-            
-            # Create cosmic structure
             structure = CosmicStructure(
-                structure_id=structure_id,
-                pattern=structure_pattern,
-                position=position[:3],  # Only spatial components
+                structure_id=f"structure_{len(self.structural_hierarchy)}_{time.time()}",
+                pattern=pattern,
+                position=pos + (self.current_time,),  # 4D position
                 recursion_depth=0,
                 metadata={
                     'mass': mass,
                     'density': density,
-                    'temperature': 1e9 / (self.current_time + 1),  # Cooling over time
                     'formation_time': self.current_time,
-                    'structure_type': structure_type,
-                    'complexity': 1.0 + np.log10(1 + mass/1e20),  # Complexity increases with mass
-                    'ethical_vector': np.zeros(getattr(self.config, 'ethical_dimensions', 3))  # Default ethical vector
+                    'type': self._classify_structure_type(mass)
                 }
             )
-            
-            # Register with recursion manager
-            self.recursion_manager.register_structure(structure.structure_id)
-            
-            # Apply conservation laws
-            structure.metadata['energy'] = structure.metadata['mass'] * (self.constants.c ** 2)
             
             new_structures.append(structure)
-            
-            # Log structure formation
-            logger.info(f"New cosmic structure formed: {structure_id} at {position[:3]}, mass={mass:.2e}, type={structure_type}")
+            self.recursion_manager.register_structure(structure.structure_id, 0)
         
+        logger.info(f"Formed {len(new_structures)} new cosmic structures")
         return new_structures
-
+    
     def _create_structure_pattern(self, position: Tuple[float, ...], mass: float, density: float) -> AetherPattern:
-        """Create an Aether pattern for a new cosmic structure"""
-        import hashlib
+        """Create an aether pattern for a cosmic structure"""
+        # Create core pattern based on structure properties
+        core_size = min(128, max(16, int(np.log10(mass / 1e30) * 10 + 64)))
+        core = np.zeros((core_size, core_size))
         
-        # Generate unique pattern based on position and properties
-        pattern_seed = f"{position}_{mass}_{density}_{self.current_time}"
-        pattern_hash = hashlib.sha256(pattern_seed.encode()).digest()
+        # Fill with pattern based on density
+        center = core_size // 2
+        for i in range(core_size):
+            for j in range(core_size):
+                distance = np.sqrt((i - center)**2 + (j - center)**2)
+                if distance < center:
+                    core[i, j] = np.exp(-distance / (center * 0.3)) * density / 1e15
         
-        # Find compatible patterns in Aether space or create new one
-        compatible_patterns = [
-            p for p in self.aether_space.patterns
-            if p.metadata.get('density', 0) < density * 1.2
-            and p.metadata.get('density', 0) > density * 0.8
-        ]
-        
-        if compatible_patterns:
-            # Use existing pattern as template
-            template = np.random.choice(compatible_patterns)
-            
-            # Replace pattern creation code with:
-            pattern = AetherPattern(
-                core=hashlib.sha256(pattern_seed.encode()).digest(),
-                mutations=(hashlib.sha256((pattern_seed + "_mut1").encode()).digest(),),
-                interactions={'combine': '0.5', 'transform': '0.7'},
-                encoding_type=EncodingType.QUANTUM,  # Use Quantum encoding for cosmic structures
-                recursion_level=0,
-                metadata={
-                    'pattern_id': f"structure_pattern_{len(self.structural_hierarchy)}",
-                    'mass': mass,
-                    'density': density,
-                    'complexity': template.metadata.get('complexity', 1.0) * (1 + 0.1 * np.random.random()),
-                    'parent_pattern_id': template.pattern_id,
-                    'position': position[:3],  # Only spatial components
-                    'creation_time': self.current_time,
-                    'encoding_type': template.metadata.get('encoding_type', 'QUANTUM'),
-                }
-            )
-        else:
-            # Create new pattern from scratch
-            dimensions = min(4, self.manifold.dimensions)
-            grid_size = max(2, int(np.log10(mass)))
-            
-            # Create weights tensor with Gaussian distribution
-            weights = np.ones((grid_size,) * dimensions)
-            center = tuple(grid_size // 2 for _ in range(dimensions))
-            
-            # Apply Gaussian distribution
-            indices = np.indices((grid_size,) * dimensions)
-            distance_sq = sum((indices[i] - center[i])**2 for i in range(dimensions))
-            sigma = grid_size / 4
-            weights = np.exp(-distance_sq / (2 * sigma**2))
-            
-            # Normalize to conserve mass
-            weights = weights * mass / np.sum(weights)
-            
-            # Create new pattern
-            pattern = AetherPattern(
-                pattern_id=f"structure_pattern_{len(self.structural_hierarchy)}",
-                dimensions=dimensions,
-                weights=weights,
-                metadata={
-                    'mass': mass,
-                    'density': density,
-                    'complexity': 1.0 + 0.5 * np.random.random(),
-                    'position': position[:3],  # Only spatial components
-                    'creation_time': self.current_time,
-                    'encoding_type': 'QUANTUM',  # Default encoding for cosmic structures
-                }
-            )
+        pattern = AetherPattern(
+            core=core,
+            encoding_type=EncodingType.SYMBOLIC,
+            metadata={
+                'mass': mass,
+                'density': density,
+                'position': position,
+                'structure_type': self._classify_structure_type(mass)
+            }
+        )
         
         return pattern
-
+    
+    def _classify_structure_type(self, mass: float) -> str:
+        """Classify structure type based on mass"""
+        if mass < 1e25:  # Less than asteroid mass
+            return "particle_cloud"
+        elif mass < 1e28:  # Asteroid to planet mass
+            return "planetoid"
+        elif mass < 1e30:  # Planet mass
+            return "planet"
+        elif mass < 1e33:  # Stellar mass
+            return "star"
+        elif mass < 1e36:  # Massive star
+            return "massive_star"
+        elif mass < 1e39:  # Stellar cluster
+            return "star_cluster"
+        else:
+            return "galactic_core"
+    
     def _manage_recursion_depth(self):
-        """
-        Manage recursion depth across cosmic structures
-        Implements Recursive Depth Management from Genesis Framework
-        """
-        # Get recursion limit from config
-        max_depth = self.config.recursion_limit
-        
-        # Track recursive depth changes
-        changes = 0
-        
-        # Check each structure against criteria for recursion depth changes
+        """Manage recursion depth for all structures"""
         for structure in self.structural_hierarchy:
             current_depth = self.recursion_manager.current_depths.get(structure.structure_id, 0)
             
-            # Criteria for increasing recursion depth
-            # 1. Complex enough structure
-            complexity = structure.pattern.metadata.get('complexity', 1.0)
-            
-            # 2. Enough mass/energy
-            mass = structure.total_mass
-            
-            # 3. Observer attention (simplified approximation)
-            # In a full implementation, this would come from the Simulation Engine
-            observer_attention = 0.0
-            if hasattr(structure, 'metadata') and 'observer_attention' in structure.metadata:
-                observer_attention = structure.metadata['observer_attention']
-            
-            # Calculate recursion score
-            recursion_score = (
-                0.4 * (complexity / 10.0) + 
-                0.4 * min(1.0, np.log10(mass) / 30) +
-                0.2 * observer_attention
-            )
-            
-            # Decision to change recursion depth
-            target_depth = min(max_depth, int(recursion_score * max_depth))
-            
-            if target_depth > current_depth:
-                # Increase depth if possible
-                new_depth = self.recursion_manager.increase_depth(structure.structure_id)
-                if new_depth > current_depth:
-                    structure.recursion_depth = new_depth
-                    changes += 1
-                    logger.debug(f"Increased recursion depth for {structure.structure_id}: {current_depth} -> {new_depth}")
-            
-            elif target_depth < current_depth:
-                # Decrease depth
-                new_depth = self.recursion_manager.decrease_depth(structure.structure_id)
-                structure.recursion_depth = new_depth
-                changes += 1
-                logger.debug(f"Decreased recursion depth for {structure.structure_id}: {current_depth} -> {new_depth}")
-        
-        # Update recursion depth map in manifold
-        for structure in self.structural_hierarchy:
-            grid_pos = self.manifold._position_to_grid(structure.position)
-            if all(0 <= g < self.manifold.grid_size for g in grid_pos[:3]):
-                idx = tuple(int(g) for g in grid_pos[:3])
-                self.manifold.recursion_depth_map[idx] = structure.recursion_depth
-        
-        if changes > 0:
-            logger.debug(f"Recursion depth changes: {changes}")
-        
-        return changes
-
+            # Increase depth for complex structures
+            if structure.metadata.get('mass', 0) > 1e32 and current_depth < 3:
+                try:
+                    self.recursion_manager.increase_depth(structure.structure_id)
+                except RuntimeError as e:
+                    logger.warning(f"Cannot increase recursion depth for {structure.structure_id}: {e}")
+    
     def _apply_ethical_tensors(self):
-        """
-        Apply ethical tensors to influence cosmic evolution
-        Implements 'Ethical Tensors' axiom from Genesis Framework
-        """
-        if not self.structural_hierarchy:
+        """Apply ethical force tensors to cosmic structures"""
+        if not hasattr(self.config, 'ethical_dimensions'):
             return
         
-        # Default ethical dimensions if not set
-        ethical_dimensions = getattr(self.config, 'ethical_dimensions', 3)
-        
         for structure in self.structural_hierarchy:
-            # Get ethical vector (or initialize if not present)
-            ethical_vector = structure.metadata.get('ethical_vector', 
-                                                  np.zeros(ethical_dimensions))
+            ethical_vector = structure.metadata.get('ethical_vector')
+            if ethical_vector is None:
+                # Initialize ethical vector based on structure properties
+                mass = structure.metadata.get('mass', 1e30)
+                structure_type = structure.metadata.get('type', 'unknown')
+                
+                # Different structure types have different ethical inclinations
+                if structure_type == 'star':
+                    ethical_vector = [0.8, 0.2, 0.3]  # High creation, low destruction, moderate balance
+                elif structure_type == 'planet':
+                    ethical_vector = [0.6, 0.1, 0.9]  # Moderate creation, low destruction, high balance
+                elif structure_type == 'galactic_core':
+                    ethical_vector = [0.5, 0.8, 0.2]  # Moderate creation, high destruction, low balance
+                else:
+                    ethical_vector = [0.4, 0.3, 0.5]  # Balanced default
+                
+                structure.metadata['ethical_vector'] = ethical_vector
             
-            if len(ethical_vector) != ethical_dimensions:
-                # Resize if dimensions don't match
-                old_vector = ethical_vector
-                ethical_vector = np.zeros(ethical_dimensions)
-                ethical_vector[:min(len(old_vector), ethical_dimensions)] = old_vector[:min(len(old_vector), ethical_dimensions)]
+            # Apply ethical forces to structure evolution
+            creation_force = ethical_vector[0] * 0.1
+            destruction_force = ethical_vector[1] * -0.05
+            balance_force = ethical_vector[2] * 0.02
             
-            # Calculate moral force magnitude
-            moral_force = np.linalg.norm(ethical_vector)
-            
-            if moral_force > 0:
-                # Calculate influence direction based on ethical vector
-                ethical_direction = ethical_vector / moral_force
-                
-                # Ethical force scales with recursion depth and complexity
-                force_magnitude = moral_force * (1 + 0.1 * structure.recursion_depth) * \
-                                 structure.pattern.metadata.get('complexity', 1.0)
-                
-                # Physical effects of ethical forces
-                
-                # 1. Position perturbation (tiny nudges based on ethics)
-                position = list(structure.position)
-                for i in range(min(len(position), len(ethical_direction))):
-                    position[i] += ethical_direction[i] * force_magnitude * 1e-5
-                structure.position = tuple(position)
-                
-                # 2. Stability effect (ethical alignment increases stability)
-                if 'stability' in structure.metadata:
-                    harmony = ethical_vector[0] if len(ethical_vector) > 0 else 0
-                    structure.metadata['stability'] *= (1 + 0.01 * harmony * force_magnitude)
-                
-                # 3. Complexity effect (ethical diversity increases complexity)
-                if 'complexity' in structure.pattern.metadata:
-                    diversity = np.std(ethical_vector) if len(ethical_vector) > 1 else 0
-                    structure.pattern.metadata['complexity'] *= (1 + 0.01 * diversity * force_magnitude)
-                
-                # 4. Ethical resonance between nearby structures
-                nearby_structures = self._find_nearby_structures(structure, 1e9)  # 1 billion light years
-                for neighbor in nearby_structures:
-                    if neighbor == structure:
-                        continue
-                        
-                    # Get neighbor's ethical vector
-                    neighbor_ethics = neighbor.metadata.get('ethical_vector', 
-                                                          np.zeros(ethical_dimensions))
-                    
-                    # Calculate alignment (dot product)
-                    if len(neighbor_ethics) > 0 and len(ethical_vector) > 0:
-                        alignment = np.dot(ethical_vector, neighbor_ethics) / \
-                                   (np.linalg.norm(ethical_vector) * np.linalg.norm(neighbor_ethics) + 1e-10)
-                        
-                        # Resonance effect
-                        if alignment > 0.7:  # Strong positive alignment
-                            # Create subtle attractive force
-                            distance_vector = np.array(neighbor.position) - np.array(structure.position)
-                            distance = np.linalg.norm(distance_vector)
-                            if distance > 0:
-                                attraction = alignment * 1e-6 * force_magnitude / distance
-                                attraction_vector = distance_vector * attraction / distance
-                                
-                                # Apply tiny attraction
-                                new_pos = list(structure.position)
-                                for i in range(len(new_pos)):
-                                    if i < len(attraction_vector):
-                                        new_pos[i] += attraction_vector[i]
-                                structure.position = tuple(new_pos)
-            
-            # Record ethical effect in history
-            if len(structure.history) > 0:
-                structure.history[-1]['ethical_vector'] = ethical_vector.copy()
-        
-        logger.debug(f"Applied ethical tensors to {len(self.structural_hierarchy)} structures")
-
-    def _find_nearby_structures(self, structure, max_distance):
-        """Find structures within a certain distance"""
+            # Modify structure stability
+            net_ethical_force = creation_force + destruction_force + balance_force
+            structure.pattern.stability_index = max(0.1, min(2.0, 
+                structure.pattern.stability_index + net_ethical_force))
+    
+    def _find_nearby_structures(self, structure: CosmicStructure, max_distance: float = 1.0) -> List[Tuple[CosmicStructure, float]]:
+        """Find structures within max_distance of the given structure"""
         nearby = []
-        structure_pos = np.array(structure.position)
         
         for other in self.structural_hierarchy:
-            other_pos = np.array(other.position)
-            distance = np.linalg.norm(structure_pos - other_pos)
+            if other.structure_id == structure.structure_id:
+                continue
+            
+            # Calculate 4D distance (including time)
+            pos1 = np.array(structure.position)
+            pos2 = np.array(other.position)
+            
+            # Handle different position dimensionalities
+            min_dims = min(len(pos1), len(pos2))
+            distance = np.linalg.norm(pos1[:min_dims] - pos2[:min_dims])
+            
             if distance <= max_distance:
-                nearby.append(other)
+                nearby.append((other, distance))
         
-        return nearby
-
+        return sorted(nearby, key=lambda x: x[1])
+    
     def _update_metrics(self):
-        """
-        Update global evolution metrics
-        Tracks key measures of cosmic evolution
-        """
+        """Update evolution metrics"""
+        current_time = self.current_time
+        
         # Calculate total mass
-        total_mass = sum(s.total_mass for s in self.structural_hierarchy) if self.structural_hierarchy else 0
+        total_mass = sum(s.total_mass for s in self.structural_hierarchy)
+        self.evolution_metrics['total_mass'].append((current_time, total_mass))
         
-        # Calculate average complexity
+        # Structure count
+        self.evolution_metrics['structure_count'].append((current_time, len(self.structural_hierarchy)))
+        
+        # Average complexity (based on recursion depth)
         if self.structural_hierarchy:
-            avg_complexity = sum(s.pattern.metadata.get('complexity', 1.0) for s in self.structural_hierarchy) / len(self.structural_hierarchy)
+            avg_complexity = np.mean([
+                self.recursion_manager.current_depths.get(s.structure_id, 0)
+                for s in self.structural_hierarchy
+            ])
         else:
-            avg_complexity = 0
+            avg_complexity = 0.0
+        self.evolution_metrics['avg_complexity'].append((current_time, avg_complexity))
         
-        # Calculate entropy from structure states
-        entropy = 0
-        for s in self.structural_hierarchy:
-            # Structures with higher recursion depth contribute more to entropy
-            structure_entropy = s.recursion_depth * np.log(max(1.0, s.total_mass)) if s.total_mass > 0 else 0
-            # Add metadata entropy if available
-            if 'entropy' in s.metadata:
-                structure_entropy += s.metadata['entropy']
-            entropy += structure_entropy
-        
-        # Store metrics
-        self.evolution_metrics['total_mass'].append((self.current_time, total_mass))
-        self.evolution_metrics['structure_count'].append((self.current_time, len(self.structural_hierarchy)))
-        self.evolution_metrics['avg_complexity'].append((self.current_time, avg_complexity))
-        self.evolution_metrics['entropy'].append((self.current_time, entropy))
-        
-        logger.debug(f"Metrics updated: total_mass={total_mass:.2e}, structures={len(self.structural_hierarchy)}, avg_complexity={avg_complexity:.2f}, entropy={entropy:.2e}")
-
+        # Entropy (based on pattern diversity)
+        if self.structural_hierarchy:
+            pattern_types = [s.metadata.get('type', 'unknown') for s in self.structural_hierarchy]
+            unique_types = len(set(pattern_types))
+            entropy = unique_types / len(pattern_types) if pattern_types else 0
+        else:
+            entropy = 0.0
+        self.evolution_metrics['entropy'].append((current_time, entropy))
+    
     def _handle_temporal_event(self, event: TemporalEvent, timeline_idx: int) -> None:
-        """
-        Handle temporal events from the TimelineEngine.
-
-        Args:
-            event: The temporal event to process.
-            timeline_idx: The index of the timeline where the event occurred.
-        """
-        event_type = event.event_type
-        logger.info(f"Processing temporal event {event_type} at t={event.timestamp} on timeline {timeline_idx}")
-
-        if event_type == "breath_pulse":
-            # Synchronize field oscillations with breath cycle
-            self.breath_phase = event.metadata.get('phase', 0.0)
-            self._synchronize_to_breath_phase()
-        elif event_type == "temporal_paradox":
-            # Handle temporal paradox
-            logger.warning(f"Temporal paradox detected: {event.metadata}")
-        elif event_type == "tick":
-            # Advance the universe state
-            self.evolve_universe(self.config.temporal_resolution)
-        else:
-            logger.debug(f"Unhandled event type: {event_type}")
-
-    def _handle_aether_event(self, event_data: Dict[str, Any]) -> None:
-        """
-        Handle events from the AetherEngine.
-
-        Args:
-            event_data: A dictionary containing event details.
-        """
-        event_type = event_data.get('event_type')
-        logger.info(f"Processing AetherEngine event: {event_type}")
-
-        if event_type == "pattern_created":
-            # Example: Add the new pattern to the universe's structural hierarchy
-            new_pattern = event_data.get('pattern')
-            if new_pattern:
-                logger.info(f"New pattern created: {new_pattern.metadata.get('pattern_id')}")
-                # Optionally, create a new structure based on the pattern
-                new_structure = CosmicStructure(
-                    structure_id=f"structure_{len(self.structural_hierarchy)}",
-                    pattern=new_pattern,
-                    position=(0.0, 0.0, 0.0),  # Default position
-                    recursion_depth=0,
-                    metadata=new_pattern.metadata
-                )
-                self.structural_hierarchy.append(new_structure)
-                logger.info(f"New structure added to hierarchy: {new_structure.structure_id}")
-        elif event_type == "pattern_mutated":
-            # Handle pattern mutation events
-            mutated_pattern = event_data.get('pattern')
-            if mutated_pattern:
-                logger.info(f"Pattern mutated: {mutated_pattern.metadata.get('pattern_id')}")
-        elif event_type == "interaction_processed":
-            # Handle interaction events
-            interaction_details = event_data.get('details', {})
-            logger.info(f"Interaction processed: {interaction_details}")
-        else:
-            logger.warning(f"Unhandled AetherEngine event type: {event_type}")
-
-    def get_scroll_ready_entities(self) -> List[Dict[str, Any]]:
-        """
-        Retrieve entities that are ready for lifecycle processing by the Cosmic Scroll.
-
-        Returns:
-            A list of entities with lifecycle-relevant fields.
-        """
-        scroll_ready_entities = []
+        """Handle temporal events from the timeline engine"""
+        if event.event_type == "breath_pulse":
+            # Synchronize cosmic processes with breath
+            self._synchronize_breath_cycle(event.data.get('phase', 0))
+        elif event.event_type == "paradox_detected":
+            # Handle temporal paradoxes
+            self._handle_paradox(event.data)
+        elif event.event_type == "timeline_branch":
+            # Handle timeline branching
+            self._handle_timeline_branch(event.data)
+    
+    def _synchronize_breath_cycle(self, phase: float):
+        """Synchronize cosmic processes with breath phase"""
+        # Modulate cosmic expansion rate based on breath phase
+        expansion_modifier = 1.0 + 0.1 * np.sin(phase * 2 * np.pi)
+        
+        # Apply to all structures
         for structure in self.structural_hierarchy:
-            if hasattr(structure, 'metadata') and 'birth_time' in structure.metadata:
-                scroll_ready_entities.append({
-                    'name': structure.structure_id,
-                    'birth_time': structure.metadata.get('birth_time'),
-                    'lifespan': structure.metadata.get('lifespan', float('inf')),
-                    'growth_cycle_duration': structure.metadata.get('growth_cycle_duration', 1.0),
-                    'last_update_time': structure.metadata.get('last_update_time', 0.0),
-                    'age': structure.metadata.get('age', 0.0),
-                    'health': structure.metadata.get('health', 1.0),
-                })
-        return scroll_ready_entities
+            if hasattr(structure.metadata, 'expansion_rate'):
+                structure.metadata['expansion_rate'] *= expansion_modifier
+    
+    def _handle_paradox(self, paradox_data: Dict[str, Any]):
+        """Handle temporal paradoxes affecting the universe"""
+        logger.warning(f"Handling temporal paradox: {paradox_data}")
+        
+        # Apply reality stabilization
+        for structure in self.structural_hierarchy:
+            structure.pattern.stability_index *= 0.95  # Slight destabilization
+    
+    def _handle_timeline_branch(self, branch_data: Dict[str, Any]):
+        """Handle timeline branching events"""
+        logger.info(f"Universe responding to timeline branch: {branch_data}")
+        
+        # Create alternate universe state for the new branch
+        # This is a simplified implementation
+    
+    def _handle_aether_event(self, event_data: Dict[str, Any], timeline_idx: int = 0) -> None:
+        """Handle events from the aether engine"""
+        event_type = event_data.get('type', 'unknown')
+        
+        if event_type == 'pattern_evolution':
+            # Handle pattern evolution in aether space
+            pattern_id = event_data.get('pattern_id')
+            for structure in self.structural_hierarchy:
+                if structure.pattern.id == pattern_id:
+                    # Update structure based on pattern evolution
+                    structure.record_state(self.current_time)
+                    break
